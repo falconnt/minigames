@@ -4,6 +4,7 @@
 export const categories = [
   { id: 'puzzel', name: 'Puzzel', icon: '🧩' },
   { id: 'reflex', name: 'Reflex', icon: '⚡' },
+  { id: 'simulatie', name: 'Simulatie', icon: '🏇' },
 ];
 
 export const games = [
@@ -26,6 +27,16 @@ export const games = [
     scoreMode: 'lower',
     formatScore: (s) => `${s} ms`,
     load: () => import('../games/reaction.js'),
+  },
+  {
+    id: 'paardensport',
+    title: 'Paardensport',
+    icon: '🏇',
+    category: 'simulatie',
+    description: 'Beheer je eigen manege: verzorg en train paarden, koop stallen en tuig, en doe mee aan springen, dressuur en races.',
+    scoreMode: 'higher',
+    formatScore: (s) => `${s} punten`,
+    load: () => import('../games/paardensport.js'),
   },
 ];
 

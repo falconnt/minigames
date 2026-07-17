@@ -17,6 +17,26 @@ Een minigame-framework dat volledig statisch draait op **GitHub Pages** — geen
 | --- | --- | --- |
 | 🔢 2048 | Puzzel | punten (hoger is beter) — spel wordt automatisch bewaard |
 | ⚡ Reactietest | Reflex | milliseconden (lager is beter) |
+| 🏇 Paardensport | Simulatie | wedstrijdpunten (hoger is beter) — voortgang wordt bewaard |
+
+### Paardensport
+
+Een uitgebreide paardensimulatie die het save-mechanisme ten volle benut. Je
+beheert een eigen manege met een top-down erf (stallen + buitenbak) en paarden
+in zijaanzicht, allemaal in code op canvas getekend — geen afbeeldingen of
+emoji's — met een dag/nacht-schakelaar.
+
+- Kies een gratis beginnerspaard; koop later extra stallen en paarden (je hebt
+  altijd eerst een vrije stal nodig voordat je een paard koopt).
+- Verzorg je paard (poetsen, voeren, water, rust). Een vies of moe paard
+  presteert tot 45% slechter bij wedstrijden.
+- Train vaardigheden in de buitenbak en koop zadels/hoofdstellen voor een
+  prestatiebonus.
+- Drie disciplines: **springen** met een eigen parcoursbouwer en instelbare
+  hindernishoogtes, **dressuur** op ritme/timing, en **racen** tegen
+  tegenstanders.
+- Verdien prijzengeld en wedstrijdpunten; een gratis dagelijkse bonus en een
+  gesimuleerde muntenknop houden de economie soepel (geen echte betalingen).
 
 ## Structuur
 

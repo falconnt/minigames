@@ -13,11 +13,14 @@ Een minigame-framework dat volledig statisch draait op **GitHub Pages** — geen
 
 ## Meegeleverde games
 
-| Game | Categorie | Score |
-| --- | --- | --- |
-| 🔢 2048 | Puzzel | punten (hoger is beter) — spel wordt automatisch bewaard |
-| ⚡ Reactietest | Reflex | milliseconden (lager is beter) |
-| 🏇 Paardensport | Simulatie | wedstrijdpunten (hoger is beter) — voortgang wordt bewaard |
+Elke game heeft een eigen documentatiepagina in [`docs/`](docs/) met het doel,
+de besturing, de mechanics en de manier van scoren.
+
+| Game | Categorie | Score | Documentatie |
+| --- | --- | --- | --- |
+| 🔢 2048 | Puzzel | punten (hoger is beter) — spel wordt automatisch bewaard | [docs/2048.md](docs/2048.md) |
+| ⚡ Reactietest | Reflex | milliseconden (lager is beter) | [docs/reactietest.md](docs/reactietest.md) |
+| 🏇 Paardensport | Simulatie | wedstrijdpunten (hoger is beter) — voortgang wordt bewaard | [docs/paardensport.md](docs/paardensport.md) |
 
 ### Paardensport
 
@@ -91,6 +94,10 @@ games/<id>.js         één module per game
    ```
 
 3. Klaar — de game verschijnt op het startscherm, inclusief highscores en (als je `ctx.save` gebruikt) een "verder spelen"-badge.
+
+4. **Documenteer de game** — maak `docs/<id>.md` met het doel, de besturing, de
+   mechanics en de manier van scoren, en voeg hem toe aan de tabel in
+   [`docs/README.md`](docs/README.md). Gebruik een bestaande pagina als sjabloon.
 
 Een nieuwe categorie toevoegen kan in dezelfde file, in de `categories`-lijst.
 

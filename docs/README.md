@@ -1,0 +1,13 @@
+# 📚 Documentatie
+
+Per game een pagina met het doel, de besturing, de mechanics en de manier van
+scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
+
+| Game | Categorie | Documentatie |
+| --- | --- | --- |
+| 🔢 2048 | Puzzel | [2048.md](2048.md) |
+| ⚡ Reactietest | Reflex | [reactietest.md](reactietest.md) |
+| 🏇 Paardensport | Simulatie | [paardensport.md](paardensport.md) |
+
+> Voeg je een nieuwe game toe (zie de [hoofd-README](../README.md#een-nieuwe-game-toevoegen)),
+> maak dan ook een `docs/<id>.md` en zet hem in deze tabel.

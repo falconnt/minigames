@@ -12,6 +12,7 @@ const view = document.getElementById('view');
 let destroyCurrentGame = null;
 let activeCategory = 'alles';
 let hsView = 'local'; // 'local' of 'online' — welke highscore-lijst getoond wordt
+let scoresView = null; // idem voor de overzichtspagina (null = nog niet gekozen)
 
 // ---------- startscherm ----------
 
@@ -56,6 +57,91 @@ function renderHome() {
       renderHome();
     })
   );
+}
+
+// ---------- highscore-overzicht ----------
+
+function scoreCardBody(game, entries, online) {
+  if (!entries.length) {
+    return `<p class="empty">Nog geen scores. <a href="#/game/${game.id}">Speel ${game.title} →</a></p>`;
+  }
+  const champ = entries[0];
+  const rest = entries.slice(1, 5);
+  return `
+    <div class="champ">
+      <div class="champ-crown">👑</div>
+      <div class="champ-main">
+        <div class="champ-name">${online ? escapeHtml(champ.name) : 'Beste op dit apparaat'}</div>
+        <div class="champ-score">${game.formatScore(champ.score)}</div>
+      </div>
+    </div>
+    ${rest.length
+      ? `<ol class="rank-list">${rest
+          .map(
+            (e, i) => `<li><span class="rk">${i + 2}</span>
+              <span class="nm">${online ? escapeHtml(e.name) : new Date(e.date).toLocaleDateString('nl-NL')}</span>
+              <span class="sc">${game.formatScore(e.score)}</span></li>`
+          )
+          .join('')}</ol>`
+      : ''}`;
+}
+
+function renderScores() {
+  if (scoresView === null) scoresView = cloudEnabled() ? 'online' : 'local';
+  if (!cloudEnabled()) scoresView = 'local';
+  const online = scoresView === 'online';
+
+  const tabs = cloudEnabled()
+    ? `<div class="hs-tabs scores-tabs">
+        <button class="btn ${!online ? 'btn-primary' : ''}" data-sv="local">Dit apparaat</button>
+        <button class="btn ${online ? 'btn-primary' : ''}" data-sv="online">Online</button>
+      </div>`
+    : '';
+
+  view.innerHTML = `
+    <div class="scores-head">
+      <a class="btn btn-back" href="#/">← Terug</a>
+      <h2>🏆 Highscores</h2>
+    </div>
+    ${tabs}
+    <p class="scores-sub">${online ? 'Wereldwijde ranglijst — wie staat er nummer 1?' : 'Je beste scores op dit apparaat.'}</p>
+    <div class="scores-grid">
+      ${games
+        .map((g) => {
+          const cat = getCategory(g.category);
+          const body = online
+            ? '<p class="empty">Laden…</p>'
+            : scoreCardBody(g, storage.getHighscores(g.id).map((s) => ({ score: s.score, date: s.date })), false);
+          return `<div class="score-card">
+            <div class="score-card-head">
+              <span class="sc-icon">${g.icon}</span>
+              <h3>${g.title}</h3>
+              <span class="tag">${cat.icon} ${cat.name}</span>
+            </div>
+            <div class="score-card-body" data-body="${g.id}">${body}</div>
+          </div>`;
+        })
+        .join('')}
+    </div>`;
+
+  view.querySelectorAll('[data-sv]').forEach((b) =>
+    b.addEventListener('click', () => { scoresView = b.dataset.sv; renderScores(); })
+  );
+
+  if (online) {
+    for (const g of games) {
+      cloud
+        .getLeaderboard(g.id, g.scoreMode, 5)
+        .then((rows) => {
+          const el = view.querySelector(`[data-body="${g.id}"]`);
+          if (el) el.innerHTML = scoreCardBody(g, rows.map((r) => ({ name: r.username, score: r.score })), true);
+        })
+        .catch(() => {
+          const el = view.querySelector(`[data-body="${g.id}"]`);
+          if (el) el.innerHTML = '<p class="empty">Online ranglijst niet beschikbaar.</p>';
+        });
+    }
+  }
 }
 
 // ---------- gamepagina ----------
@@ -173,6 +259,7 @@ function route() {
     destroyCurrentGame();
     destroyCurrentGame = null;
   }
+  if (location.hash === '#/scores') { renderScores(); return; }
   const match = location.hash.match(/^#\/game\/(.+)$/);
   if (match) renderGame(decodeURIComponent(match[1]));
   else renderHome();
@@ -186,30 +273,8 @@ function initDataDialog() {
   const dialog = document.getElementById('data-dialog');
   document.getElementById('data-btn').addEventListener('click', () => dialog.showModal());
 
-  document.getElementById('export-btn').addEventListener('click', () => {
-    const blob = new Blob([storage.exportJson()], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'minigames-backup.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
-
-  document.getElementById('import-file').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      storage.importJson(await file.text());
-      alert('Back-up geïmporteerd!');
-      location.reload();
-    } catch {
-      alert('Dit bestand is geen geldige back-up.');
-    }
-    e.target.value = '';
-  });
-
   document.getElementById('reset-btn').addEventListener('click', () => {
-    if (confirm('Weet je zeker dat je ALLE saves en highscores wilt wissen?')) {
+    if (confirm('Weet je zeker dat je ALLE saves en highscores op dit apparaat wilt wissen?')) {
       storage.resetAll();
       location.reload();
     }
@@ -308,6 +373,7 @@ function currentGame() {
   initDataDialog();
   initAccount();
   sync.initSync();
+  document.getElementById('scores-btn').addEventListener('click', () => { location.hash = '#/scores'; });
   route();
 })();
 

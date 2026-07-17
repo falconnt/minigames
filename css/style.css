@@ -222,6 +222,53 @@ body {
 .hs-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
 .hs-tabs .btn { flex: 1; padding: 0.35rem 0.5rem; font-size: 0.85rem; }
 
+/* ---------- highscore-overzicht ---------- */
+
+.scores-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+.scores-head h2 { margin: 0; }
+.scores-tabs { max-width: 20rem; }
+.scores-sub { color: var(--text-muted); margin: 0 0 1.1rem; }
+
+.scores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.score-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.score-card-head { display: flex; align-items: center; gap: 0.55rem; }
+.score-card-head .sc-icon { font-size: 1.6rem; line-height: 1; }
+.score-card-head h3 { margin: 0; font-size: 1.05rem; }
+.score-card-head .tag { margin-left: auto; }
+
+.champ {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(135deg, rgba(255, 200, 60, 0.22), rgba(255, 200, 60, 0.05));
+  border: 1px solid rgba(255, 200, 60, 0.55);
+}
+.champ-crown { font-size: 1.7rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2)); }
+.champ-name { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.champ-score { font-weight: 800; font-size: 1.2rem; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.rank-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
+.rank-list li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.rank-list .rk { width: 1.3rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.rank-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.rank-list .sc { font-weight: 600; font-variant-numeric: tabular-nums; }
+
 .acc-form { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem; }
 .acc-input {
   background: var(--bg-inset);

@@ -33,6 +33,7 @@
     <a class="app-title" href="#/">🎮 Minigames</a>
     <div class="header-actions">
       <button id="install-btn" class="btn btn-primary" hidden>Installeren</button>
+      <button id="scores-btn" class="icon-btn" title="Highscores" aria-label="Highscores">🏆</button>
       <button id="account-btn" class="icon-btn" title="Inloggen / account aanmaken" aria-label="Account" hidden>👤</button>
       <button id="theme-toggle" class="icon-btn" title="Wissel licht/donker thema" aria-label="Wissel thema">🌓</button>
       <button id="data-btn" class="icon-btn" title="Opslag &amp; gegevens" aria-label="Opslag en gegevens">⚙️</button>
@@ -46,13 +47,10 @@
   </footer>
 
   <dialog id="data-dialog">
-    <h2>Opslag &amp; gegevens</h2>
-    <p>Je voortgang en highscores worden lokaal in deze browser bewaard. Maak een back-up om ze mee te nemen naar een ander apparaat.</p>
+    <h2>Gegevens</h2>
+    <p>Je saves en highscores staan (versleuteld) op dit apparaat. Log in met een account om ze ook online te bewaren en op de ranglijst te komen.</p>
     <div class="dialog-actions">
-      <button id="export-btn" class="btn">⬇️ Exporteer back-up</button>
-      <label class="btn" for="import-file">⬆️ Importeer back-up</label>
-      <input type="file" id="import-file" accept="application/json" hidden>
-      <button id="reset-btn" class="btn btn-danger">🗑️ Wis alle gegevens</button>
+      <button id="reset-btn" class="btn btn-danger">Wis alle gegevens op dit apparaat</button>
     </div>
     <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>
   </dialog>

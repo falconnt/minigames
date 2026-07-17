@@ -58,25 +58,30 @@ Twee manieren:
   de inhoud van dat migratiebestand en klik **Run**. Dit maakt de tabel + de
   beveiliging (Row Level Security) aan.
 
-### 3. Vul de anon-sleutel in
-Ga naar **Project Settings → API**, kopieer de **anon public** sleutel (in
-nieuwere projecten heet die **publishable key**) en zet die in
-[`js/cloud-config.js`](../js/cloud-config.js):
+### 3. Zet de publishable key in een GitHub Actions-secret
+De sleutel staat bewust **niet** in de broncode. In plaats daarvan bewaren we hem
+in een repo-secret; de deploy-workflow schrijft hem tijdens het publiceren in
+`js/cloud-key.js`.
 
-```js
-export const CLOUD = {
-  url: 'https://sapaexufrcenzzevemxg.supabase.co', // al ingevuld
-  anonKey: 'JOUW_ANON_PUBLIC_KEY',                 // ← plak hier je sleutel
-  emailDomain: 'minigames.local',
-};
-```
+1. Kopieer in Supabase de **publishable key** (Project Settings → API; oudere
+   projecten noemen dit de "anon public" sleutel).
+2. Ga in GitHub naar **Settings → Secrets and variables → Actions → New
+   repository secret**.
+3. Naam: **`SUPABASE_ANON_KEY`** · Waarde: je publishable key. Opslaan.
+4. Start een nieuwe deploy (push naar `main`, of **Actions → Deploy naar GitHub
+   Pages → Run workflow**). De workflow injecteert de sleutel in de gepubliceerde
+   site.
 
-De sleutel is **publiek** en mag in de repo — de database is beveiligd met de
-Row Level Security-policies uit stap 2.
+> **Let op:** een publishable key is bedoeld om publiek te zijn en is op de
+> gepubliceerde site (in de JavaScript) zichtbaar — dat kan niet anders, de
+> browser heeft hem nodig. De secret houdt hem alleen uit je **git-broncode/
+> historie**. De database blijft beveiligd met de Row Level Security uit stap 2.
 
-Commit, push naar `main`, en klaar: op de site verschijnt rechtsboven de
-account-knop (👤). Maak een account aan, speel een potje, en zet de
-highscore-schakelaar op **Online**.
+Klaar: op de site verschijnt rechtsboven de account-knop (👤). Maak een account
+aan, speel een potje, en zet de highscore-schakelaar op **Online**.
+
+> Draai je lokaal (zonder de secret), dan blijft `js/cloud-key.js` leeg en staan
+> de online functies simpelweg uit — de app werkt dan met lokale highscores.
 
 ## Onderhoud
 

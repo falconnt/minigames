@@ -22,6 +22,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # Supabase publishable key uit de repo-secret in de build injecteren.
+      # De key hoort niet in de git-broncode; op de gepubliceerde site is hij
+      # (noodzakelijkerwijs) wel zichtbaar — dat is prima voor een publishable key.
+      - name: Injecteer Supabase publishable key
+        run: |
+          printf "export const RUNTIME_ANON_KEY = '%s';\n" "${SUPABASE_ANON_KEY}" > js/cloud-key.js
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

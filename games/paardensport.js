@@ -117,115 +117,312 @@ function injectStyles() {
 //  Canvas-tekenwerk
 // ============================================================
 
-// Paard in zijaanzicht. pose: 0 = staan, 'run' met legPhase, 'jump' met jumpT.
+// --- kleur- en uiterlijk-helpers ---
+
+function hexToRgb(h) {
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbToHex([r, g, b]) {
+  return '#' + [r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+}
+function mixHex(a, b, t) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  return rgbToHex([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]);
+}
+
+// Vachtkleur "vervuilen": doffer en richting modderbruin bij lage netheid.
+function muddyCoat(c, dirt) {
+  if (!dirt) return c;
+  const t = Math.min(0.45, dirt * 0.5);
+  const mud = '#5c4a33';
+  return {
+    body: mixHex(c.body, mud, t),
+    shade: mixHex(c.shade, mud, t),
+    light: mixHex(c.light, mud, t * 0.8),
+    mane: mixHex(c.mane, mud, t * 0.5),
+  };
+}
+
+// Silhouet-parameters per ras.
+function breedLook(breed) {
+  switch (breed) {
+    case 'shetland': return { legLen: 0.68, barrel: 1.12, neck: 0.82, head: 1.08, longMane: true, feather: true };
+    case 'fries': return { legLen: 1.0, barrel: 1.06, neck: 1.06, head: 1.0, longMane: true, feather: true };
+    case 'volbloed': return { legLen: 1.14, barrel: 0.9, neck: 1.06, head: 0.95, longMane: false, feather: false };
+    case 'holsteiner': return { legLen: 1.06, barrel: 1.0, neck: 1.0, head: 1.0, longMane: false, feather: false };
+    default: return { legLen: 1.0, barrel: 1.0, neck: 1.0, head: 1.0, longMane: false, feather: false };
+  }
+}
+
+// Witte aftekeningen (bles/ster op hoofd, sokken). socks: [voorNaby, voorVer, achterNaby, achterVer].
+function randomMarkings() {
+  const r = Math.random();
+  let socks = [false, false, false, false];
+  if (r < 0.18) socks = [true, true, true, true];
+  else if (r < 0.4) socks = [false, false, true, true];   // twee achter
+  else if (r < 0.52) socks = [true, false, false, false]; // één voor
+  const f = Math.random();
+  const face = f < 0.45 ? 'geen' : f < 0.72 ? 'ster' : 'bles';
+  return { face, socks };
+}
+
+// Paard in realistisch zijaanzicht (naar links kijkend). opts:
+//   legPhase (loopanimatie), jump (0..1 sprong-tuck), dirt (0..1),
+//   breed, markings {face, socks}, tack {zadel, hoofdstel}, flip.
 function drawHorse(g, cx, cy, scale, coat, opts = {}) {
-  const c = COATS[coat] || COATS.bruin;
-  const s = scale;
+  const base = COATS[coat] || COATS.bruin;
+  const c = muddyCoat(base, opts.dirt || 0);
+  const look = breedLook(opts.breed);
+  const markings = opts.markings || { face: 'geen', socks: [false, false, false, false] };
   const legPhase = opts.legPhase || 0;
+  const jump = opts.jump || 0;
+
   g.save();
   g.translate(cx, cy);
   if (opts.flip) g.scale(-1, 1);
-  g.scale(s, s);
+  g.scale(scale, scale);
 
-  // schaduw
+  const groundY = 46;
+  const lift = (look.legLen - 1) * 18 + jump * 22;      // langere benen / sprong tilt de romp op
+  const cyB = 4 - lift;                                  // verticaal midden van de romp
+  const bH = 22 * look.barrel;                           // halve barrel-hoogte
+  const nk = look.neck, hd = look.head;
+
+  // grondschaduw (kleiner tijdens sprong)
   g.save();
-  g.globalAlpha = 0.18;
+  g.globalAlpha = 0.2 - jump * 0.12;
   g.fillStyle = '#000';
   g.beginPath();
-  g.ellipse(4, 46, 52, 9, 0, 0, Math.PI * 2);
+  g.ellipse(6, groundY + 2, 50 - jump * 16, 9, 0, 0, Math.PI * 2);
   g.fill();
   g.restore();
 
-  const body = g.createLinearGradient(0, -20, 0, 30);
-  body.addColorStop(0, c.light);
-  body.addColorStop(0.55, c.body);
-  body.addColorStop(1, c.shade);
+  const bodyGrad = g.createLinearGradient(0, cyB - bH, 0, cyB + bH);
+  bodyGrad.addColorStop(0, c.light);
+  bodyGrad.addColorStop(0.5, c.body);
+  bodyGrad.addColorStop(1, c.shade);
 
-  // benen (voor en achter, met loop-/sprongfase)
-  const swing = Math.sin(legPhase) * 10;
-  const swing2 = Math.sin(legPhase + Math.PI) * 10;
-  g.strokeStyle = c.shade;
-  g.lineWidth = 7;
-  g.lineCap = 'round';
-  const legs = [
-    [-34, swing], [-28, swing2], [30, swing2], [36, swing],
-  ];
-  for (const [lx, sw] of legs) {
+  // --- één poot: bovenbeen -> knie/spron -> pijp -> hoef ---
+  function drawLeg(hipX, topY, phase, far, sock) {
+    const amp = jump ? 0 : 9;
+    const fwd = Math.sin(phase) * amp;                   // hoef zwaait voor/achter
+    const knee = jump ? -16 : 22 + Math.cos(phase) * 2;  // getrokken bij sprong
+    const footY = jump ? cyB + bH - 4 : groundY;
+    const kneeX = hipX + fwd * 0.35 + (jump ? 10 : 0);
+    const footX = hipX + fwd + (jump ? 22 : 0);
+    const main = far ? mixHex(c.body, c.shade, 0.5) : c.body;
+    const shade = far ? mixHex(c.shade, '#000', 0.15) : c.shade;
+    const wTop = far ? 6.5 : 7.5, wKnee = 5, wFoot = 4;
+
     g.beginPath();
-    g.moveTo(lx, 8);
-    g.lineTo(lx + sw * 0.4, 30);
-    g.lineTo(lx + sw, 44);
-    g.stroke();
+    g.moveTo(hipX - wTop, topY);
+    g.lineTo(hipX + wTop, topY);
+    g.lineTo(kneeX + wKnee, cyB + knee);
+    g.lineTo(footX + wFoot, footY - 5);
+    g.lineTo(footX - wFoot, footY - 5);
+    g.lineTo(kneeX - wKnee, cyB + knee);
+    g.closePath();
+    g.fillStyle = main;
+    g.fill();
+
+    // beharing (feather) onderaan bij o.a. Fries/Shetland
+    if (look.feather && !jump) {
+      g.fillStyle = mixHex(main, c.mane, 0.35);
+      g.beginPath();
+      g.moveTo(footX - wFoot - 2, footY - 12);
+      g.quadraticCurveTo(footX, footY - 2, footX + wFoot + 2, footY - 12);
+      g.lineTo(footX + wFoot, footY - 2);
+      g.lineTo(footX - wFoot, footY - 2);
+      g.closePath();
+      g.fill();
+    }
+    // sok (witte onderbeen-aftekening)
+    if (sock && coat !== 'schimmel') {
+      g.fillStyle = '#efeae2';
+      g.beginPath();
+      g.moveTo(footX - wFoot - 0.5, footY - 16);
+      g.lineTo(footX + wFoot + 0.5, footY - 16);
+      g.lineTo(footX + wFoot, footY - 4);
+      g.lineTo(footX - wFoot, footY - 4);
+      g.closePath();
+      g.fill();
+    }
+    // hoef
+    g.fillStyle = sock && coat !== 'schimmel' ? '#7c6f63' : '#2b2320';
+    g.beginPath();
+    g.moveTo(footX - wFoot - 0.5, footY - 5);
+    g.lineTo(footX + wFoot + 0.5, footY - 5);
+    g.lineTo(footX + wFoot, footY);
+    g.lineTo(footX - wFoot, footY);
+    g.closePath();
+    g.fill();
+    // knieschaduw
+    g.strokeStyle = shade; g.lineWidth = 1;
   }
 
-  // romp
-  g.fillStyle = body;
-  g.beginPath();
-  g.ellipse(0, 4, 46, 24, 0, 0, Math.PI * 2);
-  g.fill();
-  // borst/achterhand ronding
-  g.beginPath();
-  g.ellipse(34, 2, 20, 22, 0, 0, Math.PI * 2);
-  g.fill();
+  // verre benen eerst (donkerder, iets naar achteren)
+  drawLeg(-18, cyB + bH * 0.5, legPhase + Math.PI, true, markings.socks[1]);      // voor-ver
+  drawLeg(44, cyB + bH * 0.5, legPhase, true, markings.socks[3]);                 // achter-ver
 
-  // hals
+  // --- staart (deels achter de romp) ---
+  const tailBaseX = 60, tailBaseY = cyB - bH * 0.3;
+  g.fillStyle = c.mane;
   g.beginPath();
-  g.moveTo(-30, -8);
-  g.quadraticCurveTo(-52, -22, -58, -46);
-  g.lineTo(-44, -50);
-  g.quadraticCurveTo(-40, -26, -18, -12);
+  g.moveTo(tailBaseX - 4, tailBaseY);
+  g.quadraticCurveTo(tailBaseX + 20, tailBaseY + 6, tailBaseX + 16 + Math.sin(legPhase) * 2, tailBaseY + 44);
+  g.quadraticCurveTo(tailBaseX + 6, tailBaseY + 30, tailBaseX - 8, tailBaseY + 14);
   g.closePath();
   g.fill();
 
-  // hoofd
+  // --- romp (barrel) ---
+  g.fillStyle = bodyGrad;
   g.beginPath();
-  g.moveTo(-58, -46);
-  g.quadraticCurveTo(-66, -50, -70, -40);
-  g.quadraticCurveTo(-74, -30, -66, -26);
-  g.lineTo(-50, -30);
+  g.moveTo(-22, cyB - bH * 0.85);                         // schoft
+  g.bezierCurveTo(2, cyB - bH * 1.05, 30, cyB - bH * 1.02, 48, cyB - bH * 0.8); // rug
+  g.bezierCurveTo(60, cyB - bH * 0.62, 66, cyB - bH * 0.2, 64, cyB + bH * 0.25); // croupe/bil
+  g.bezierCurveTo(62, cyB + bH * 0.7, 48, cyB + bH, 30, cyB + bH * 1.02);        // achterbuik
+  g.bezierCurveTo(6, cyB + bH * 1.08, -18, cyB + bH * 1.02, -30, cyB + bH * 0.6); // buik
+  g.bezierCurveTo(-34, cyB + bH * 0.2, -34, cyB - bH * 0.35, -26, cyB - bH * 0.7); // borst/schouder
+  g.closePath();
+  g.fill();
+
+  // spierschaduw achterhand + schouder
+  g.save();
+  g.globalAlpha = 0.16;
+  g.fillStyle = base.shade;
+  g.beginPath(); g.ellipse(46, cyB + bH * 0.15, 16, bH * 0.8, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.ellipse(-18, cyB + bH * 0.15, 12, bH * 0.7, 0, 0, Math.PI * 2); g.fill();
+  g.restore();
+
+  // --- hals + hoofd als één silhouet ---
+  const pollX = -58 * nk * 0.5 - 30, pollY = cyB - bH - 30 * nk;
+  g.fillStyle = bodyGrad;
+  g.beginPath();
+  g.moveTo(-24, cyB - bH * 0.78);                         // schoft/halsbasis achter
+  g.quadraticCurveTo(pollX + 22, cyB - bH - 8 * nk, pollX + 6, pollY + 2); // kam naar nek
+  g.lineTo(pollX - 4, pollY + 4);                         // over het genick
+  g.quadraticCurveTo(pollX - 20 * hd, pollY + 12 * hd, pollX - 22 * hd, pollY + 30 * hd); // voorhoofd->neus
+  g.quadraticCurveTo(pollX - 22 * hd, pollY + 40 * hd, pollX - 12 * hd, pollY + 40 * hd); // neus onder
+  g.quadraticCurveTo(pollX - 2, pollY + 40 * hd, pollX + 4, pollY + 30);   // kaak
+  g.quadraticCurveTo(pollX + 14, cyB - bH - 6 * nk, -28, cyB - bH * 0.1);  // keel naar borst
+  g.quadraticCurveTo(-24, cyB - bH * 0.4, -24, cyB - bH * 0.78);
+  g.closePath();
+  g.fill();
+
+  // --- manen langs de kam ---
+  g.fillStyle = c.mane;
+  const maneDrop = look.longMane ? 20 : 10;
+  g.beginPath();
+  g.moveTo(-24, cyB - bH * 0.82);
+  g.quadraticCurveTo(pollX + 22, cyB - bH - 8 * nk, pollX + 4, pollY + 2);
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    const mx = pollX + 4 + t * (-24 - (pollX + 4));
+    const my = (pollY + 2) + t * ((cyB - bH * 0.82) - (pollY + 2));
+    g.lineTo(mx + 4, my + maneDrop * (0.6 + 0.4 * Math.sin(t * 6)));
+  }
+  g.closePath();
+  g.fill();
+
+  // voorlok tussen de oren
+  g.beginPath();
+  g.moveTo(pollX - 2, pollY + 2);
+  g.quadraticCurveTo(pollX - 12, pollY + 6, pollX - 14 * hd, pollY + 16);
+  g.lineTo(pollX - 6, pollY + 8);
   g.closePath();
   g.fill();
 
   // oor
+  g.fillStyle = mixHex(c.body, c.shade, 0.3);
   g.beginPath();
-  g.moveTo(-50, -50);
-  g.lineTo(-46, -60);
-  g.lineTo(-42, -49);
+  g.moveTo(pollX + 2, pollY + 2);
+  g.lineTo(pollX - 2, pollY - 12);
+  g.lineTo(pollX - 10, pollY + 2);
   g.closePath();
   g.fill();
 
-  // manen
-  g.fillStyle = c.mane;
-  g.beginPath();
-  g.moveTo(-46, -50);
-  g.quadraticCurveTo(-30, -30, -18, -12);
-  g.lineTo(-26, -8);
-  g.quadraticCurveTo(-40, -28, -52, -46);
-  g.closePath();
-  g.fill();
-
-  // staart
-  g.beginPath();
-  g.moveTo(44, -10);
-  g.quadraticCurveTo(66, -6, 60, 34);
-  g.quadraticCurveTo(52, 20, 44, 8);
-  g.closePath();
-  g.fill();
-
-  // oog
-  g.fillStyle = '#1a1416';
-  g.beginPath();
-  g.arc(-60, -38, 2.4, 0, Math.PI * 2);
-  g.fill();
-
-  // vuil (bij lage netheid)
-  if (opts.dirt > 0) {
-    g.save();
-    g.globalAlpha = Math.min(0.5, opts.dirt);
-    g.fillStyle = '#5a4326';
-    for (let i = 0; i < 6; i++) {
+  // gezichtsaftekening (ster/bles)
+  if (markings.face !== 'geen' && coat !== 'schimmel') {
+    g.fillStyle = '#efeae2';
+    if (markings.face === 'bles') {
       g.beginPath();
-      g.arc(-20 + i * 12, 8 + (i % 2) * 8, 4, 0, Math.PI * 2);
+      g.moveTo(pollX - 12 * hd, pollY + 8);
+      g.quadraticCurveTo(pollX - 20 * hd, pollY + 22 * hd, pollX - 16 * hd, pollY + 36 * hd);
+      g.lineTo(pollX - 11 * hd, pollY + 36 * hd);
+      g.quadraticCurveTo(pollX - 13 * hd, pollY + 22 * hd, pollX - 8 * hd, pollY + 8);
+      g.closePath();
+      g.fill();
+    } else {
+      g.beginPath();
+      g.ellipse(pollX - 15 * hd, pollY + 9, 3, 4.2, 0.2, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  // oog + neusgat + mondlijn
+  g.fillStyle = '#15100f';
+  g.beginPath(); g.ellipse(pollX - 6 * hd, pollY + 16 * hd, 2.6, 3.2, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.7)';
+  g.beginPath(); g.arc(pollX - 6.8 * hd, pollY + 14.5 * hd, 0.9, 0, Math.PI * 2); g.fill();
+  g.fillStyle = mixHex(c.shade, '#000', 0.3);
+  g.beginPath(); g.ellipse(pollX - 18 * hd, pollY + 34 * hd, 2, 1.4, 0, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = mixHex(c.shade, '#000', 0.2); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(pollX - 20 * hd, pollY + 38 * hd); g.lineTo(pollX - 12 * hd, pollY + 39 * hd); g.stroke();
+
+  // --- tuig (zadel + hoofdstel) ---
+  if (opts.tack) {
+    const tier = (opts.tack.zadel || 0);
+    const padColor = tier >= 2 ? '#26406e' : tier === 1 ? '#3a2f26' : '#4a3527';
+    // zadeldekje
+    g.fillStyle = padColor;
+    g.beginPath();
+    g.moveTo(-14, cyB - bH * 0.85);
+    g.lineTo(24, cyB - bH * 0.85);
+    g.lineTo(22, cyB - bH * 0.2);
+    g.lineTo(-12, cyB - bH * 0.2);
+    g.closePath();
+    g.fill();
+    if (tier >= 2) { g.strokeStyle = '#d9b25a'; g.lineWidth = 1.5; g.stroke(); }
+    // zadel (leren zit met pommel/cantle)
+    g.fillStyle = '#3c2415';
+    g.beginPath();
+    g.moveTo(-10, cyB - bH * 0.9);
+    g.quadraticCurveTo(6, cyB - bH * 1.02, 20, cyB - bH * 0.9);
+    g.quadraticCurveTo(16, cyB - bH * 0.66, 4, cyB - bH * 0.62);
+    g.quadraticCurveTo(-8, cyB - bH * 0.66, -12, cyB - bH * 0.78);
+    g.closePath();
+    g.fill();
+    // singel + stijgbeugel
+    g.strokeStyle = '#2b1a0f'; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(2, cyB - bH * 0.6); g.lineTo(0, cyB + bH * 0.5); g.stroke();
+    g.fillStyle = '#c9ccd4';
+    g.beginPath(); g.rect(-3, cyB + bH * 0.5, 6, 7); g.fill();
+    // hoofdstel + teugel
+    g.strokeStyle = '#2b1a0f'; g.lineWidth = 1.6;
+    g.beginPath();
+    g.moveTo(pollX - 4, pollY + 6); g.lineTo(pollX - 20 * hd, pollY + 30 * hd);   // neusriem-lijn
+    g.moveTo(pollX - 16 * hd, pollY + 30 * hd); g.lineTo(pollX - 6, pollY + 30 * hd);
+    g.stroke();
+    g.beginPath();                                                                 // teugel naar schoft
+    g.moveTo(pollX + 2, pollY + 24); g.quadraticCurveTo(-30, cyB - bH * 0.7, -12, cyB - bH * 0.85);
+    g.stroke();
+  }
+
+  // nabije benen (bovenop de romp)
+  drawLeg(-24, cyB + bH * 0.55, legPhase, false, markings.socks[0]);              // voor-naby
+  drawLeg(40, cyB + bH * 0.55, legPhase + Math.PI, false, markings.socks[2]);     // achter-naby
+
+  // --- modder bij lage netheid: onregelmatige vegen laag op benen/buik ---
+  if (opts.dirt > 0.15) {
+    g.save();
+    g.fillStyle = '#4b3a24';
+    const spots = [[-24, cyB + bH * 0.9], [-6, cyB + bH * 1.0], [16, cyB + bH * 0.95], [40, cyB + bH * 0.85], [-22, groundY - 10], [42, groundY - 10]];
+    for (const [sx, sy] of spots) {
+      g.globalAlpha = Math.min(0.55, opts.dirt) * (0.6 + Math.random() * 0.4);
+      g.beginPath();
+      const w = 6 + Math.random() * 5, h = 3 + Math.random() * 3;
+      g.ellipse(sx + (Math.random() - 0.5) * 4, sy, w, h, Math.random(), 0, Math.PI * 2);
       g.fill();
     }
     g.restore();
@@ -373,6 +570,10 @@ export function init(root, ctx) {
   let save = ctx.load() || defaultSave();
   // veiligheidsnet voor oude/incomplete saves
   save = Object.assign(defaultSave(), save);
+  for (const h of save.horses) {
+    if (!h.markings) h.markings = randomMarkings();
+    if (!h.tack) h.tack = { zadel: 0, hoofdstel: 0 };
+  }
 
   let screen = save.onboarded ? 'erf' : 'onboarding';
   let raf = null;
@@ -450,16 +651,20 @@ export function init(root, ctx) {
   }
 
   // Tekent een paardportret op een canvas-element (met lucht + grond).
-  function paintPortrait(canvas, horse, pose) {
+  function paintPortrait(canvas, horse, opts = {}) {
     const g = canvas.getContext('2d');
     const w = canvas.width, hgt = canvas.height;
     skyGradient(g, w, hgt, save.night);
     // grond
     g.fillStyle = save.night ? '#3a5540' : '#7aa451';
     g.fillRect(0, hgt * 0.7, w, hgt * 0.3);
-    const dirt = 1 - horse.cleanliness / 100;
+    const dirt = horse.cleanliness == null ? 0 : 1 - horse.cleanliness / 100;
     drawHorse(g, w / 2, hgt * 0.66, (BREEDS[horse.breed].size || 1) * (w / 320), horse.coat, {
-      dirt, legPhase: pose === 'run' ? performance.now() / 90 : 0,
+      dirt,
+      breed: horse.breed,
+      markings: horse.markings,
+      tack: opts.tack ? horse.tack : null,
+      legPhase: opts.pose === 'run' ? performance.now() / 90 : 0,
     });
   }
 
@@ -529,6 +734,7 @@ export function init(root, ctx) {
       cleanliness: 90, energy: 100, hunger: 90, happiness: 90,
       level: 1, xp: 0,
       tack: { zadel: 0, hoofdstel: 0 },
+      markings: randomMarkings(),
     };
   }
 
@@ -612,7 +818,7 @@ export function init(root, ctx) {
 
     save.horses.forEach((h) => {
       const cv = app.querySelector(`[data-portrait="${h.id}"]`);
-      if (cv) paintPortrait(cv, h);
+      if (cv) paintPortrait(cv, h, { tack: true });
     });
     app.querySelectorAll('[data-activate]').forEach((b) =>
       on(b, 'click', () => { save.activeId = b.dataset.activate; persist(); render(); }));
@@ -903,6 +1109,8 @@ export function init(root, ctx) {
       }
       drawHorse(g, 150, ground - 6 + horseY, 0.9, h.coat, {
         legPhase: performance.now() / 70, dirt: 1 - h.cleanliness / 100,
+        breed: h.breed, markings: h.markings, tack: h.tack,
+        jump: Math.min(1, Math.max(0, -horseY / 16)),
       });
       if (save.night) { g.fillStyle = 'rgba(20,30,70,.28)'; g.fillRect(0, 0, W, H); }
       g.fillStyle = save.night ? '#fff' : '#1a1a1a';
@@ -1008,7 +1216,7 @@ export function init(root, ctx) {
       g.fillStyle = '#c0392b';
       g.fillRect(marker - 2, 30, 4, H - 70);
       // paard + oefening
-      drawHorse(g, W * 0.18, H * 0.7, 0.7, h.coat, { legPhase: performance.now() / 120, dirt: 1 - h.cleanliness / 100 });
+      drawHorse(g, W * 0.18, H * 0.7, 0.7, h.coat, { legPhase: performance.now() / 120, dirt: 1 - h.cleanliness / 100, breed: h.breed, markings: h.markings, tack: h.tack });
       g.fillStyle = save.night ? '#fff' : '#1a1a1a';
       g.font = '700 18px system-ui';
       g.fillText(`Oefening ${Math.min(idx + 1, 8)}/8: ${moves[idx % moves.length]}`, 16, 26);
@@ -1040,10 +1248,12 @@ export function init(root, ctx) {
     const lanes = 4;
     const runners = [];
     // speler
-    runners.push({ player: true, name: h.name, coat: h.coat, dist: 0, v: 0,
-      maxV: 2.2 + (h.speed / 100) * 2.4 + tack / 60, stam: h.stamina, energy: 100 });
+    runners.push({ player: true, name: h.name, coat: h.coat, breed: h.breed, markings: h.markings, tack: h.tack,
+      dist: 0, v: 0, maxV: 2.2 + (h.speed / 100) * 2.4 + tack / 60, stam: h.stamina, energy: 100 });
+    const rivalBreeds = ['volbloed', 'kwpn', 'holsteiner'];
     for (let i = 0; i < lanes - 1; i++) {
       runners.push({ player: false, name: 'Tegenstander', coat: pick(['bruin', 'vos', 'zwart', 'schimmel']),
+        breed: rivalBreeds[i % rivalBreeds.length], markings: randomMarkings(),
         dist: 0, v: 0, maxV: 3.0 + rand(-0.3, 0.5), stam: rand(50, 80), energy: 100, ai: rand(0.6, 0.85) });
     }
     let holding = false, finished = false, startT = performance.now();
@@ -1082,7 +1292,7 @@ export function init(root, ctx) {
       runners.forEach((r, i) => {
         const x = 90 + (r.dist - camera);
         const y = 40 + i * ((H - 60) / lanes) + ((H - 60) / lanes) / 2 + 6;
-        drawHorse(g, x, y, 0.52, r.coat, { legPhase: performance.now() / 60 + i, dirt: r.player ? 1 - h.cleanliness / 100 : 0 });
+        drawHorse(g, x, y, 0.52, r.coat, { legPhase: performance.now() / 60 + i, dirt: r.player ? 1 - h.cleanliness / 100 : 0, breed: r.breed, markings: r.markings, tack: r.tack });
         if (r.player) {
           g.fillStyle = save.night ? '#ffe27a' : '#1a3a6a';
           g.font = '700 12px system-ui';

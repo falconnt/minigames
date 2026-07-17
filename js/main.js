@@ -315,9 +315,20 @@ function currentGame() {
 // en offline te laten werken. Relatief pad, dus werkt ook onder /minigames/.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {
-      /* registratie mislukt (bijv. geen HTTPS); app werkt gewoon door */
-    });
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      reg.update();
+      // Zodra een nieuwe versie klaarstaat én er al een actieve versie was,
+      // de pagina één keer herladen zodat de update meteen toegepast wordt.
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(() => { /* registratie mislukt (bijv. geen HTTPS); app werkt door */ });
   });
 }
 

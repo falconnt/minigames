@@ -1,7 +1,7 @@
 // Service worker: maakt de app installeerbaar (PWA) en offline bruikbaar.
 // Verhoog CACHE bij elke release zodat oude bestanden worden opgeruimd.
 
-const CACHE = 'minigames-v4';
+const CACHE = 'minigames-v5';
 
 // Kern van de app-shell; relatieve paden werken zowel lokaal (/) als op
 // GitHub Pages (/minigames/). Games worden runtime gecachet bij eerste gebruik.

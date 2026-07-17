@@ -308,28 +308,47 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 /* ---------- 2048 ---------- */
 
 .g2048-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(3.8rem, 5.5rem));
-  gap: 0.5rem;
-  justify-content: center;
+  position: relative;
+  width: 100%;
+  max-width: 22rem;
+  margin: 0 auto;
   background: var(--bg-inset);
   border-radius: 0.75rem;
-  padding: 0.5rem;
   touch-action: none;
   user-select: none;
 }
 
-.g2048-cell {
-  aspect-ratio: 1;
+#g2048-bg, #g2048-tiles { position: absolute; inset: 0; }
+
+.g2048-cell-bg {
+  position: absolute;
+  border-radius: 0.5rem;
+  background: var(--bg-card);
+}
+
+.g2048-tile {
+  position: absolute;
   display: flex;
   justify-content: center;
   align-items: center;
   border-radius: 0.5rem;
   font-weight: 700;
-  font-size: 1.3rem;
-  background: var(--bg-card);
   color: var(--text);
   font-variant-numeric: tabular-nums;
+  transition: left 0.12s ease, top 0.12s ease;
+  will-change: left, top;
+}
+/* Tijdens (her)opmaak geen schuifanimatie, bv. bij resize. */
+.g2048-nt .g2048-tile { transition: none; }
+
+.g2048-appear { animation: g2048-appear 0.16s ease; }
+.g2048-pop { animation: g2048-pop 0.18s ease; }
+@keyframes g2048-appear { 0% { transform: scale(0.1); opacity: 0.2; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes g2048-pop { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .g2048-tile { transition: none; }
+  .g2048-appear, .g2048-pop { animation: none; }
 }
 
 .t2 { background: #eee4da; color: #776e65; }

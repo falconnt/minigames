@@ -14,14 +14,14 @@ create table if not exists public.scores (
 alter table public.scores enable row level security;
 
 -- Iedereen mag de ranglijst lezen.
-drop policy if exists "scores_select_all" on public.scores;
-create policy "scores_select_all"
+drop policy if exists scores_select_all on public.scores;
+create policy scores_select_all
   on public.scores for select
   using (true);
 
 -- Alleen de ingelogde gebruiker mag zijn eigen score toevoegen.
-drop policy if exists "scores_insert_own" on public.scores;
-create policy "scores_insert_own"
+drop policy if exists scores_insert_own on public.scores;
+create policy scores_insert_own
   on public.scores for insert
   with check (auth.uid() = user_id);
 

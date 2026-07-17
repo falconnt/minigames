@@ -6,6 +6,17 @@
   <title>Minigames</title>
   <meta name="description" content="Een verzameling minigames met highscores, gebouwd voor GitHub Pages.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+  <!-- PWA: installeerbaar via Chrome op Android -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Minigames">
+  <meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+
   <link rel="stylesheet" href="css/style.css">
   <script>
     // Thema direct toepassen vóór de eerste render om een flits te voorkomen.
@@ -19,6 +30,7 @@
   <header class="app-header">
     <a class="app-title" href="#/">🎮 Minigames</a>
     <div class="header-actions">
+      <button id="install-btn" class="btn btn-primary" hidden>Installeren</button>
       <button id="theme-toggle" class="icon-btn" title="Wissel licht/donker thema" aria-label="Wissel thema">🌓</button>
       <button id="data-btn" class="icon-btn" title="Opslag &amp; gegevens" aria-label="Opslag en gegevens">⚙️</button>
     </div>

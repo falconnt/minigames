@@ -169,3 +169,40 @@ function initDataDialog() {
 initTheme(document.getElementById('theme-toggle'));
 initDataDialog();
 route();
+
+// Service worker registreren: nodig om de app installeerbaar te maken (PWA)
+// en offline te laten werken. Relatief pad, dus werkt ook onder /minigames/.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      /* registratie mislukt (bijv. geen HTTPS); app werkt gewoon door */
+    });
+  });
+}
+
+// Eigen installatieknop: verschijnt zodra Chrome installeren aanbiedt, zodat
+// de gebruiker niet in het browsermenu hoeft te zoeken.
+(function initInstallPrompt() {
+  const btn = document.getElementById('install-btn');
+  if (!btn) return;
+  let deferred = null;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferred = e;
+    btn.hidden = false;
+  });
+
+  btn.addEventListener('click', async () => {
+    if (!deferred) return;
+    btn.hidden = true;
+    deferred.prompt();
+    await deferred.userChoice;
+    deferred = null;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferred = null;
+    btn.hidden = true;
+  });
+})();

@@ -12,3 +12,8 @@ scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
 
 > Voeg je een nieuwe game toe (zie de [hoofd-README](../README.md#een-nieuwe-game-toevoegen)),
 > maak dan ook een `docs/<id>.md` en zet hem in deze tabel.
+
+## Framework
+
+- [online-highscores.md](online-highscores.md) — optionele online accounts en
+  ranglijst per game koppelen via een gratis Supabase-project.

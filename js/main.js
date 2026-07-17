@@ -4,10 +4,13 @@
 import { storage } from './storage.js';
 import { initTheme } from './theme.js';
 import { games, categories, getGame, getCategory } from './registry.js';
+import { cloudEnabled } from './cloud-config.js';
+import * as cloud from './cloud.js';
 
 const view = document.getElementById('view');
 let destroyCurrentGame = null;
 let activeCategory = 'alles';
+let hsView = 'local'; // 'local' of 'online' — welke highscore-lijst getoond wordt
 
 // ---------- startscherm ----------
 
@@ -59,19 +62,61 @@ function renderHome() {
 function renderHighscores(game) {
   const box = document.getElementById('highscores');
   if (!box) return;
-  const scores = storage.getHighscores(game.id);
-  box.innerHTML = `
-    <h3>🏆 Highscores</h3>
-    ${
-      scores.length
-        ? `<ol class="score-list">${scores
-            .map(
-              (s) => `<li><span>${game.formatScore(s.score)}</span>
-                <span class="score-date">${new Date(s.date).toLocaleDateString('nl-NL')}</span></li>`
-            )
-            .join('')}</ol>`
-        : '<p class="empty">Nog geen scores — speel een potje!</p>'
-    }`;
+
+  // Tabbladen alleen tonen als online opslag is geconfigureerd.
+  const tabs = cloudEnabled()
+    ? `<div class="hs-tabs">
+        <button class="btn ${hsView === 'local' ? 'btn-primary' : ''}" data-hs="local">Dit apparaat</button>
+        <button class="btn ${hsView === 'online' ? 'btn-primary' : ''}" data-hs="online">Online</button>
+      </div>`
+    : '';
+
+  const localList = () => {
+    const scores = storage.getHighscores(game.id);
+    return scores.length
+      ? `<ol class="score-list">${scores
+          .map(
+            (s) => `<li><span>${game.formatScore(s.score)}</span>
+              <span class="score-date">${new Date(s.date).toLocaleDateString('nl-NL')}</span></li>`
+          )
+          .join('')}</ol>`
+      : '<p class="empty">Nog geen scores — speel een potje!</p>';
+  };
+
+  box.innerHTML = `<h3>🏆 Highscores</h3>${tabs}<div id="hs-body">${
+    hsView === 'online' ? '<p class="empty">Laden…</p>' : localList()
+  }</div>`;
+
+  box.querySelectorAll('[data-hs]').forEach((btn) =>
+    btn.addEventListener('click', () => { hsView = btn.dataset.hs; renderHighscores(game); })
+  );
+
+  if (hsView === 'online') {
+    const bodyEl = box.querySelector('#hs-body');
+    cloud
+      .getLeaderboard(game.id, game.scoreMode)
+      .then((rows) => {
+        if (!document.getElementById('hs-body')) return; // scherm verlaten
+        bodyEl.innerHTML = rows.length
+          ? `<ol class="score-list">${rows
+              .map(
+                (r) => `<li><span class="hs-name">${escapeHtml(r.username)}</span>
+                  <span>${game.formatScore(r.score)}</span></li>`
+              )
+              .join('')}</ol>`
+          : '<p class="empty">Nog geen online scores. Wees de eerste!</p>';
+      })
+      .catch(() => {
+        if (document.getElementById('hs-body')) {
+          bodyEl.innerHTML = '<p class="empty">Online ranglijst niet beschikbaar.</p>';
+        }
+      });
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 async function renderGame(id) {
@@ -103,6 +148,13 @@ async function renderGame(id) {
     submitScore(score) {
       const result = storage.submitScore(game.id, score, game.scoreMode);
       renderHighscores(game);
+      // Ook online opslaan als je bent ingelogd (stil op de achtergrond).
+      if (cloudEnabled() && cloud.isLoggedIn()) {
+        cloud
+          .submitScore(game.id, score)
+          .then(() => { if (hsView === 'online') renderHighscores(game); })
+          .catch(() => { /* offline of fout — lokale score is al bewaard */ });
+      }
       return result;
     },
   };
@@ -166,8 +218,91 @@ function initDataDialog() {
   });
 }
 
+// ---------- account (online in-/uitloggen) ----------
+
+function initAccount() {
+  const btn = document.getElementById('account-btn');
+  const dialog = document.getElementById('account-dialog');
+  if (!btn || !dialog) return;
+
+  // Zonder cloud-config bestaan er geen accounts: knop verbergen.
+  if (!cloudEnabled()) { btn.hidden = true; return; }
+  btn.hidden = false;
+
+  function refreshButton() {
+    const user = cloud.currentUser();
+    btn.textContent = user ? `👤 ${user.username}` : '👤';
+    btn.title = user ? `Ingelogd als ${user.username}` : 'Inloggen / account aanmaken';
+  }
+
+  function renderDialog(message = '') {
+    const user = cloud.currentUser();
+    if (user) {
+      dialog.innerHTML = `
+        <h2>Account</h2>
+        <p>Je bent ingelogd als <b>${escapeHtml(user.username)}</b>. Je highscores
+           worden nu ook online opgeslagen en verschijnen in de online ranglijst.</p>
+        <div class="dialog-actions">
+          <button class="btn btn-danger" id="acc-logout">Uitloggen</button>
+        </div>
+        <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>`;
+      dialog.querySelector('#acc-logout').addEventListener('click', async () => {
+        await cloud.signOut();
+        refreshButton();
+        renderDialog('Je bent uitgelogd.');
+        if (hsView === 'online') { const g = currentGame(); if (g) renderHighscores(g); }
+      });
+    } else {
+      dialog.innerHTML = `
+        <h2>Inloggen</h2>
+        <p>Maak een account met alleen een gebruikersnaam en wachtwoord — geen
+           e-mail nodig. Nog geen account? Vul iets in en kies "Account aanmaken".</p>
+        <div class="acc-form">
+          <input id="acc-user" class="acc-input" placeholder="Gebruikersnaam" autocomplete="username">
+          <input id="acc-pass" class="acc-input" type="password" placeholder="Wachtwoord" autocomplete="current-password">
+          <div class="acc-msg">${escapeHtml(message)}</div>
+          <div class="dialog-actions">
+            <button class="btn btn-primary" id="acc-login">Inloggen</button>
+            <button class="btn" id="acc-signup">Account aanmaken</button>
+          </div>
+        </div>
+        <form method="dialog"><button class="btn">Sluiten</button></form>`;
+
+      const userEl = dialog.querySelector('#acc-user');
+      const passEl = dialog.querySelector('#acc-pass');
+      const msgEl = dialog.querySelector('.acc-msg');
+
+      const run = async (fn) => {
+        msgEl.textContent = 'Bezig…';
+        try {
+          await fn(userEl.value, passEl.value);
+          refreshButton();
+          dialog.close();
+          const g = currentGame();
+          if (g) { hsView = 'online'; renderHighscores(g); }
+        } catch (err) {
+          msgEl.textContent = err.message || 'Er ging iets mis.';
+        }
+      };
+      dialog.querySelector('#acc-login').addEventListener('click', () => run(cloud.signIn));
+      dialog.querySelector('#acc-signup').addEventListener('click', () => run(cloud.signUp));
+    }
+  }
+
+  btn.addEventListener('click', () => { renderDialog(); dialog.showModal(); });
+  refreshButton();
+}
+
+// Actieve game (of null) op basis van de huidige route — voor het verversen
+// van de highscore-lijst na in-/uitloggen.
+function currentGame() {
+  const m = location.hash.match(/^#\/game\/(.+)$/);
+  return m ? getGame(decodeURIComponent(m[1])) : null;
+}
+
 initTheme(document.getElementById('theme-toggle'));
 initDataDialog();
+initAccount();
 route();
 
 // Service worker registreren: nodig om de app installeerbaar te maken (PWA)

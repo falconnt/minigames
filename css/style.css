@@ -214,9 +214,26 @@ body {
 .highscores h3 { margin-top: 0; }
 
 .score-list { margin: 0; padding-left: 1.4rem; }
-.score-list li { display: flex; justify-content: space-between; padding: 0.15rem 0; }
+.score-list li { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.15rem 0; }
 .score-list li:first-child { font-weight: 700; color: var(--accent); }
 .score-date { color: var(--text-muted); font-size: 0.82rem; }
+.hs-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.hs-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
+.hs-tabs .btn { flex: 1; padding: 0.35rem 0.5rem; font-size: 0.85rem; }
+
+.acc-form { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem; }
+.acc-input {
+  background: var(--bg-inset);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  font-family: inherit;
+}
+.acc-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.acc-msg { min-height: 1.2rem; color: var(--accent); font-weight: 600; font-size: 0.9rem; }
 
 /* ---------- dialoog ---------- */
 

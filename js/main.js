@@ -2,7 +2,7 @@
 // highscores, en de opslag/back-updialoog.
 
 import { storage } from './storage.js';
-import { initTheme } from './theme.js';
+import { getTheme, setTheme } from './theme.js';
 import { games, categories, getGame, getCategory } from './registry.js';
 import { cloudEnabled } from './cloud-config.js';
 import * as cloud from './cloud.js';
@@ -271,9 +271,32 @@ window.addEventListener('hashchange', route);
 
 function initDataDialog() {
   const dialog = document.getElementById('data-dialog');
-  document.getElementById('data-btn').addEventListener('click', () => dialog.showModal());
+  document.getElementById('data-btn').addEventListener('click', () => { renderSettings(); dialog.showModal(); });
+}
 
-  document.getElementById('reset-btn').addEventListener('click', () => {
+function renderSettings() {
+  const dialog = document.getElementById('data-dialog');
+  const theme = getTheme();
+  const opt = (val, label) =>
+    `<button class="btn ${theme === val ? 'btn-primary' : ''}" data-theme="${val}">${label}</button>`;
+  dialog.innerHTML = `
+    <h2>Instellingen</h2>
+    <div class="settings-row">
+      <span class="settings-label">Thema</span>
+      <div class="hs-tabs theme-tabs">
+        ${opt('system', 'Systeem')}${opt('light', 'Licht')}${opt('dark', 'Donker')}
+      </div>
+    </div>
+    <p class="muted-line">Je saves en highscores staan versleuteld op dit apparaat. Log in met een account om ze ook online te bewaren.</p>
+    <div class="dialog-actions">
+      <button id="reset-btn" class="btn btn-danger">Wis alle gegevens op dit apparaat</button>
+    </div>
+    <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>`;
+
+  dialog.querySelectorAll('[data-theme]').forEach((b) =>
+    b.addEventListener('click', () => { setTheme(b.dataset.theme); renderSettings(); })
+  );
+  dialog.querySelector('#reset-btn').addEventListener('click', () => {
     if (confirm('Weet je zeker dat je ALLE saves en highscores op dit apparaat wilt wissen?')) {
       storage.resetAll();
       location.reload();
@@ -294,7 +317,8 @@ function initAccount() {
 
   function refreshButton() {
     const user = cloud.currentUser();
-    btn.textContent = user ? `👤 ${user.username}` : '👤';
+    btn.textContent = '👤';
+    btn.classList.toggle('logged-in', !!user);
     btn.title = user ? `Ingelogd als ${user.username}` : 'Inloggen / account aanmaken';
   }
 
@@ -439,7 +463,6 @@ function initSyncStatus() {
 // Opslag eerst laden/ontsleutelen (en oude opslag migreren), daarna renderen.
 (async () => {
   await storage.init();
-  initTheme(document.getElementById('theme-toggle'));
   initDataDialog();
   initAccount();
   initSyncStatus();

@@ -36,8 +36,7 @@
       <button id="sync-status" class="sync-chip" title="Synchronisatiestatus" hidden></button>
       <button id="scores-btn" class="icon-btn" title="Highscores" aria-label="Highscores">🏆</button>
       <button id="account-btn" class="icon-btn" title="Inloggen / account aanmaken" aria-label="Account" hidden>👤</button>
-      <button id="theme-toggle" class="icon-btn" title="Wissel licht/donker thema" aria-label="Wissel thema">🌓</button>
-      <button id="data-btn" class="icon-btn" title="Opslag &amp; gegevens" aria-label="Opslag en gegevens">⚙️</button>
+      <button id="data-btn" class="icon-btn" title="Instellingen" aria-label="Instellingen">⚙️</button>
     </div>
   </header>
 
@@ -47,14 +46,7 @@
     Gehost op GitHub Pages · saves &amp; highscores staan lokaal in je browser
   </footer>
 
-  <dialog id="data-dialog">
-    <h2>Gegevens</h2>
-    <p>Je saves en highscores staan (versleuteld) op dit apparaat. Log in met een account om ze ook online te bewaren en op de ranglijst te komen.</p>
-    <div class="dialog-actions">
-      <button id="reset-btn" class="btn btn-danger">Wis alle gegevens op dit apparaat</button>
-    </div>
-    <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>
-  </dialog>
+  <dialog id="data-dialog"></dialog>
 
   <dialog id="account-dialog"></dialog>
   <dialog id="sync-dialog"></dialog>

@@ -5,6 +5,7 @@ scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
 
 | Game | Categorie | Documentatie |
 | --- | --- | --- |
+| 🐦 Vogel Vlucht | Arcade | [vogelvlucht.md](vogelvlucht.md) |
 | 🔢 2048 | Puzzel | [2048.md](2048.md) |
 | ⚡ Reactietest | Reflex | [reactietest.md](reactietest.md) |
 | 🏇 Paardensport | Simulatie | [paardensport.md](paardensport.md) |

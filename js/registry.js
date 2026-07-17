@@ -2,12 +2,23 @@
 // plus één module in games/ (zie README.md).
 
 export const categories = [
+  { id: 'arcade', name: 'Arcade', icon: '🕹️' },
   { id: 'puzzel', name: 'Puzzel', icon: '🧩' },
   { id: 'reflex', name: 'Reflex', icon: '⚡' },
   { id: 'simulatie', name: 'Simulatie', icon: '🏇' },
 ];
 
 export const games = [
+  {
+    id: 'vogelvlucht',
+    title: 'Vogel Vlucht',
+    icon: '🐦',
+    category: 'arcade',
+    description: 'Tik of druk op spatie om te fladderen en vlieg zo ver mogelijk tussen de buizen door.',
+    scoreMode: 'higher',
+    formatScore: (s) => `${s} punten`,
+    load: () => import('../games/vogelvlucht.js'),
+  },
   {
     id: '2048',
     title: '2048',

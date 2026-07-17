@@ -142,7 +142,7 @@ export async function submitScore(game, score) {
   });
   if (!res.ok) {
     const t = await res.text().catch(() => '');
-    throw new Error('Score online opslaan mislukt: ' + t);
+    throw new Error(`Score opslaan mislukt (${res.status}): ${t || res.statusText}`);
   }
 }
 
@@ -154,7 +154,10 @@ export async function getLeaderboard(game, mode = 'higher', limit = 10) {
   const order = `score.${asc ? 'asc' : 'desc'}`;
   const url = `${CLOUD.url}/rest/v1/scores?game=eq.${encodeURIComponent(game)}&select=username,score,created_at&order=${order}&limit=200`;
   const res = await fetch(url, { headers: { apikey: CLOUD.anonKey } });
-  if (!res.ok) throw new Error('Ranglijst ophalen mislukt');
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`Ranglijst ophalen mislukt (${res.status}): ${t || res.statusText}`);
+  }
   const rows = await res.json();
   // beste per gebruiker (de lijst is al gesorteerd, dus eerste voorkomen wint)
   const best = new Map();

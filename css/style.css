@@ -92,6 +92,45 @@ body {
 }
 .icon-btn:hover { border-color: var(--accent); }
 
+/* synchronisatie-indicator in de header */
+.sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  border-radius: 1rem;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sync-chip .sync-ico { font-weight: 700; }
+.sync-chip.sync-ok { color: #2e9e4f; border-color: rgba(46, 158, 79, 0.4); }
+.sync-chip.sync-syncing { color: var(--accent); border-color: var(--accent); }
+.sync-chip.sync-pending { color: #b8860b; border-color: rgba(184, 134, 11, 0.4); }
+.sync-chip.sync-offline { color: var(--text-muted); }
+.sync-chip.sync-error { color: var(--danger); border-color: var(--danger); }
+.sync-ico.spin { display: inline-block; animation: sync-spin 0.9s linear infinite; }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+@media (max-width: 34rem) { .sync-chip .sync-label { display: none; } }
+
+.sync-err-box {
+  background: var(--bg-inset);
+  border: 1px solid var(--danger);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  margin: 0.6rem 0;
+  color: var(--text);
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+.sync-hint { color: var(--text-muted); font-size: 0.85rem; margin: 0.2rem 0 0; }
+.muted-line { color: var(--text-muted); font-size: 0.85rem; }
+.sc-err { color: var(--danger); font-size: 0.78rem; word-break: break-word; }
+
 .view {
   flex: 1;
   width: 100%;

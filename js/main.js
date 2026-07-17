@@ -136,9 +136,9 @@ function renderScores() {
           const el = view.querySelector(`[data-body="${g.id}"]`);
           if (el) el.innerHTML = scoreCardBody(g, rows.map((r) => ({ name: r.username, score: r.score })), true);
         })
-        .catch(() => {
+        .catch((e) => {
           const el = view.querySelector(`[data-body="${g.id}"]`);
-          if (el) el.innerHTML = '<p class="empty">Online ranglijst niet beschikbaar.</p>';
+          if (el) el.innerHTML = `<p class="empty">Online ranglijst niet beschikbaar.<br><span class="sc-err">${escapeHtml(e.message || 'onbekende fout')}</span></p>`;
         });
     }
   }
@@ -312,6 +312,7 @@ function initAccount() {
       dialog.querySelector('#acc-logout').addEventListener('click', async () => {
         await cloud.signOut();
         refreshButton();
+        sync.refresh();
         renderDialog('Je bent uitgelogd.');
         if (hsView === 'online') { const g = currentGame(); if (g) renderHighscores(g); }
       });
@@ -366,12 +367,82 @@ function currentGame() {
   return m ? getGame(decodeURIComponent(m[1])) : null;
 }
 
+// ---------- synchronisatiestatus (zichtbaar + details bij aantikken) ----------
+
+function renderSyncChip(s) {
+  const chip = document.getElementById('sync-status');
+  if (!chip) return;
+  if (s.state === 'disabled') { chip.hidden = true; return; }
+  chip.hidden = false;
+  const map = {
+    offline: { cls: 'sync-offline', icon: '⚡', label: 'Offline' },
+    syncing: { cls: 'sync-syncing', icon: '↻', label: 'Synchroniseren…' },
+    pending: { cls: 'sync-pending', icon: '↑', label: `${s.pending} te synchroniseren` },
+    synced: { cls: 'sync-ok', icon: '✓', label: 'Gesynct' },
+    error: { cls: 'sync-error', icon: '⚠', label: 'Sync-fout' },
+  };
+  const m = map[s.state] || map.synced;
+  chip.className = 'sync-chip ' + m.cls;
+  chip.innerHTML = `<span class="sync-ico ${s.state === 'syncing' ? 'spin' : ''}">${m.icon}</span><span class="sync-label">${m.label}</span>`;
+}
+
+function syncErrorHint(msg) {
+  const m = (msg || '').toLowerCase();
+  let tip = '';
+  if (m.includes('does not exist') || m.includes('relation') || m.includes('(404)')) {
+    tip = 'De tabel "scores" lijkt te ontbreken. Voer de SQL uit docs/online-highscores.md uit in de Supabase SQL Editor.';
+  } else if (m.includes('row-level security') || m.includes('(403)') || m.includes('permission') || m.includes('policy')) {
+    tip = 'Er ontbreekt waarschijnlijk een RLS-policy. Voer het SQL-blok (met de policies) uit docs/online-highscores.md uit.';
+  } else if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed')) {
+    tip = 'Geen verbinding met de server. Controleer je internet — je scores blijven in de wachtrij en gaan later vanzelf mee.';
+  } else if ((m.includes('invalid') && m.includes('key')) || m.includes('(401)')) {
+    tip = 'De Supabase-sleutel of inlog klopt mogelijk niet. Controleer de anon/publishable key en log eventueel opnieuw in.';
+  }
+  return tip ? `<p class="sync-hint">💡 ${tip}</p>` : '';
+}
+
+function openSyncDialog() {
+  const dialog = document.getElementById('sync-dialog');
+  const s = sync.getStatus();
+  const stateText = {
+    offline: 'Offline — wachten op verbinding',
+    syncing: 'Bezig met synchroniseren…',
+    pending: 'In de wachtrij',
+    synced: 'Alles gesynchroniseerd',
+    error: 'Synchronisatiefout',
+    disabled: 'Uit',
+  }[s.state] || s.state;
+
+  dialog.innerHTML = `
+    <h2>Synchronisatie</h2>
+    <p>Status: <b>${stateText}</b></p>
+    <p>Nog te synchroniseren: <b>${s.pending}</b> score(s)</p>
+    ${s.lastSyncAt ? `<p class="muted-line">Laatst gesynct: ${new Date(s.lastSyncAt).toLocaleString('nl-NL')}${s.lastCount ? ` — ${s.lastCount} score(s)` : ''}</p>` : ''}
+    ${s.lastError ? `<div class="sync-err-box"><b>Foutmelding</b><br>${escapeHtml(s.lastError)}</div>${syncErrorHint(s.lastError)}` : ''}
+    <div class="dialog-actions">
+      <button id="sync-retry" class="btn btn-primary">Opnieuw proberen</button>
+    </div>
+    <form method="dialog"><button class="btn">Sluiten</button></form>`;
+  dialog.querySelector('#sync-retry').addEventListener('click', async () => {
+    await sync.retry();
+    openSyncDialog();
+  });
+  if (!dialog.open) dialog.showModal();
+}
+
+function initSyncStatus() {
+  const chip = document.getElementById('sync-status');
+  sync.subscribe(renderSyncChip);
+  if (chip) chip.addEventListener('click', openSyncDialog);
+}
+
 // Opslag eerst laden/ontsleutelen (en oude opslag migreren), daarna renderen.
 (async () => {
   await storage.init();
   initTheme(document.getElementById('theme-toggle'));
   initDataDialog();
   initAccount();
+  initSyncStatus();
   sync.initSync();
   document.getElementById('scores-btn').addEventListener('click', () => { location.hash = '#/scores'; });
   route();

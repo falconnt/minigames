@@ -6,6 +6,7 @@ import { initTheme } from './theme.js';
 import { games, categories, getGame, getCategory } from './registry.js';
 import { cloudEnabled } from './cloud-config.js';
 import * as cloud from './cloud.js';
+import * as sync from './sync.js';
 
 const view = document.getElementById('view');
 let destroyCurrentGame = null;
@@ -148,13 +149,10 @@ async function renderGame(id) {
     submitScore(score) {
       const result = storage.submitScore(game.id, score, game.scoreMode);
       renderHighscores(game);
-      // Ook online opslaan als je bent ingelogd (stil op de achtergrond).
-      if (cloudEnabled() && cloud.isLoggedIn()) {
-        cloud
-          .submitScore(game.id, score)
-          .then(() => { if (hsView === 'online') renderHighscores(game); })
-          .catch(() => { /* offline of fout — lokale score is al bewaard */ });
-      }
+      // Online: lokaal in de wachtrij + versturen zodra er verbinding is.
+      sync.enqueueScore(game.id, score).then(() => {
+        if (hsView === 'online') renderHighscores(game);
+      });
       return result;
     },
   };
@@ -278,6 +276,9 @@ function initAccount() {
           await fn(userEl.value, passEl.value);
           refreshButton();
           dialog.close();
+          // Bestaande lokale highscores koppelen aan (het eerste) account, en
+          // eventuele offline scores versturen.
+          await sync.syncLocalHighscoresOnce();
           const g = currentGame();
           if (g) { hsView = 'online'; renderHighscores(g); }
         } catch (err) {
@@ -300,10 +301,15 @@ function currentGame() {
   return m ? getGame(decodeURIComponent(m[1])) : null;
 }
 
-initTheme(document.getElementById('theme-toggle'));
-initDataDialog();
-initAccount();
-route();
+// Opslag eerst laden/ontsleutelen (en oude opslag migreren), daarna renderen.
+(async () => {
+  await storage.init();
+  initTheme(document.getElementById('theme-toggle'));
+  initDataDialog();
+  initAccount();
+  sync.initSync();
+  route();
+})();
 
 // Service worker registreren: nodig om de app installeerbaar te maken (PWA)
 // en offline te laten werken. Relatief pad, dus werkt ook onder /minigames/.

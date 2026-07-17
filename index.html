@@ -20,9 +20,11 @@
   <link rel="stylesheet" href="css/style.css">
   <script>
     // Thema direct toepassen vóór de eerste render om een flits te voorkomen.
+    // Thema staat plat in minigames.settings; oude opslag (v1) als terugval.
     try {
-      const opgeslagen = JSON.parse(localStorage.getItem('minigames.v1'))?.settings?.theme;
-      if (opgeslagen) document.documentElement.dataset.theme = opgeslagen;
+      let t = JSON.parse(localStorage.getItem('minigames.settings') || '{}').theme;
+      if (!t) t = JSON.parse(localStorage.getItem('minigames.v1') || '{}')?.settings?.theme;
+      if (t) document.documentElement.dataset.theme = t;
     } catch { /* geen opgeslagen data */ }
   </script>
 </head>

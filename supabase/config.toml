@@ -1,0 +1,9 @@
+# Supabase-projectconfiguratie (voor de GitHub-koppeling / CLI).
+project_id = "sapaexufrcenzzevemxg"
+
+[auth]
+enable_signup = true
+
+[auth.email]
+# Geen e-mailbevestiging: gebruikers loggen in met alleen gebruikersnaam + wachtwoord.
+enable_confirmations = false

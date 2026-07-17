@@ -8,8 +8,8 @@
 // highscores per apparaat); de account- en online-functies zijn dan verborgen.
 
 export const CLOUD = {
-  url: '',      // bijv. 'https://abcdefgh.supabase.co'
-  anonKey: '',  // de publieke "anon"/"publishable" sleutel uit je Supabase-project
+  url: 'https://sapaexufrcenzzevemxg.supabase.co', // jouw Supabase-project
+  anonKey: '',  // ← VUL IN: de publieke "anon"/"publishable" sleutel (Project Settings → API)
   // Gebruikers loggen in met alleen een gebruikersnaam; intern koppelen we die
   // aan een nep-e-mail (naam@<emailDomain>) zodat Supabase-auth kan worden gebruikt.
   emailDomain: 'minigames.local',

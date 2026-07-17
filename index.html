@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minigames</title>
+  <meta name="description" content="Een verzameling minigames met highscores, gebouwd voor GitHub Pages.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Thema direct toepassen vóór de eerste render om een flits te voorkomen.
+    try {
+      const opgeslagen = JSON.parse(localStorage.getItem('minigames.v1'))?.settings?.theme;
+      if (opgeslagen) document.documentElement.dataset.theme = opgeslagen;
+    } catch { /* geen opgeslagen data */ }
+  </script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="app-title" href="#/">🎮 Minigames</a>
+    <div class="header-actions">
+      <button id="theme-toggle" class="icon-btn" title="Wissel licht/donker thema" aria-label="Wissel thema">🌓</button>
+      <button id="data-btn" class="icon-btn" title="Opslag &amp; gegevens" aria-label="Opslag en gegevens">⚙️</button>
+    </div>
+  </header>
+
+  <main id="view" class="view"></main>
+
+  <footer class="app-footer">
+    Gehost op GitHub Pages · saves &amp; highscores staan lokaal in je browser
+  </footer>
+
+  <dialog id="data-dialog">
+    <h2>Opslag &amp; gegevens</h2>
+    <p>Je voortgang en highscores worden lokaal in deze browser bewaard. Maak een back-up om ze mee te nemen naar een ander apparaat.</p>
+    <div class="dialog-actions">
+      <button id="export-btn" class="btn">⬇️ Exporteer back-up</button>
+      <label class="btn" for="import-file">⬆️ Importeer back-up</label>
+      <input type="file" id="import-file" accept="application/json" hidden>
+      <button id="reset-btn" class="btn btn-danger">🗑️ Wis alle gegevens</button>
+    </div>
+    <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>
+  </dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -50,6 +50,16 @@ export const games = [
     load: () => import('../games/tetris.js'),
   },
   {
+    id: 'ruimteschieter',
+    title: 'Ruimteschieter',
+    icon: '🚀',
+    category: 'arcade',
+    description: 'Neon space-shooter: knal in je gloeiende ruimteschip de aanvallende vijanden uit de lucht en ontwijk hun schoten. Schermvullend, met de vinger of het toetsenbord.',
+    scoreMode: 'higher',
+    formatScore: (s) => `${s} punten`,
+    load: () => import('../games/ruimteschieter.js'),
+  },
+  {
     id: 'paardensport',
     title: 'Paardensport',
     icon: '🏇',

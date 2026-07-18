@@ -14,7 +14,7 @@ const CARS = [
   { name: 'Mercedes GT 63',   col: '#5cbf22', accent: '#141418', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'v8', grille: 'amg', realistic: true, carbonHood: true, wheelCol: '#26282e', caliper: '#f2c40f', accentLine: '#f2c40f', splitter: true, sideStripe: true },
   { name: 'Ferrari Pista',    col: '#22c1e8', accent: '#111114', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v8', realistic: true, carbonHood: true, splitter: true, sideStripe: true, sideScoops: true, wheelCol: '#26282e', caliper: '#e8d21a', dualExhaust: true },
   { name: 'Lamborghini SVJ',  col: '#1b8fe2', accent: '#101014', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12', realistic: true, carbonHood: 'full', splitter: true, sideScoops: true, wheelCol: '#26282e', caliper: '#2aa0e8', dualExhaust: true },
-  { name: 'Porsche 911',      col: '#e9ecf0', accent: '#15151a', stripe: null,      wing: 'mid',   shape: 'classic', eng: 'flat6' },
+  { name: 'Porsche 911',      col: '#1c1d23', accent: '#0c0c0f', stripe: null,      wing: 'big',   shape: 'classic', eng: 'flat6', realistic: true, splitter: true, sideStripe: true, sideStripeCol: '#12b39a', accentLine: '#12b39a', hoodStripes: '#12b39a', roundLights: true, wheelCol: '#24262c', caliper: '#12b39a', dualExhaust: true },
   { name: 'Mustang',          col: '#1f57c8', accent: '#15151a', stripe: '#ffffff', wing: 'small', shape: 'muscle',  eng: 'v8' },
   { name: 'Audi R8',          col: '#9aa1a8', accent: '#15151a', stripe: null,      wing: 'small', shape: 'super',   eng: 'v10' },
   { name: 'Pagani',           col: '#c9b06a', accent: '#2a2320', stripe: null,      wing: 'mid',   shape: 'super',   eng: 'v12' },
@@ -756,9 +756,20 @@ export function init(root, ctx) {
       const y0 = py(0.05), y1 = py(-0.6), top = Math.min(y0, y1), hgt = Math.abs(y1 - y0);
       for (const sx of [-1, 1]) {
         const x = sx < 0 ? px(-1.0) : px(1.0) - bw * 0.16;
-        gg.fillStyle = 'rgba(22,22,26,0.9)'; gg.fillRect(x, top, bw * 0.16, hgt);
-        if (car.accentLine) { gg.fillStyle = car.accentLine; gg.fillRect(x + (sx < 0 ? bw * 0.16 : -bw * 0.02), top, bw * 0.02, hgt); }
+        gg.fillStyle = car.sideStripeCol || 'rgba(22,22,26,0.9)'; gg.fillRect(x, top, bw * 0.16, hgt);
+        if (car.accentLine && !car.sideStripeCol) { gg.fillStyle = car.accentLine; gg.fillRect(x + (sx < 0 ? bw * 0.16 : -bw * 0.02), top, bw * 0.02, hgt); }
       }
+      gg.restore();
+    }
+
+    // ---- gekleurde motorkap-strepen (bv. teal pinstripes) ----
+    if (car.hoodStripes) {
+      gg.save(); bodyPath(); gg.clip();
+      gg.strokeStyle = car.hoodStripes; gg.lineWidth = Math.max(1, w * 0.018);
+      gg.beginPath();
+      gg.moveTo(px(-0.28), py(0.5)); gg.lineTo(px(-0.15), py(0.92));
+      gg.moveTo(px(0.28), py(0.5)); gg.lineTo(px(0.15), py(0.92));
+      gg.stroke();
       gg.restore();
     }
 
@@ -826,18 +837,31 @@ export function init(root, ctx) {
     gg.fillRect(px(-1.0) - mw * 0.3, my - mh / 2, mw, mh);
     gg.fillRect(px(1.0) - mw * 0.7, my - mh / 2, mw, mh);
 
-    // ---- koplampen (kleur per auto, met gloed) ----
-    const hw = w * 0.15, hh = h * 0.045, hy = py(0.7);
+    // ---- koplampen (rechthoekig of rond 911-model, met gloed) ----
     const hlc = car.headlight || (car.ledlights ? '#eaf6ff' : null);
-    if (hlc) { gg.save(); gg.shadowColor = hlc; gg.shadowBlur = w * 0.14; }
-    gg.fillStyle = hlc || '#fff7d0';
-    rrPath(gg, cx - w * 0.38, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
-    rrPath(gg, cx + w * 0.23, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
-    if (hlc) {
-      gg.shadowBlur = 0; gg.fillStyle = 'rgba(255,255,255,0.72)';
-      rrPath(gg, cx - w * 0.38, hy - hh * 0.16, hw, hh * 0.32, hh * 0.3); gg.fill();
-      rrPath(gg, cx + w * 0.23, hy - hh * 0.16, hw, hh * 0.32, hh * 0.3); gg.fill();
-      gg.restore();
+    if (car.roundLights) {
+      const r = w * 0.09, ly = py(0.72);
+      for (const sx of [-1, 1]) {
+        const lx = cx + sx * w * 0.32;
+        if (hlc) { gg.save(); gg.shadowColor = hlc; gg.shadowBlur = w * 0.12; }
+        gg.fillStyle = hlc || '#fff7d0';
+        gg.beginPath(); gg.arc(lx, ly, r, 0, Math.PI * 2); gg.fill();
+        if (hlc) gg.restore();
+        gg.fillStyle = 'rgba(255,255,255,0.6)';
+        gg.beginPath(); gg.arc(lx, ly, r * 0.5, 0, Math.PI * 2); gg.fill();
+      }
+    } else {
+      const hw = w * 0.15, hh = h * 0.045, hy = py(0.7);
+      if (hlc) { gg.save(); gg.shadowColor = hlc; gg.shadowBlur = w * 0.14; }
+      gg.fillStyle = hlc || '#fff7d0';
+      rrPath(gg, cx - w * 0.38, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
+      rrPath(gg, cx + w * 0.23, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
+      if (hlc) {
+        gg.shadowBlur = 0; gg.fillStyle = 'rgba(255,255,255,0.72)';
+        rrPath(gg, cx - w * 0.38, hy - hh * 0.16, hw, hh * 0.32, hh * 0.3); gg.fill();
+        rrPath(gg, cx + w * 0.23, hy - hh * 0.16, hw, hh * 0.32, hh * 0.3); gg.fill();
+        gg.restore();
+      }
     }
 
     // ---- BMW niervormige grille (twee hoge sleuven, tussen de koplampen) ----

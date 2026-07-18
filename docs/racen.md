@@ -25,12 +25,18 @@ Speelbaar met de **vinger** of het **toetsenbord**.
 | Turbo (boost) | knop **🚀 turbo** ingedrukt houden | spatie |
 | Pauze | knop **Pauze** | P |
 
-Er is een realistisch **motorgeluid** dat als een echte race-motor optrekt: de
-toon is de ontstekingsfrequentie (die hoog oploopt bij hoge toeren) door een
-resonant uitlaat-filter. **Elke auto heeft een eigen motortype** (te zien op het
-keuzescherm) dat anders klinkt: een **V8** rommelt zwaar (lope), een **V12**
-giert hoog en glad, en er zijn ook **W12, V10, Flat-6 en Rotary**. Met de
-**🔊/🔇-knop** zet je het geluid aan of uit.
+Er is een realistisch **motorgeluid** dat als een echte race-motor optrekt. Het
+is volledig in code gesynthetiseerd (er zitten geen audiobestanden in de game).
+De aanpak volgt hoe echte games het doen: in plaats van de toon simpelweg omhoog
+te "pitchen" bij het gas geven (dat klinkt onnatuurlijk), gebruikt de motor een
+**gesimuleerde versnellingsbak** — de toeren lopen soepel op binnen een
+versnelling en zakken bij het schakelen, zodat de toon in een muzikale band
+blijft. **Extra gas (turbo)** laat de toeren *geleidelijk* oplopen en opent
+vooral de uitlaat: harder, feller en met meer inductieruis — het geluid van een
+motor die "opendraait", niet een chipmunk-sprong. **Elke auto heeft een eigen
+motortype** (te zien op het keuzescherm) dat anders klinkt: een **V8** rommelt
+zwaar (lope), een **V12** giert hoog en glad, en er zijn ook **W12, V10, Flat-6
+en Rotary**. Met de **🔊/🔇-knop** zet je het geluid aan of uit.
 
 Sleep je met je vinger over de weg, dan volgt je auto je vinger. **Turbo** geeft
 een flinke snelheidsboost maar gebruikt je **turbo-balk** (linksonder); die laadt

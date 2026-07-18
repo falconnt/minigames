@@ -39,9 +39,10 @@ zwaar (lope), een **V12** giert hoog en glad, en er zijn ook **6-in-lijn** (de
 BMW M4 heeft net als in het echt een turbo-zescilinder in lijn), **W12, V10,
 Flat-6 en Rotary**. Met de **🔊/🔇-knop** zet je het geluid aan of uit.
 
-De **BMW M4** is nagetekend als de echte: São Paulo-geel, de kenmerkende hoge
-**niervormige grille**, de **BMW M-strepen** (lichtblauw, donkerblauw, rood) over
-de motorkap en het kofferdeksel, en **vier uitlaten**.
+De **BMW M4** is nagetekend als de echte, in een **geel-witte** twee-tone (gele
+voorkant, witte achterkant), met de kenmerkende hoge **niervormige grille**, de
+**BMW M-strepen** (lichtblauw, donkerblauw, rood) over de motorkap en het
+kofferdeksel, en **vier uitlaten**.
 
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een

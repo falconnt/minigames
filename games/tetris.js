@@ -53,22 +53,31 @@ function rotateCW(cells) {
 }
 
 export function init(root, ctx) {
-  root.classList.add('tetris-root');
-  root.innerHTML = `
-    <div class="game-toolbar tetris-top">
+  // Fullscreen-laag los van de app-chrome (header, titelbalk, footer), zodat de
+  // game de héle schermhoogte gebruikt. Een flex-kolom verdeelt de ruimte:
+  // bovenbalk (vaste hoogte) — speelveld (vult alle resterende ruimte) —
+  // knoppen (vaste hoogte). Zo past alles altijd, zonder scrollen.
+  root.innerHTML = '';
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+
+  const fs = document.createElement('div');
+  fs.className = 'tetris-fs';
+  fs.innerHTML = `
+    <div class="tetris-fs-top">
+      <button id="tet-back" class="btn tetris-fs-back" aria-label="Terug naar menu">← Terug</button>
       <span class="stat">Score <b id="tet-score">0</b></span>
       <span class="stat">Rijen <b id="tet-lines">0</b></span>
       <span class="stat">Level <b id="tet-level">1</b></span>
       <span class="tetris-nextmini" title="Volgend blok">
         <canvas id="tet-next" aria-label="Volgend blok"></canvas>
       </span>
-      <span class="tetris-topbtns">
+      <span class="tetris-top-actions">
         <button id="tet-pause" class="btn">Pauze</button>
-        <button id="tet-new" class="btn">Nieuw</button>
         <button id="tet-help-btn" class="btn" aria-label="Uitleg">❔</button>
       </span>
     </div>
-    <div class="tetris-stage game-stage">
+    <div class="tetris-fs-board" id="tet-area">
       <div class="tetris-boardwrap">
         <canvas id="tet-board" class="tetris-board" aria-label="Speelveld"></canvas>
         <div id="tet-overlay" class="overlay" hidden></div>
@@ -91,16 +100,18 @@ export function init(root, ctx) {
       </ul>
       <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>
     </dialog>`;
+  document.body.appendChild(fs);
 
-  const boardCanvas = root.querySelector('#tet-board');
-  const nextCanvas = root.querySelector('#tet-next');
+  const boardCanvas = fs.querySelector('#tet-board');
+  const nextCanvas = fs.querySelector('#tet-next');
+  const boardArea = fs.querySelector('#tet-area');
   const bctx = boardCanvas.getContext('2d');
   const nctx = nextCanvas.getContext('2d');
-  const overlay = root.querySelector('#tet-overlay');
-  const scoreEl = root.querySelector('#tet-score');
-  const linesEl = root.querySelector('#tet-lines');
-  const levelEl = root.querySelector('#tet-level');
-  const pauseBtn = root.querySelector('#tet-pause');
+  const overlay = fs.querySelector('#tet-overlay');
+  const scoreEl = fs.querySelector('#tet-score');
+  const linesEl = fs.querySelector('#tet-lines');
+  const levelEl = fs.querySelector('#tet-level');
+  const pauseBtn = fs.querySelector('#tet-pause');
 
   // ---------- spelstatus ----------
   let board = emptyBoard();
@@ -392,6 +403,7 @@ export function init(root, ctx) {
     clearing = null; nextType = randType();
     overlay.hidden = true;
     state = 'playing';
+    pauseBtn.textContent = 'Pauze';
     spawn(nextType);
     nextType = randType();
     dropTimer = 0;
@@ -403,9 +415,15 @@ export function init(root, ctx) {
     if (on && state === 'playing') {
       state = 'paused';
       pauseBtn.textContent = 'Verder';
-      overlay.innerHTML = `<h3>⏸️ Pauze</h3><button id="tet-resume" class="btn btn-primary">Verder spelen</button>`;
+      overlay.innerHTML = `<h3>⏸️ Pauze</h3>
+        <button id="tet-resume" class="btn btn-primary">Verder spelen</button>
+        <button id="tet-newp" class="btn">Nieuw spel</button>`;
       overlay.hidden = false;
       overlay.querySelector('#tet-resume').addEventListener('click', () => setPaused(false));
+      overlay.querySelector('#tet-newp').addEventListener('click', () => {
+        if (score > 0) ctx.submitScore(score);
+        newGame();
+      });
     } else if (!on && state === 'paused') {
       state = 'playing';
       pauseBtn.textContent = 'Pauze';
@@ -456,7 +474,7 @@ export function init(root, ctx) {
     el.addEventListener('pointercancel', stop);
     holds.push({ el, start, stop });
   }
-  root.querySelectorAll('.tet-pad').forEach(bindPad);
+  fs.querySelectorAll('.tet-pad').forEach(bindPad);
 
   // ---------- invoer: vegen over het veld ----------
   let sw = null;
@@ -485,36 +503,28 @@ export function init(root, ctx) {
 
   // ---------- knoppen ----------
   pauseBtn.addEventListener('click', () => setPaused(state !== 'paused'));
-  root.querySelector('#tet-new').addEventListener('click', () => {
+  function onBack() {
     if (score > 0 && state !== 'over') ctx.submitScore(score);
-    newGame();
-  });
-  const helpDlg = root.querySelector('#tet-help');
-  root.querySelector('#tet-help-btn').addEventListener('click', () => {
+    location.hash = '#/';   // terug naar het menu (framework ruimt de game op)
+  }
+  fs.querySelector('#tet-back').addEventListener('click', onBack);
+  const helpDlg = fs.querySelector('#tet-help');
+  fs.querySelector('#tet-help-btn').addEventListener('click', () => {
     if (state === 'playing') setPaused(true);   // pauzeer terwijl je leest
     if (helpDlg.showModal) helpDlg.showModal();
   });
   function onVisibility() { if (document.hidden) setPaused(true); }
 
   // ---------- layout ----------
+  // Het speelveld vult exact de flex-ruimte die overblijft tussen de bovenbalk
+  // en de knoppen. We meten die ruimte (boardArea) en schalen de cellen daarop,
+  // zodat het bord zo groot mogelijk is en altijd volledig in beeld staat.
   function layout() {
-    const stage = root.querySelector('.tetris-stage');
-    const controls = root.querySelector('.tetris-controls');
-    // Het bord krijgt de volle breedte (info + volgende + knoppen staan boven en
-    // onder, niet ernaast), zodat er geen breedte verloren gaat.
-    const avail = stage.clientWidth || root.clientWidth || 320;
-    const boardW = Math.max(120, avail - 4);
-
-    // Verticale ruimte: van de bovenkant van het speelveld tot onder in het
-    // scherm, min alleen wat de knoppen eronder nodig hebben (de uitleg zit nu
-    // achter de ❔-knop). Zo vult het bord zowel de breedte als de hoogte
-    // maximaal en passen bord + bediening samen in beeld zonder scrollen.
-    const stageTop = stage.getBoundingClientRect().top;
-    const below = (controls ? controls.offsetHeight : 60) + 18;
-    const vAvail = (window.innerHeight || 700) - stageTop - below;
-    const maxH = Math.max(220, vAvail);
-
-    cell = Math.max(12, Math.floor(Math.min(boardW / COLS, maxH / ROWS)));
+    const aw = boardArea.clientWidth;
+    const ah = boardArea.clientHeight;
+    if (!aw || !ah) return;
+    const pad = 6; // kleine marge rond het bord
+    cell = Math.max(8, Math.floor(Math.min((aw - pad) / COLS, (ah - pad) / ROWS)));
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = COLS * cell, h = ROWS * cell;
     boardCanvas.style.width = w + 'px';
@@ -524,20 +534,25 @@ export function init(root, ctx) {
     draw();
     drawNext();
   }
+  function onResize() { layout(); }
+  function onOrient() { setTimeout(layout, 150); }
 
   window.addEventListener('keydown', onKey);
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onOrient);
   boardCanvas.addEventListener('touchstart', onTouchStart, { passive: true });
   boardCanvas.addEventListener('touchmove', onTouchMove, { passive: true });
   boardCanvas.addEventListener('touchend', onTouchEnd, { passive: true });
   document.addEventListener('visibilitychange', onVisibility);
   const ro = new ResizeObserver(() => layout());
-  ro.observe(root);
+  ro.observe(boardArea);
 
   loadOrStart();
   layout();
   // Mobiele browsers stellen hoogtes soms pas na de eerste render goed in.
   requestAnimationFrame(layout);
   setTimeout(layout, 200);
+  setTimeout(layout, 600);
   updateStats();
   drawNext();
   raf = requestAnimationFrame(loop);
@@ -545,6 +560,8 @@ export function init(root, ctx) {
   return () => {
     cancelAnimationFrame(raf);
     window.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('orientationchange', onOrient);
     document.removeEventListener('visibilitychange', onVisibility);
     boardCanvas.removeEventListener('touchstart', onTouchStart);
     boardCanvas.removeEventListener('touchmove', onTouchMove);
@@ -556,6 +573,7 @@ export function init(root, ctx) {
       el.removeEventListener('pointercancel', stop);
     });
     ro.disconnect();
-    root.classList.remove('tetris-root');
+    document.body.style.overflow = prevOverflow;
+    fs.remove();
   };
 }

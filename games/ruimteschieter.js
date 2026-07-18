@@ -121,7 +121,7 @@ export function init(root, ctx) {
   let score = 0, wave = 1, lives = 3;
   let state = 'playing';
   let breakT = 0, fireCd = 0, enemyFireCd = 1.2, invuln = 0;
-  let pTriple = 0, pRapid = 0, pShield = 0;
+  let pTriple = 0, pRapid = 0, pShield = 0, powerDropsLeft = 1;
   let shake = 0, killStreak = 0, streakT = 0;
   let moveDir = 0, firing = false, dragging = false, dragX = 0;
   let raf = 0, last = 0;
@@ -153,7 +153,9 @@ export function init(root, ctx) {
     }
     dir = 1;
     enemySpeed = 0.13 + (n - 1) * 0.02;
-    enemyFireCd = Math.max(0.35, 1.2 - (n - 1) * 0.08);
+    enemyFireCd = Math.max(0.35, 1.0 - (n - 1) * 0.08);
+    // Hooguit 1 power-up per golf in het begin, later 2. Ze vervallen per golf.
+    powerDropsLeft = n <= 2 ? 1 : 2;
   }
 
   function newGame() {
@@ -185,7 +187,11 @@ export function init(root, ctx) {
     particles.push({ x: nx, y: ny, ring: 1, color });
   }
   function maybeDrop(x, y) {
-    if (Math.random() < 0.13) powerups.push({ x, y, type: POWERS[Math.floor(Math.random() * POWERS.length)] });
+    // Beperkt aantal per golf + lagere kans, zodat power-ups bijzonder blijven.
+    if (powerDropsLeft > 0 && Math.random() < 0.10) {
+      powerups.push({ x, y, type: POWERS[Math.floor(Math.random() * POWERS.length)] });
+      powerDropsLeft -= 1;
+    }
   }
 
   function loseLife() {
@@ -281,6 +287,8 @@ export function init(root, ctx) {
     for (const e of enemies) if (e.alive) { minX = Math.min(minX, e.x); maxX = Math.max(maxX, e.x); lowest = Math.max(lowest, e.y); aliveCount++; }
     if (aliveCount === 0) {
       wave += 1; updateHud();
+      pTriple = 0; pRapid = 0; pShield = 0;   // power-ups gaan niet mee naar de volgende golf
+      powerups = []; eBullets = [];           // openstaande power-ups/kogels opruimen
       spawnWave(wave);
       state = 'wavebreak'; breakT = 1.1;
       overlay.innerHTML = `<h2>Golf ${wave}</h2><p>Maak je klaar…</p>`;
@@ -302,7 +310,7 @@ export function init(root, ctx) {
       const shooters = enemies.filter((e) => e.alive);
       const e = shooters[Math.floor(Math.random() * shooters.length)];
       if (e) eBullets.push({ x: e.x, y: e.y });
-      enemyFireCd = Math.max(0.3, (1.1 - (wave - 1) * 0.07) * (0.6 + Math.random() * 0.8));
+      enemyFireCd = Math.max(0.28, (0.95 - (wave - 1) * 0.06) * (0.6 + Math.random() * 0.8));
     }
     for (const b of eBullets) b.y += 0.6 * dt;
     eBullets = eBullets.filter((b) => b.y < 1.05);
@@ -315,8 +323,8 @@ export function init(root, ctx) {
         if (!e.alive) continue;
         if (hit(bx, by, S.pBulletW, S.pBulletH, e.x * W, e.y * H, S.enemyW, S.enemyH)) {
           e.alive = false; b.dead = true;
-          killStreak += 1; streakT = 1.5;
-          const mult = 1 + Math.min(Math.floor(killStreak / 3), 4);
+          killStreak += 1; streakT = 1.2;
+          const mult = 1 + Math.min(Math.floor(killStreak / 4), 2);
           const gained = e.points * mult;
           score += gained; updateHud();
           boom(e.x, e.y, e.color);
@@ -349,9 +357,9 @@ export function init(root, ctx) {
     for (const pu of powerups) {
       if (hit(px2, py2, S.playerW, S.playerH, pu.x * W, pu.y * H, S.enemyW, S.enemyH)) {
         pu.taken = true;
-        if (pu.type === 'triple') pTriple = 8;
-        else if (pu.type === 'rapid') pRapid = 8;
-        else pShield = 7;
+        if (pu.type === 'triple') pTriple = 6;
+        else if (pu.type === 'rapid') pRapid = 6;
+        else pShield = 6;
         popups.push({ x: pu.x, y: Math.min(pu.y, 0.9), text: pu.type === 'triple' ? 'DRIEDUBBEL!' : pu.type === 'rapid' ? 'SNELVUUR!' : 'SCHILD!', life: 1.3, color: POWER_COL[pu.type] });
         sPower();
       }

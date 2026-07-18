@@ -6,6 +6,7 @@ import { ICON_2048 } from './icon-2048.js';
 import { ICON_REACTIE } from './icon-reactie.js';
 import { ICON_TETRIS } from './icon-tetris.js';
 import { ICON_RUIMTE } from './icon-ruimteschieter.js';
+import { ICON_PAARD } from './icon-paard.js';
 
 export const categories = [
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
@@ -68,7 +69,7 @@ export const games = [
   {
     id: 'paardensport',
     title: 'Paardensport',
-    icon: '🏇',
+    icon: ICON_PAARD,
     category: 'simulatie',
     description: 'Beheer je eigen manege: verzorg en train paarden, koop stallen en tuig, en doe mee aan springen, dressuur en races.',
     scoreMode: 'higher',

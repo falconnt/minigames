@@ -264,6 +264,8 @@ body {
 .card-game-tetris .card-icon { background: linear-gradient(180deg, #32363f, #24262d); }
 /* Ruimteschieter: diepe ruimte zoals het speelveld. */
 .card-game-ruimteschieter .card-icon { background: linear-gradient(180deg, #10132b, #04050d); }
+/* Paardensport: lucht boven, weiland onder — zoals de buitenbak-scenes. */
+.card-game-paardensport .card-icon { background: linear-gradient(180deg, #b9dcec 55%, #7fae57 55%); }
 .card-body h3 { margin: 0 0 0.25rem; }
 .card-body p { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.9rem; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }

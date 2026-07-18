@@ -10,7 +10,7 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'BMW M4',           col: '#f2c500', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'v8' },
+  { name: 'BMW M4',           col: '#f2c500', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'i6', grille: 'kidney', mstripes: true, quad: true },
   { name: 'Mercedes GT 63',   col: '#c7ccd3', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'w12' },
   { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
   { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
@@ -33,13 +33,14 @@ const SHAPES = {
 // rumble = sub-octaaf (V8-lope), bright = felheid/formant, vol = volume.
 const ENGINES = {
   v8:     { base: 75,  rev: 560,  rumble: 0.55, bright: 1.0,  vol: 0.08 },
+  i6:     { base: 88,  rev: 720,  rumble: 0.14, bright: 1.12, vol: 0.075 },
   v10:    { base: 85,  rev: 680,  rumble: 0.28, bright: 1.15, vol: 0.075 },
   v12:    { base: 100, rev: 900,  rumble: 0.05, bright: 1.35, vol: 0.065 },
   w12:    { base: 90,  rev: 760,  rumble: 0.18, bright: 1.1,  vol: 0.07 },
   flat6:  { base: 95,  rev: 720,  rumble: 0.22, bright: 1.12, vol: 0.075 },
   rotary: { base: 120, rev: 1000, rumble: 0.05, bright: 1.5,  vol: 0.06 },
 };
-const ENG_LABEL = { v8: 'V8', v10: 'V10', v12: 'V12', w12: 'W12', flat6: 'Flat-6', rotary: 'Rotary' };
+const ENG_LABEL = { v8: 'V8', i6: '6-in-lijn', v10: 'V10', v12: 'V12', w12: 'W12', flat6: 'Flat-6', rotary: 'Rotary' };
 const ROAD = '#2c2f36', GRASS = '#1f3d24', CURB1 = '#e8433f', CURB2 = '#f5f5f5';
 
 export function init(root, ctx) {
@@ -630,6 +631,13 @@ export function init(root, ctx) {
       const sw = bw * 0.16;
       gg.fillRect(cx - sw / 2, py(0.84), sw, py(-0.86) - py(0.84));
     }
+    // ---- BMW M-tricolor over motorkap en kofferdeksel (cabine dekt het midden) ----
+    if (car.mstripes) {
+      const cols = ['#2e79c2', '#0e1a52', '#e10600']; // licht blauw, donkerblauw, rood
+      const sw = bw * 0.05, gap = sw * 1.2;
+      const y0 = py(0.6), y1 = py(-0.82), top = Math.min(y0, y1), hgt = Math.abs(y1 - y0);
+      for (let i = 0; i < 3; i++) { gg.fillStyle = cols[i]; gg.fillRect(cx + (i - 1) * gap - sw / 2, top, sw, hgt); }
+    }
 
     // ---- cockpit / canopy ----
     const cpW = bw * 0.5, cpH = bh * S2.cabF * 1.15;
@@ -652,9 +660,30 @@ export function init(root, ctx) {
     rrPath(gg, cx - w * 0.38, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
     rrPath(gg, cx + w * 0.23, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
 
+    // ---- BMW niervormige grille (twee hoge sleuven, tussen de koplampen) ----
+    if (car.grille === 'kidney') {
+      const gtop = Math.min(py(0.92), py(0.6)), gh2 = Math.abs(py(0.92) - py(0.6));
+      const gw = w * 0.15, gap = w * 0.015;
+      for (const sx of [-1, 1]) {
+        const gx = cx + sx * (gw / 2 + gap / 2) - gw / 2;
+        gg.fillStyle = '#0b0b0d'; rrPath(gg, gx - w * 0.012, gtop - gh2 * 0.03, gw + w * 0.024, gh2 * 1.06, gw * 0.4); gg.fill();
+        gg.fillStyle = '#1b1c22'; rrPath(gg, gx, gtop, gw, gh2, gw * 0.35); gg.fill();
+      }
+    }
+
     // ---- achterlichten (rode balk) ----
     gg.fillStyle = '#ff3b30';
     gg.fillRect(cx - bw * 0.4, py(-0.82) - h * 0.02, bw * 0.8, h * 0.04);
+
+    // ---- BMW quad uitlaten ----
+    if (car.quad) {
+      const ey = py(-0.92), er = w * 0.05;
+      for (const f of [-0.27, -0.13, 0.13, 0.27]) {
+        const ex = cx + f * bw;
+        gg.fillStyle = '#20222a'; gg.beginPath(); gg.arc(ex, ey, er, 0, Math.PI * 2); gg.fill();
+        gg.fillStyle = '#4a4e57'; gg.beginPath(); gg.arc(ex, ey, er * 0.58, 0, Math.PI * 2); gg.fill();
+      }
+    }
   }
 
   function draw() {

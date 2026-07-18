@@ -30,6 +30,14 @@ een flinke snelheidsboost maar gebruikt je **turbo-balk** (linksonder); die laad
 vanzelf weer op als je 'm loslaat. Met **← Terug** ga je naar het menu; **Nieuw
 spel** vind je in het pauzemenu (of de ❔-knop voor uitleg).
 
+## Startscherm: kies je auto
+
+Voor de race verschijnt een **keuzescherm** met **10 auto's** (elk een eigen kleur
+en naam: Bliksem, Vuurbal, Turbo, Smaragd, Oceaan, Storm, Druif, Roze Raket,
+Zilver en Limoen). Tik op een auto om hem te kiezen en druk op **🏁 Start!**. Je
+gekozen kleur zie je terug op de weg. Via **Andere auto** (in het pauzemenu of na
+game over) kun je opnieuw kiezen.
+
 ## Spelverloop
 
 1. Je start met **3 levens** (♥♥♥). Je auto rijdt vanzelf vooruit; jij stuurt.

@@ -9,6 +9,7 @@ scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
 | 🔢 2048 | Puzzel | [2048.md](2048.md) |
 | 🟩 Blokjes (Tetris) | Puzzel | [tetris.md](tetris.md) |
 | 🚀 Ruimteschieter | Arcade | [ruimteschieter.md](ruimteschieter.md) |
+| 🏎️ Racen | Arcade | [racen.md](racen.md) |
 | ⚡ Reactietest | Reflex | [reactietest.md](reactietest.md) |
 | 🏇 Paardensport | Simulatie | [paardensport.md](paardensport.md) |
 

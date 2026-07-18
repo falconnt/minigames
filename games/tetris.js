@@ -53,23 +53,26 @@ function rotateCW(cells) {
 }
 
 export function init(root, ctx) {
+  root.classList.add('tetris-root');
   root.innerHTML = `
-    <div class="game-toolbar">
-      <span class="stat">Score: <b id="tet-score">0</b></span>
-      <span class="stat">Rijen: <b id="tet-lines">0</b></span>
-      <span class="stat">Level: <b id="tet-level">1</b></span>
+    <div class="game-toolbar tetris-top">
+      <span class="stat">Score <b id="tet-score">0</b></span>
+      <span class="stat">Rijen <b id="tet-lines">0</b></span>
+      <span class="stat">Level <b id="tet-level">1</b></span>
+      <span class="tetris-nextmini" title="Volgend blok">
+        <canvas id="tet-next" aria-label="Volgend blok"></canvas>
+      </span>
+      <span class="tetris-topbtns">
+        <button id="tet-pause" class="btn">Pauze</button>
+        <button id="tet-new" class="btn">Nieuw</button>
+        <button id="tet-help-btn" class="btn" aria-label="Uitleg">❔</button>
+      </span>
     </div>
-    <div class="tetris-stage">
-      <div class="game-stage tetris-boardwrap">
+    <div class="tetris-stage game-stage">
+      <div class="tetris-boardwrap">
         <canvas id="tet-board" class="tetris-board" aria-label="Speelveld"></canvas>
         <div id="tet-overlay" class="overlay" hidden></div>
       </div>
-      <aside class="tetris-side">
-        <span class="tetris-side-label">Volgende</span>
-        <canvas id="tet-next" class="tetris-next" aria-label="Volgend blok"></canvas>
-        <button id="tet-pause" class="btn tetris-side-btn">Pauze</button>
-        <button id="tet-new" class="btn tetris-side-btn">Nieuw</button>
-      </aside>
     </div>
     <div class="tetris-controls" aria-label="Bediening">
       <button class="tet-pad" data-act="left"  aria-label="Naar links">◀</button>
@@ -77,7 +80,17 @@ export function init(root, ctx) {
       <button class="tet-pad" data-act="right" aria-label="Naar rechts">▶</button>
       <button class="tet-pad tet-pad-wide tet-pad-drop" data-act="soft" aria-label="Vallen (ingedrukt houden)">⬇ vallen</button>
     </div>
-    <p class="game-hint">Houd <b>⬇ vallen</b> ingedrukt om te zakken; laat los om op eigen tempo verder te gaan. Of veeg over het veld (tik = draaien). Toetsenbord: pijltjes, ↑ draaien, ↓ zakken, spatie ineens vallen, P pauze.</p>`;
+    <dialog id="tet-help" class="tetris-help">
+      <h2>Zo speel je Blokjes</h2>
+      <ul class="tetris-help-list">
+        <li><b>◀ ▶</b> — schuif het blok naar links of rechts (of veeg over het veld).</li>
+        <li><b>⟳</b> — draai het blok (of tik op het veld).</li>
+        <li><b>⬇ vallen</b> — <b>ingedrukt houden</b> om te zakken; loslaten = op eigen tempo verder, zodat je nog even opzij kunt schuiven.</li>
+        <li>Maak een <b>hele rij</b> vol: die verdwijnt en levert punten op.</li>
+        <li><b>Toetsenbord:</b> pijltjes bewegen, ↑ draaien, ↓ zakken, spatie = ineens vallen, P = pauze.</li>
+      </ul>
+      <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>
+    </dialog>`;
 
   const boardCanvas = root.querySelector('#tet-board');
   const nextCanvas = root.querySelector('#tet-next');
@@ -476,25 +489,28 @@ export function init(root, ctx) {
     if (score > 0 && state !== 'over') ctx.submitScore(score);
     newGame();
   });
+  const helpDlg = root.querySelector('#tet-help');
+  root.querySelector('#tet-help-btn').addEventListener('click', () => {
+    if (state === 'playing') setPaused(true);   // pauzeer terwijl je leest
+    if (helpDlg.showModal) helpDlg.showModal();
+  });
   function onVisibility() { if (document.hidden) setPaused(true); }
 
   // ---------- layout ----------
   function layout() {
     const stage = root.querySelector('.tetris-stage');
     const controls = root.querySelector('.tetris-controls');
-    const hint = root.querySelector('.game-hint');
+    // Het bord krijgt de volle breedte (info + volgende + knoppen staan boven en
+    // onder, niet ernaast), zodat er geen breedte verloren gaat.
     const avail = stage.clientWidth || root.clientWidth || 320;
-    // Het "volgende"-paneel staat er altijd naast; reserveer die breedte + de
-    // flex-gap zodat het paneel nooit onder het bord wegvalt (dat zou de pagina
-    // hoger maken en de knoppen uit beeld duwen).
-    const gap = 12, sidePanel = 120;
-    const boardW = Math.max(120, avail - sidePanel - gap - 6);
+    const boardW = Math.max(120, avail - 4);
 
     // Verticale ruimte: van de bovenkant van het speelveld tot onder in het
-    // scherm, min wat de knoppen + hint eronder nodig hebben. Zo passen bord én
-    // bediening samen in beeld en hoef je tijdens het spelen niet te scrollen.
+    // scherm, min alleen wat de knoppen eronder nodig hebben (de uitleg zit nu
+    // achter de ❔-knop). Zo vult het bord zowel de breedte als de hoogte
+    // maximaal en passen bord + bediening samen in beeld zonder scrollen.
     const stageTop = stage.getBoundingClientRect().top;
-    const below = (controls ? controls.offsetHeight : 140) + (hint ? hint.offsetHeight : 40) + 24;
+    const below = (controls ? controls.offsetHeight : 60) + 18;
     const vAvail = (window.innerHeight || 700) - stageTop - below;
     const maxH = Math.max(220, vAvail);
 
@@ -540,5 +556,6 @@ export function init(root, ctx) {
       el.removeEventListener('pointercancel', stop);
     });
     ro.disconnect();
+    root.classList.remove('tetris-root');
   };
 }

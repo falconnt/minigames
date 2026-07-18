@@ -5,6 +5,7 @@
 
 import { availableHeight } from '../js/fit.js';
 import { BIRD_ICON } from '../js/bird-icon.js';
+import * as sound from '../js/sound.js';
 
 // ---- dag-nachtcyclus ----
 // De wereld doorloopt continu dag → zonsondergang → nacht → zonsopkomst,
@@ -207,6 +208,7 @@ export function init(root, ctx) {
       if (!p.passed && p.x + pw < bird.x - bird.w / 2) {
         p.passed = true;
         score++;
+        sound.play('ping');
         scoreEl.textContent = score;
         scoreEl.classList.remove('pop');
         void scoreEl.offsetWidth;

@@ -24,7 +24,8 @@ mogelijk openingen tussen de buizen. Elke buis die je passeert is één punt.
    opwaartse impuls. Timing is alles.
 3. Buizen komen van rechts aanvliegen met steeds een opening op wisselende
    hoogte. Vlieg door de opening.
-4. Je scoort **+1 punt** voor elke buis die je volledig passeert.
+4. Je scoort **+1 punt** voor elke buis die je volledig passeert, met een
+   **ping-geluidje** (uit te zetten via Instellingen → Geluid).
 5. De **snelheid loopt geleidelijk op** naarmate je langer vliegt, dus het wordt
    steeds pittiger.
 6. De wereld doorloopt een **dag-nachtcyclus**: overdag zon, wolken en vogeltjes

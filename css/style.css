@@ -609,6 +609,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
   -webkit-tap-highlight-color: transparent;
 }
 .race-car.sel { border-color: #ffd23d; box-shadow: 0 0 12px rgba(255, 210, 61, 0.5); }
+.race-car-eng { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; color: #ffd23d; opacity: 0.9; }
 .race-car canvas { pointer-events: none; }
 .race-start { flex: 0 0 auto; font-size: 1.1rem; padding: 0.65rem 1.6rem; }
 

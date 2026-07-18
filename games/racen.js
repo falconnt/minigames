@@ -10,17 +10,28 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'BMW M4', col: '#ffd23d' },
-  { name: 'Mercedes GT 63', col: '#ff5b5b' },
-  { name: 'Ferrari Pista', col: '#ff9a3d' },
-  { name: 'Lamborghini SVJ', col: '#48ff8e' },
-  { name: 'Porsche 911', col: '#4fd0d6' },
-  { name: 'Mustang', col: '#5f97ef' },
-  { name: 'Audi R8', col: '#c08ee8' },
-  { name: 'Pagani', col: '#ff6ec7' },
-  { name: 'Mazda RX500', col: '#cfd6df' },
-  { name: 'Koenigsegg Jesko', col: '#a3e635' },
+  { name: 'BMW M4', col: '#ffd23d', eng: 'v8' },
+  { name: 'Mercedes GT 63', col: '#ff5b5b', eng: 'w12' },
+  { name: 'Ferrari Pista', col: '#ff9a3d', eng: 'v8' },
+  { name: 'Lamborghini SVJ', col: '#48ff8e', eng: 'v12' },
+  { name: 'Porsche 911', col: '#4fd0d6', eng: 'flat6' },
+  { name: 'Mustang', col: '#5f97ef', eng: 'v8' },
+  { name: 'Audi R8', col: '#c08ee8', eng: 'v10' },
+  { name: 'Pagani', col: '#ff6ec7', eng: 'v12' },
+  { name: 'Mazda RX500', col: '#cfd6df', eng: 'rotary' },
+  { name: 'Koenigsegg Jesko', col: '#a3e635', eng: 'v8' },
 ];
+// Motorprofielen: base/rev = ontstekingsfrequentie (Hz) van stationair tot rood;
+// rumble = sub-octaaf (V8-lope), bright = felheid/formant, vol = volume.
+const ENGINES = {
+  v8:     { base: 75,  rev: 560,  rumble: 0.55, bright: 1.0,  vol: 0.08 },
+  v10:    { base: 85,  rev: 680,  rumble: 0.28, bright: 1.15, vol: 0.075 },
+  v12:    { base: 100, rev: 900,  rumble: 0.05, bright: 1.35, vol: 0.065 },
+  w12:    { base: 90,  rev: 760,  rumble: 0.18, bright: 1.1,  vol: 0.07 },
+  flat6:  { base: 95,  rev: 720,  rumble: 0.22, bright: 1.12, vol: 0.075 },
+  rotary: { base: 120, rev: 1000, rumble: 0.05, bright: 1.5,  vol: 0.06 },
+};
+const ENG_LABEL = { v8: 'V8', v10: 'V10', v12: 'V12', w12: 'W12', flat6: 'Flat-6', rotary: 'Rotary' };
 const ROAD = '#2c2f36', GRASS = '#1f3d24', CURB1 = '#e8433f', CURB2 = '#f5f5f5';
 
 export function init(root, ctx) {
@@ -101,58 +112,64 @@ export function init(root, ctx) {
     for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(x * k); }
     return c;
   }
-  // Doorlopend, realistisch motorgeluid: meerdere boventonen door een waveshaper
-  // en filter, met een tremolo-"brom" en uitlaat-ruis. Toonhoogte/filter stijgen
-  // mee met de snelheid.
+  // Race-motor-synth. De "toon" is de ontstekingsfrequentie (hoog en gierend bij
+  // hoge toeren), door een resonant uitlaat-filter. Per motortype: sub-octaaf
+  // (V8-lope), felheid (V12-wail) en volume verschillen.
   function startEngine() {
     if (!actx || engine) return;
     const master = actx.createGain(); master.gain.value = 0; master.connect(actx.destination);
-    // tremolo (amplitude-modulatie geeft het rommelige motorgevoel)
-    const throb = actx.createGain(); throb.gain.value = 1; throb.connect(master);
-    const lfo = actx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 8;
-    const lfoAmt = actx.createGain(); lfoAmt.gain.value = 0.4;
+    // resonant "uitlaat"-formant: geeft de brul/gier
+    const form = actx.createBiquadFilter(); form.type = 'lowpass'; form.frequency.value = 900; form.Q.value = 3.5;
+    form.connect(master);
+    // grit/vervorming voor motor-textuur
+    const shaper = actx.createWaveShaper(); shaper.curve = gritCurve(3.2); shaper.oversample = '4x';
+    shaper.connect(form);
+    // amplitude-throb (lope) — sterk bij V8, bijna nul bij V12
+    const throb = actx.createGain(); throb.gain.value = 1; throb.connect(shaper);
+    const lfo = actx.createOscillator(); lfo.type = 'triangle'; lfo.frequency.value = 10;
+    const lfoAmt = actx.createGain(); lfoAmt.gain.value = 0.2;
     lfo.connect(lfoAmt).connect(throb.gain);
-    // lowpass dat opent bij hogere toeren
-    const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 0.8;
-    lp.connect(throb);
-    // grit/vervorming voor textuur
-    const shaper = actx.createWaveShaper(); shaper.curve = gritCurve(2.6); shaper.oversample = '2x';
-    shaper.connect(lp);
-    // oscillatoren: grondtoon + octaaf lager (gewicht) + boventoon (rand)
-    const oscBus = actx.createGain(); oscBus.gain.value = 0.5; oscBus.connect(shaper);
+    // oscillatoren: grondtoon (ontsteking) + octaaf lager (V8-gewicht) + hoger (wail)
     const oscMain = actx.createOscillator(); oscMain.type = 'sawtooth';
     const oscSub = actx.createOscillator(); oscSub.type = 'sawtooth';
-    const oscHi = actx.createOscillator(); oscHi.type = 'square';
-    const gMain = actx.createGain(); gMain.gain.value = 0.6;
-    const gSub = actx.createGain(); gSub.gain.value = 0.5;
+    const oscHi = actx.createOscillator(); oscHi.type = 'sawtooth';
+    const gMain = actx.createGain(); gMain.gain.value = 0.5;
+    const gSub = actx.createGain(); gSub.gain.value = 0.4;
     const gHi = actx.createGain(); gHi.gain.value = 0.12;
-    oscMain.connect(gMain).connect(oscBus);
-    oscSub.connect(gSub).connect(oscBus);
-    oscHi.connect(gHi).connect(oscBus);
-    // uitlaat-ruis door een bandfilter
+    oscMain.connect(gMain).connect(throb);
+    oscSub.connect(gSub).connect(throb);
+    oscHi.connect(gHi).connect(throb);
+    // uitlaat-ruis, gefilterd rond de ontstekingsfrequentie
     const nb = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
     const nd = nb.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     const noise = actx.createBufferSource(); noise.buffer = nb; noise.loop = true;
-    const nBp = actx.createBiquadFilter(); nBp.type = 'bandpass'; nBp.frequency.value = 400; nBp.Q.value = 0.7;
-    const nGain = actx.createGain(); nGain.gain.value = 0.4;
-    noise.connect(nBp).connect(nGain).connect(shaper);
+    const nBp = actx.createBiquadFilter(); nBp.type = 'bandpass'; nBp.frequency.value = 600; nBp.Q.value = 0.9;
+    const nGain = actx.createGain(); nGain.gain.value = 0.25;
+    noise.connect(nBp).connect(nGain).connect(throb);
     try { oscMain.start(); oscSub.start(); oscHi.start(); lfo.start(); noise.start(); } catch (e) { /* al gestart */ }
-    engine = { master, lp, lfo, oscMain, oscSub, oscHi, nBp, nodes: [oscMain, oscSub, oscHi, lfo, noise] };
+    engine = { master, form, lfo, lfoAmt, oscMain, oscSub, oscHi, gSub, gHi, nBp, nodes: [oscMain, oscSub, oscHi, lfo, noise] };
   }
   function engineUpdate() {
     if (!engine || !actx) return;
     const t = actx.currentTime;
+    const prof = ENGINES[carEngine] || ENGINES.v8;
     const on = state === 'playing';
-    const vol = (muted || !on) ? 0 : (turboOn && turbo > 0 ? 0.09 : 0.065);
-    engine.master.gain.setTargetAtTime(vol, t, 0.1);
-    const f = 46 + speed * 130 + (turboOn && turbo > 0 ? 28 : 0); // grondtoon ~ toeren
-    engine.oscMain.frequency.setTargetAtTime(f, t, 0.05);
-    engine.oscSub.frequency.setTargetAtTime(f * 0.5, t, 0.05);
-    engine.oscHi.frequency.setTargetAtTime(f * 2, t, 0.05);
-    engine.lfo.frequency.setTargetAtTime(Math.min(26, Math.max(6, f * 0.14)), t, 0.1); // throb met de toeren mee
-    engine.lp.frequency.setTargetAtTime(350 + speed * 2300, t, 0.08);
-    engine.nBp.frequency.setTargetAtTime(f * 3, t, 0.08);
+    const boost = (turboOn && turbo > 0) ? 1 : 0;
+    // toeren: van stationair (lage speed) tot rood; ontstekingsfrequentie = toon
+    const revFrac = Math.max(0, speed - 0.35);
+    const f = Math.min(prof.base + prof.rev * 1.4, prof.base + revFrac * prof.rev * 1.15 + boost * prof.rev * 0.14);
+    const vol = (muted || !on) ? 0 : prof.vol * (0.85 + revFrac * 0.4 + boost * 0.15);
+    engine.master.gain.setTargetAtTime(vol, t, 0.08);
+    engine.oscMain.frequency.setTargetAtTime(f, t, 0.04);
+    engine.oscSub.frequency.setTargetAtTime(f * 0.5, t, 0.04);
+    engine.oscHi.frequency.setTargetAtTime(f * 2, t, 0.04);
+    engine.gSub.gain.setTargetAtTime(prof.rumble, t, 0.1);            // V8-lope vs. gladde V12
+    engine.gHi.gain.setTargetAtTime(0.08 + prof.bright * 0.12 + boost * 0.06, t, 0.1); // wail
+    engine.lfoAmt.gain.setTargetAtTime(0.08 + prof.rumble * 0.35, t, 0.1);
+    engine.lfo.frequency.setTargetAtTime(Math.min(30, Math.max(7, f * 0.12)), t, 0.1);
+    engine.form.frequency.setTargetAtTime(Math.min(6500, f * (2.4 * prof.bright) + 300), t, 0.06);
+    engine.nBp.frequency.setTargetAtTime(f * 2, t, 0.06);
   }
   function tone(freq, dur, type, vol, slideTo) {
     if (muted || !actx) return;
@@ -183,7 +200,7 @@ export function init(root, ctx) {
   let scroll = 0, speed = 0.42, dist = 0, lives = 3;
   let spawnCd = 1, coinCd = 2, turbo = 1, invuln = 0, shake = 0, flashT = 0;
   let state = 'select';
-  let carColor = CARS[0].col, selected = 0, sel = null;
+  let carColor = CARS[0].col, carEngine = CARS[0].eng, selected = 0, sel = null;
   let moveDir = 0, turboOn = false, dragging = false, dragX = 0;
   let raf = 0, last = 0;
 
@@ -223,14 +240,15 @@ export function init(root, ctx) {
       const g2 = cv.getContext('2d'); g2.setTransform(2, 0, 0, 2, 0, 0);
       drawCarShape(g2, 40, 54, 44, 78, car.col, -1);
       const nm = document.createElement('span'); nm.textContent = car.name;
-      card.appendChild(cv); card.appendChild(nm);
+      const eg = document.createElement('small'); eg.className = 'race-car-eng'; eg.textContent = ENG_LABEL[car.eng] || car.eng;
+      card.appendChild(cv); card.appendChild(nm); card.appendChild(eg);
       card.addEventListener('click', () => selectCar(i));
       wrap.appendChild(card);
     });
     sel.querySelector('#rc-start').addEventListener('click', () => { ensureAudio(); startRace(); });
   }
   function selectCar(i) {
-    selected = i; carColor = CARS[i].col;
+    selected = i; carColor = CARS[i].col; carEngine = CARS[i].eng;
     sel.querySelectorAll('.race-car').forEach((el, k) => el.classList.toggle('sel', k === i));
   }
   function goToSelect() {
@@ -240,7 +258,7 @@ export function init(root, ctx) {
     if (sel) sel.style.display = 'flex';
   }
   function startRace() {
-    carColor = CARS[selected].col;
+    carColor = CARS[selected].col; carEngine = CARS[selected].eng;
     if (sel) sel.style.display = 'none';
     reset();
   }

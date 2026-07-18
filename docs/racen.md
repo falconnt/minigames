@@ -87,6 +87,11 @@ de iconische **vier ronde koplampen**, een **geel-blauwe middenstreep**, een gel
 **front-lichtbalk**, de kenmerkende **centrale quad-uitlaat**, zwarte velgen met
 gele remklauwen, een grote **zwarte achtervleugel** en een **V12**.
 
+De **Mazda RX500** is nagetekend als de retro **Mazda RX-500 (1970)**: een
+**zilveren** wig-conceptcar met een zwarte **bubble-canopy**, **louvres** op de
+motorkap en de achterklep, kleine **ronde koplampen**, klassieke **chromen
+velgen**, geen spoiler en een **Rotary**-motor.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als

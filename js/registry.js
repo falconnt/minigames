@@ -3,6 +3,7 @@
 
 import { BIRD_ICON } from './bird-icon.js';
 import { ICON_2048 } from './icon-2048.js';
+import { ICON_REACTIE } from './icon-reactie.js';
 
 export const categories = [
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
@@ -35,7 +36,7 @@ export const games = [
   {
     id: 'reactie',
     title: 'Reactietest',
-    icon: '⚡',
+    icon: ICON_REACTIE,
     category: 'reflex',
     description: 'Klik zodra het scherm groen wordt. Vijf rondes, gemiddelde telt.',
     scoreMode: 'lower',

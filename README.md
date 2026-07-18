@@ -12,7 +12,8 @@ Een minigame-framework dat volledig statisch draait op **GitHub Pages** — geen
 - **Licht & donker thema** — volgt standaard je systeemvoorkeur; de 🌓-knop overschrijft dat en onthoudt je keuze.
 - **Categorieën** — games zijn ingedeeld in categorieën met filterknoppen op het startscherm.
 - **Schermvullend spelen** — elke game past zijn speelveld aan de schermgrootte aan, zodat speelveld, knoppen en score zonder scrollen in beeld staan; uitleg zit achter een ❔-knop. Zie de richtlijn hieronder.
-- **Record-feestje & geluid** — confetti, een melding en een klein fanfaretje bij elk nieuw record (in elke game, via het framework). Geluid is in code gesynthetiseerd en uit te zetten in Instellingen.
+- **Record-feestje & geluid** — confetti, een melding, trilfeedback (mobiel) en een klein fanfaretje bij elk nieuw record (in elke game, via het framework). Games hebben eigen geluidjes (ping, plop); alles is in code gesynthetiseerd en uit te zetten in Instellingen.
+- **Badges & streak** — verdien badges (eerste potje, alle games gespeeld, records, game-prestaties) met een melding bij het verdienen; te bekijken op de 🏆-pagina. Speel meerdere dagen op rij voor een 🔥-streak op het startscherm.
 - **Hash-routing** — `#/game/<id>` werkt zonder serverconfiguratie, dus ook op een GitHub Pages-projectpagina.
 
 ## Meegeleverde games

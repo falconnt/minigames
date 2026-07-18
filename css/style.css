@@ -362,6 +362,51 @@ body {
 .rank-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
 .rank-list .sc { font-weight: 600; font-variant-numeric: tabular-nums; }
 
+/* ---------- badges ---------- */
+
+.badges-title { margin: 1.6rem 0 0.8rem; }
+
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.8rem;
+}
+
+.badge {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  opacity: 0.55;
+  filter: grayscale(0.6);
+}
+.badge-earned {
+  opacity: 1;
+  filter: none;
+  border-color: rgba(240, 190, 60, 0.7);
+  background: linear-gradient(135deg, rgba(255, 200, 60, 0.14), var(--bg-card) 55%);
+}
+.badge-ico { font-size: 1.6rem; line-height: 1; }
+.badge b { font-size: 0.92rem; }
+.badge-desc { font-size: 0.78rem; color: var(--text-muted); }
+
+/* streak-indicator op het startscherm */
+.streak-chip {
+  margin-left: auto;
+  align-self: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #d9822b;
+  background: rgba(240, 150, 60, 0.14);
+  border: 1px solid rgba(240, 150, 60, 0.45);
+  border-radius: 2rem;
+  padding: 0.35rem 0.8rem;
+  white-space: nowrap;
+}
+
 .acc-form { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem; }
 .acc-input {
   background: var(--bg-inset);

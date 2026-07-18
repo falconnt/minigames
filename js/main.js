@@ -10,6 +10,7 @@ import * as sync from './sync.js';
 import { APP_VERSION } from './version.js';
 import * as fx from './effects.js';
 import * as sound from './sound.js';
+import * as ach from './achievements.js';
 
 const view = document.getElementById('view');
 let destroyCurrentGame = null;
@@ -49,8 +50,11 @@ function renderHome() {
     })
     .join('');
 
+  const streak = storage.getStat('streak');
+  const streakChip = streak >= 2 ? `<span class="streak-chip" title="Dagen op rij gespeeld">🔥 ${streak} dagen op rij</span>` : '';
+
   view.innerHTML = `
-    <div class="chips">${chips}</div>
+    <div class="chips">${chips}${streakChip}</div>
     <div class="cards">${cards || '<p class="empty">Geen games in deze categorie.</p>'}</div>
   `;
 
@@ -125,6 +129,17 @@ function renderScores() {
           </div>`;
         })
         .join('')}
+    </div>
+    <h3 class="badges-title">🏅 Badges</h3>
+    <div class="badges-grid">
+      ${ach.BADGES.map((b) => {
+        const earned = ach.isEarned(b.id);
+        return `<div class="badge ${earned ? 'badge-earned' : ''}">
+          <span class="badge-ico">${earned ? b.icon : '🔒'}</span>
+          <b>${b.title}</b>
+          <span class="badge-desc">${b.desc}</span>
+        </div>`;
+      }).join('')}
     </div>`;
 
   view.querySelectorAll('[data-sv]').forEach((b) =>
@@ -155,6 +170,7 @@ const celebrated = new Set();
 function celebrate(game, result, score) {
   if (!result.isRecord || !(score > 0)) return;
   fx.toast(`🥇 Nieuw record: ${game.formatScore(score)}!`);
+  if (navigator.vibrate) navigator.vibrate(80);
   if (!celebrated.has(game.id)) {
     celebrated.add(game.id);
     fx.confetti();
@@ -256,6 +272,7 @@ async function renderGame(id) {
       const result = storage.submitScore(game.id, score, game.scoreMode);
       renderHighscores(game);
       celebrate(game, result, score);
+      ach.onScore(game, score, result);
       // Online: lokaal in de wachtrij + versturen zodra er verbinding is.
       sync.enqueueScore(game.id, score).then(() => {
         if (hsView === 'online') renderHighscores(game);

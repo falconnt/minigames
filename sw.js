@@ -23,6 +23,7 @@ const APP_SHELL = [
   './js/bird-icon.js',
   './js/effects.js',
   './js/sound.js',
+  './js/achievements.js',
   './js/version.js',
   './manifest.webmanifest',
   './icons/icon-192.png',

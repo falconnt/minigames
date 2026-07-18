@@ -6,6 +6,7 @@
 // kleine schaal-animatie. Voortgang wordt automatisch bewaard.
 
 import { availableHeight } from '../js/fit.js';
+import * as sound from '../js/sound.js';
 
 const PAD = 10;   // binnenmarge van het bord (px)
 const GAP = 10;   // ruimte tussen tegels (px)
@@ -213,6 +214,7 @@ export function init(root, ctx) {
     // 2) na de schuifanimatie: samenvoegen afronden + nieuwe tegel
     pending = setTimeout(() => {
       pending = null;
+      if (merges.length) sound.play('plop');
       for (const m of merges) {
         m.keep.value *= 2;
         const el = elById(m.keep.id);

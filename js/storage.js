@@ -22,7 +22,7 @@ const subtleOk = typeof crypto !== 'undefined' && crypto.subtle && isSecureConte
 
 let secure = emptySecure();
 function emptySecure() {
-  return { games: {}, pending: [], flags: {} };
+  return { games: {}, pending: [], flags: {}, stats: {} };
 }
 
 // ---------- instellingen (plat, synchroon) ----------
@@ -128,6 +128,7 @@ export const storage = {
     secure.games ??= {};
     secure.pending ??= [];
     secure.flags ??= {};
+    secure.stats ??= {};
   },
 
   // --- instellingen (thema) ---
@@ -186,6 +187,23 @@ export const storage = {
   removePending(id) {
     secure.pending = (secure.pending || []).filter((p) => p.id !== id);
     persist();
+  },
+
+  // --- statistieken (voor badges en streaks) ---
+  getStat(name) {
+    return secure.stats?.[name] ?? 0;
+  },
+  setStat(name, value) {
+    secure.stats[name] = value;
+    persist();
+  },
+  bumpStat(name, by = 1) {
+    secure.stats[name] = (secure.stats[name] || 0) + by;
+    persist();
+    return secure.stats[name];
+  },
+  getStats() {
+    return { ...(secure.stats || {}) };
   },
 
   // --- vlaggen (bv. of lokale scores al één keer online gesynct zijn) ---

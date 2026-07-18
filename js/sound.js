@@ -45,6 +45,10 @@ export function play(name) {
       // helder belletje, bv. bij het passeren van een buis in Vogel Vlucht
       tone(1046, 0, 0.09, 'sine', 0.11);
       tone(1568, 0.02, 0.07, 'sine', 0.05);
+    } else if (name === 'plop') {
+      // zachte plop, bv. bij het samenvoegen van tegels in 2048
+      tone(320, 0, 0.07, 'sine', 0.12);
+      tone(215, 0.045, 0.09, 'sine', 0.08);
     } else if (name === 'record') {
       // klein fanfare-arpeggio (C-E-G-C)
       [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.09, 0.16, 'triangle', 0.14));

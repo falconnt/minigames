@@ -71,6 +71,11 @@ De **Porsche 911** is nagetekend als de zwarte **MANSORY P9LM EVO 900** met
 remklauwen, **ronde 911-koplampen**, een grote **zwarte achtervleugel**, dubbele
 uitlaten en een **Flat-6**.
 
+De **Mustang** is nagetekend als een **2024 Mustang GT Dark Horse** in nachtstijl:
+een **zwarte** glanzende body met felle **paarse neon-underglow**, **blauw
+oplichtende koplampen** en een **blauwe front-lichtbalk**, **witte velgen**,
+**vier uitlaten** en een **V8**.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als

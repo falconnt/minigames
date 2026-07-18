@@ -1,6 +1,8 @@
 // Register van alle minigames. Een nieuwe game toevoegen = één entry hier
 // plus één module in games/ (zie README.md).
 
+import { BIRD_ICON } from './bird-icon.js';
+
 export const categories = [
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
   { id: 'puzzel', name: 'Puzzel', icon: '🧩' },
@@ -12,7 +14,7 @@ export const games = [
   {
     id: 'vogelvlucht',
     title: 'Vogel Vlucht',
-    icon: '🐦',
+    icon: BIRD_ICON,
     category: 'arcade',
     description: 'Tik of druk op spatie om te fladderen en vlieg zo ver mogelijk tussen de buizen door.',
     scoreMode: 'higher',

@@ -254,6 +254,8 @@ body {
 .card-cat-puzzel .card-icon { background: rgba(70, 170, 95, 0.18); }
 .card-cat-reflex .card-icon { background: rgba(240, 200, 60, 0.22); }
 .card-cat-simulatie .card-icon { background: rgba(95, 135, 245, 0.18); }
+/* Vogel Vlucht: eigen artwork in een mini-luchtje. */
+.card-game-vogelvlucht .card-icon { background: linear-gradient(180deg, #5b9fee, #bfe0f8); }
 .card-body h3 { margin: 0 0 0.25rem; }
 .card-body p { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.9rem; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }

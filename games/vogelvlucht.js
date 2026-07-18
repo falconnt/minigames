@@ -4,6 +4,7 @@
 // spelpaneel in plaats van fullscreen.
 
 import { availableHeight } from '../js/fit.js';
+import { BIRD_ICON } from '../js/bird-icon.js';
 
 // ---- dag-nachtcyclus ----
 // De wereld doorloopt continu dag → zonsondergang → nacht → zonsopkomst,
@@ -66,7 +67,7 @@ export function init(root, ctx) {
       <div class="vv-score">0</div>
       <div class="vv-overlay">
         <div class="vv-panel">
-          <h1>Vogel Vlucht! 🐦</h1>
+          <h1>Vogel Vlucht! ${BIRD_ICON}</h1>
           <p class="vv-intro">Tik of druk op spatie om te fladderen en vlieg tussen de buizen door!</p>
           <div class="vv-scoreline vv-hidden"></div>
           <div class="vv-bestline vv-hidden"></div>

@@ -34,7 +34,7 @@ function renderHome() {
       const best = storage.getBest(g.id, g.scoreMode);
       const cat = getCategory(g.category);
       const hasSave = storage.getSave(g.id) !== null;
-      return `<a class="card card-cat-${g.category}" href="#/game/${g.id}">
+      return `<a class="card card-cat-${g.category} card-game-${g.id}" href="#/game/${g.id}">
         <div class="card-icon">${g.icon}</div>
         <div class="card-body">
           <h3>${g.title}</h3>

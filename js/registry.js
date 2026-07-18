@@ -4,6 +4,7 @@
 import { BIRD_ICON } from './bird-icon.js';
 import { ICON_2048 } from './icon-2048.js';
 import { ICON_REACTIE } from './icon-reactie.js';
+import { ICON_TETRIS } from './icon-tetris.js';
 
 export const categories = [
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
@@ -46,7 +47,7 @@ export const games = [
   {
     id: 'tetris',
     title: 'Blokjes',
-    icon: '🟩',
+    icon: ICON_TETRIS,
     category: 'puzzel',
     description: 'Tetris met Minecraft-blokken! Stapel gras, diamant en goud tot volle rijen. Speel met je vinger, de muis of het toetsenbord.',
     scoreMode: 'higher',

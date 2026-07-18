@@ -229,15 +229,42 @@ export function init(root, ctx) {
   }
   const sCoin = () => { tone(880, 0.08, 'square', 0.08, 1320); };
   const sCrash = () => { noiseBurst(0.35, 0.22); tone(150, 0.35, 'sawtooth', 0.12, 50); };
+  // "ponk": een korte holle pop van de uitlaat (backfire)
+  const sBackfire = (p) => { p = p || 1; tone(155, 0.15, 'triangle', 0.15 * p, 62); noiseBurst(0.13, 0.13 * p); };
+
+  // Backfire: ponk + een vuurflits uit de twee uitlaten achter de auto.
+  function spawnBackfire(power) {
+    power = power || 1;
+    sBackfire(power);
+    const ry = 0.82 + (S.carH * 0.5) / H + 0.004;   // achterkant van de auto
+    const dx = (S.carW * 0.18) / W;                  // afstand tot de twee uitlaten
+    for (const side of [-1, 1]) {
+      const ox = player.x + side * dx;
+      const n = 5 + Math.floor(power * 5);
+      for (let k = 0; k < n; k++) {
+        flames.push({
+          x: ox + (Math.random() - 0.5) * 0.008,
+          y: ry + Math.random() * 0.008,
+          vx: (Math.random() - 0.5) * 0.18,
+          vy: 0.55 + Math.random() * 0.8,            // naar achteren (omlaag op het scherm)
+          r: (0.5 + Math.random() * 0.7) * power,
+          life: 1,
+          max: 0.16 + Math.random() * 0.16,
+        });
+      }
+    }
+    shake = Math.max(shake, 0.12 * power);
+  }
 
   // ---------- spelstatus ----------
   let player = { x: 0.5 };
-  let enemies = [], coins = [], scenery = [], marks = [], particles = [];
+  let enemies = [], coins = [], scenery = [], marks = [], particles = [], flames = [];
   let scroll = 0, speed = 0.42, dist = 0, lives = 3;
   let spawnCd = 1, coinCd = 2, turbo = 1, invuln = 0, shake = 0, flashT = 0;
   let state = 'select';
   let carColor = CARS[0].col, carEngine = CARS[0].eng, selected = 0, sel = null;
   let moveDir = 0, turboOn = false, dragging = false, dragX = 0;
+  let engGear = -1, wasBoost = false;
   let raf = 0, last = 0;
 
   function initScene() {
@@ -251,7 +278,8 @@ export function init(root, ctx) {
 
   function reset() {
     player = { x: 0.5 };
-    enemies = []; coins = []; particles = [];
+    enemies = []; coins = []; particles = []; flames = [];
+    engGear = -1; wasBoost = false;
     scroll = 0; speed = 0.42; dist = 0; lives = 3;
     spawnCd = 1; coinCd = 2; turbo = 1; invuln = 0; shake = 0; flashT = 0;
     initScene();
@@ -371,6 +399,8 @@ export function init(root, ctx) {
   function update(dt) {
     for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.6; }
     particles = particles.filter((p) => p.life > 0);
+    for (const fl of flames) { fl.x += fl.vx * dt; fl.y += fl.vy * dt; fl.vy *= 0.96; fl.life -= dt / fl.max; }
+    flames = flames.filter((fl) => fl.life > 0);
     if (shake > 0) shake -= dt;
     if (flashT > 0) flashT -= dt;
     engineUpdate(dt);
@@ -395,6 +425,14 @@ export function init(root, ctx) {
     const baseSpeed = 0.42 + Math.min(dist / 2500, 0.55);
     speed = baseSpeed * (boosting ? 1.7 : 1);
     dist += speed * dt * 55;
+
+    // Schakelen (versnelling omhoog) → backfire; ook bij het loslaten van de
+    // turbo (overrun) ponkt de uitlaat met vuur.
+    const gbBase = speed / (boosting ? 1.7 : 1);
+    const gbGear = Math.min(5, Math.floor(Math.min(1.1, Math.max(0, (gbBase - 0.42) / 0.55)) * 6));
+    if (engGear >= 0 && gbGear > engGear) spawnBackfire(1);
+    if (wasBoost && !boosting) spawnBackfire(0.85);
+    engGear = gbGear; wasBoost = boosting;
 
     // wereld scrollt
     scroll += speed * dt;
@@ -646,6 +684,21 @@ export function init(root, ctx) {
       g.fillRect(p.x * W - r / 2, p.y * H - r / 2, r, r);
     }
     g.globalAlpha = 1; noGlow();
+    // backfire-vlammen uit de uitlaat (additief, achter de auto)
+    if (flames.length) {
+      g.save(); g.globalCompositeOperation = 'lighter';
+      for (const fl of flames) {
+        const x = fl.x * W, y = fl.y * H, li = Math.max(0, fl.life);
+        const rad = unit * 0.028 * fl.r * (0.55 + li * 0.9);
+        g.globalAlpha = 0.45 * li;
+        g.fillStyle = li > 0.5 ? '#ffd23d' : '#ff5a1a';
+        g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+        g.globalAlpha = 0.85 * li;
+        g.fillStyle = li > 0.6 ? '#fffdf0' : '#ffab3a';
+        g.beginPath(); g.arc(x, y, rad * 0.5, 0, Math.PI * 2); g.fill();
+      }
+      g.globalAlpha = 1; g.restore();
+    }
     // speler (knippert bij onkwetsbaarheid)
     if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawSuperCar(g, player.x * W, 0.82 * H, S.carW, S.carH, CARS[selected], -1);
 

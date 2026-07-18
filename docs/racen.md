@@ -38,6 +38,11 @@ motortype** (te zien op het keuzescherm) dat anders klinkt: een **V8** rommelt
 zwaar (lope), een **V12** giert hoog en glad, en er zijn ook **W12, V10, Flat-6
 en Rotary**. Met de **🔊/🔇-knop** zet je het geluid aan of uit.
 
+Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
+snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
+**"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als
+een echte raceauto die backfired.
+
 Sleep je met je vinger over de weg, dan volgt je auto je vinger. **Turbo** geeft
 een flinke snelheidsboost maar gebruikt je **turbo-balk** (linksonder); die laadt
 vanzelf weer op als je 'm loslaat. Met **← Terug** ga je naar het menu; **Nieuw

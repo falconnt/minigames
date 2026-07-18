@@ -5,6 +5,22 @@
 
 import { availableHeight } from '../js/fit.js';
 
+// ---- dag-nachtcyclus ----
+// De wereld doorloopt continu dag → zonsondergang → nacht → zonsopkomst,
+// gebaseerd op de wandkloktijd sinds het openen van de game (loopt dus ook
+// door tussen potjes). Paletten zijn de vijf gradient-stops van de lucht.
+const CYCLE = 48; // seconden per volledige dag
+const DAY = ['#3f7fe0', '#5b9fee', '#8ec9f5', '#ffd9a0', '#ffb677'];
+const SUNSET = ['#3a4fae', '#8a5fc9', '#e08fb0', '#ffb070', '#ff8e55'];
+const NIGHT = ['#0c1533', '#16224e', '#2a3260', '#3a3a68', '#4a3f66'];
+
+function hx(c) { const v = parseInt(c.slice(1), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; }
+function mixc(a, b, t) {
+  const A = hx(a), B = hx(b);
+  return '#' + [0, 1, 2].map((i) => Math.round(A[i] + (B[i] - A[i]) * t).toString(16).padStart(2, '0')).join('');
+}
+const lerpPal = (a, b, t) => a.map((c, i) => mixc(c, b[i], t));
+
 function injectStyles() {
   if (document.getElementById('vogelvlucht-style')) return;
   const style = document.createElement('style');
@@ -107,6 +123,9 @@ export function init(root, ctx) {
   const PIPE_W = () => Math.min(80, W * 0.18);
 
   let pipes = [], clouds = [], mountains = [], particles = [];
+  let stars = [], sparkles = [], farBirds = [];
+  let env = { pal: DAY, night: 0 };
+  const worldStart = performance.now() / 1000; // start van de dag-nachtklok
   let shake = 0, speed = 0, score = 0;
   let running = false, spawnTimer = 0, elapsed = 0, lastTime = 0;
 
@@ -118,16 +137,28 @@ export function init(root, ctx) {
   }
   function initMountains() {
     mountains = [
+      { offset: 0, speedMul: 0.07, colorTop: '#e0b3e8', colorBottom: '#c497dc', yBase: 0.58, amp: 0.04, period: 320 },
       { offset: 0, speedMul: 0.12, colorTop: '#c98fdc', colorBottom: '#a86fd0', yBase: 0.64, amp: 0.05, period: 260 },
       { offset: 0, speedMul: 0.22, colorTop: '#8f6fd0', colorBottom: '#7856c2', yBase: 0.72, amp: 0.06, period: 200 },
     ];
+  }
+  function initAmbient() {
+    stars = Array.from({ length: 42 }, () => ({
+      x: Math.random() * W, y: Math.random() * H * 0.55, s: 0.6 + Math.random() * 1.5, tw: Math.random() * 6,
+    }));
+    sparkles = Array.from({ length: 14 }, () => ({
+      x: Math.random() * W, y: Math.random() * H, sp: 0.05 + Math.random() * 0.12, ph: Math.random() * 6, s: 1 + Math.random() * 2,
+    }));
+    farBirds = Array.from({ length: 3 }, (_, i) => ({
+      x: Math.random() * W, y: H * (0.1 + i * 0.09), sp: 0.18 + Math.random() * 0.12, s: 4 + Math.random() * 3,
+    }));
   }
 
   function startGame() {
     resize();
     resetBird();
     pipes = []; particles = [];
-    initClouds(); initMountains();
+    initClouds(); initMountains(); initAmbient();
     shake = 0; speed = BASE_SPEED; score = 0; elapsed = 0; spawnTimer = 0;
     scoreEl.textContent = '0';
     running = true;
@@ -194,6 +225,11 @@ export function init(root, ctx) {
 
     for (const c of clouds) { c.x -= speed * dt * c.speedMul * 0.3; if (c.x < -100) c.x = W + 100; }
     for (const m of mountains) m.offset -= speed * dt * m.speedMul;
+    for (const s of sparkles) {
+      s.x -= speed * dt * s.sp; s.ph += dt * 2;
+      if (s.x < -10) { s.x = W + 10; s.y = Math.random() * H; }
+    }
+    for (const b of farBirds) { b.x -= speed * dt * b.sp; if (b.x < -30) b.x = W + 30; }
     for (let i = particles.length - 1; i >= 0; i--) {
       const pt = particles[i];
       pt.life -= dt; pt.x += pt.vx * dt; pt.y += pt.vy * dt; pt.vx *= 0.94;
@@ -214,27 +250,59 @@ export function init(root, ctx) {
     bestLine.textContent = 'Beste: ' + bestScore() + (result.isRecord ? ' — nieuw record!' : '');
     playBtn.textContent = 'Nog een keer!';
     overlay.classList.remove('vv-hidden');
+    startPreview(); // achtergrond blijft leven achter het game-over-paneel
   }
 
   // --- tekenwerk ---
+  function skyState() {
+    const p = ((performance.now() / 1000 - worldStart) % CYCLE) / CYCLE;
+    const seg = (a, b) => (p - a) / (b - a);
+    if (p < 0.40) return { pal: DAY, night: 0 };
+    if (p < 0.50) return { pal: lerpPal(DAY, SUNSET, seg(0.40, 0.50)), night: 0 };
+    if (p < 0.60) return { pal: lerpPal(SUNSET, NIGHT, seg(0.50, 0.60)), night: seg(0.50, 0.60) };
+    if (p < 0.85) return { pal: NIGHT, night: 1 };
+    if (p < 0.93) return { pal: lerpPal(NIGHT, SUNSET, seg(0.85, 0.93)), night: 1 - seg(0.85, 0.93) };
+    return { pal: lerpPal(SUNSET, DAY, seg(0.93, 1)), night: 0 };
+  }
   function drawSky() {
+    env = skyState();
+    const wt = performance.now() / 1000;
     const sky = g.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#3f7fe0'); sky.addColorStop(0.30, '#5b9fee');
-    sky.addColorStop(0.55, '#8ec9f5'); sky.addColorStop(0.80, '#ffd9a0'); sky.addColorStop(1, '#ffb677');
+    [0, 0.3, 0.55, 0.8, 1].forEach((stop, i) => sky.addColorStop(stop, env.pal[i]));
     g.fillStyle = sky;
     g.fillRect(0, 0, W, H);
+    // sterren, twinkelen 's nachts
+    if (env.night > 0.05) {
+      for (const st of stars) {
+        g.globalAlpha = env.night * (0.45 + 0.55 * Math.abs(Math.sin(wt * 2 + st.tw)));
+        g.fillStyle = '#fff';
+        g.fillRect(st.x, st.y, st.s, st.s);
+      }
+      g.globalAlpha = 1;
+    }
   }
   function drawSun() {
     const sx = W * 0.8, sy = H * 0.16, r = Math.min(W, H) * 0.09;
-    const glow = g.createRadialGradient(sx, sy, 0, sx, sy, r * 3);
-    glow.addColorStop(0, 'rgba(255,240,180,0.55)'); glow.addColorStop(1, 'rgba(255,240,180,0)');
-    g.fillStyle = glow; g.beginPath(); g.arc(sx, sy, r * 3, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#fff3c2'; g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2); g.fill();
+    if (env.night < 1) { // zon
+      g.save(); g.globalAlpha = 1 - env.night;
+      const glow = g.createRadialGradient(sx, sy, 0, sx, sy, r * 3);
+      glow.addColorStop(0, 'rgba(255,240,180,0.55)'); glow.addColorStop(1, 'rgba(255,240,180,0)');
+      g.fillStyle = glow; g.beginPath(); g.arc(sx, sy, r * 3, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff3c2'; g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+    if (env.night > 0) { // maansikkel
+      g.save(); g.globalAlpha = env.night;
+      g.fillStyle = '#f2efe0'; g.beginPath(); g.arc(sx, sy, r * 0.8, 0, Math.PI * 2); g.fill();
+      g.fillStyle = env.pal[0]; g.beginPath(); g.arc(sx + r * 0.3, sy - r * 0.18, r * 0.68, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
   }
   function drawMountainLayer(m) {
     const baseY = H * m.yBase, amp = H * m.amp;
     const grad = g.createLinearGradient(0, baseY - amp, 0, H);
-    grad.addColorStop(0, m.colorTop); grad.addColorStop(1, m.colorBottom);
+    grad.addColorStop(0, mixc(m.colorTop, '#141a30', env.night * 0.6));
+    grad.addColorStop(1, mixc(m.colorBottom, '#101528', env.night * 0.6));
     g.fillStyle = grad;
     g.beginPath(); g.moveTo(0, H);
     for (let x = 0; x <= W; x += 12) g.lineTo(x, baseY + Math.sin((x + m.offset) / m.period * Math.PI * 2) * amp);
@@ -242,11 +310,42 @@ export function init(root, ctx) {
   }
   function drawCloud(c) {
     g.save(); g.translate(c.x, c.y); g.scale(c.s, c.s);
-    g.fillStyle = 'rgba(255,255,255,0.85)';
+    // onderkant-schaduw voor wat volume
+    g.fillStyle = `rgba(120,140,190,${0.22 - env.night * 0.1})`;
+    g.beginPath(); g.arc(2, 8, 21, 0, Math.PI * 2); g.arc(-16, 4, 14, 0, Math.PI * 2); g.fill();
+    g.fillStyle = `rgba(255,255,255,${0.9 - env.night * 0.6})`;
     g.beginPath();
     g.arc(0, 0, 22, 0, Math.PI * 2); g.arc(22, -8, 18, 0, Math.PI * 2);
     g.arc(-20, -4, 16, 0, Math.PI * 2); g.arc(10, 6, 20, 0, Math.PI * 2);
     g.fill(); g.restore();
+  }
+  function drawAmbient() {
+    const wt = performance.now() / 1000;
+    // glinsters overdag, vuurvliegjes 's nachts
+    for (const s of sparkles) {
+      const bob = Math.sin(wt * 1.6 + s.ph) * 6;
+      if (env.night > 0.5) {
+        const a = (0.3 + 0.5 * Math.abs(Math.sin(wt * 2.4 + s.ph))) * env.night;
+        g.fillStyle = `rgba(214,255,138,${a})`;
+        g.beginPath(); g.arc(s.x, s.y + bob, s.s + 0.8, 0, Math.PI * 2); g.fill();
+      } else {
+        g.fillStyle = `rgba(255,255,255,${(0.2 + 0.3 * Math.abs(Math.sin(wt * 2 + s.ph))) * (1 - env.night)})`;
+        g.beginPath(); g.arc(s.x, s.y + bob, s.s * 0.7, 0, Math.PI * 2); g.fill();
+      }
+    }
+    // vogeltjes in de verte (alleen overdag zichtbaar)
+    if (env.night < 0.5) {
+      g.strokeStyle = `rgba(30,45,70,${0.5 * (1 - env.night * 2)})`;
+      g.lineWidth = 1.5;
+      for (const b of farBirds) {
+        const flapY = b.s * (0.7 + 0.3 * Math.sin(wt * 8 + b.x));
+        g.beginPath();
+        g.moveTo(b.x - b.s, b.y);
+        g.quadraticCurveTo(b.x - b.s * 0.4, b.y - flapY, b.x, b.y);
+        g.quadraticCurveTo(b.x + b.s * 0.4, b.y - flapY, b.x + b.s, b.y);
+        g.stroke();
+      }
+    }
   }
   function drawParticle(pt) {
     g.save(); g.globalAlpha = Math.max(0, pt.life / pt.maxLife);
@@ -255,10 +354,12 @@ export function init(root, ctx) {
   function drawPipeSegment(x, top, height, pw, flip) {
     g.save(); g.translate(x, top);
     const w = pw, h = height, capH = Math.min(28, h * 0.5);
+    // buizen kleuren mee met het licht (donkerder 's nachts)
+    const dk = (c) => mixc(c, '#0d1f12', env.night * 0.5);
     const bodyGrad = g.createLinearGradient(0, 0, w, 0);
-    bodyGrad.addColorStop(0, '#2e9e3f'); bodyGrad.addColorStop(0.15, '#3fc451');
-    bodyGrad.addColorStop(0.5, '#4fdb63'); bodyGrad.addColorStop(0.85, '#2e9e3f'); bodyGrad.addColorStop(1, '#1f7a30');
-    g.fillStyle = bodyGrad; g.strokeStyle = '#1a5e26'; g.lineWidth = Math.max(2, w * 0.03);
+    bodyGrad.addColorStop(0, dk('#2e9e3f')); bodyGrad.addColorStop(0.15, dk('#3fc451'));
+    bodyGrad.addColorStop(0.5, dk('#4fdb63')); bodyGrad.addColorStop(0.85, dk('#2e9e3f')); bodyGrad.addColorStop(1, dk('#1f7a30'));
+    g.fillStyle = bodyGrad; g.strokeStyle = dk('#1a5e26'); g.lineWidth = Math.max(2, w * 0.03);
     if (!flip) {
       g.fillRect(0, 0, w, h - capH); g.strokeRect(0, 0, w, h - capH);
       g.fillRect(-w * 0.08, h - capH, w * 1.16, capH); g.strokeRect(-w * 0.08, h - capH, w * 1.16, capH);
@@ -398,6 +499,7 @@ export function init(root, ctx) {
     drawSun();
     for (const c of clouds) drawCloud(c);
     for (const m of mountains) drawMountainLayer(m);
+    drawAmbient();
     for (const p of pipes) drawPipe(p);
     for (const pt of particles) drawParticle(pt);
     drawBird();
@@ -408,7 +510,7 @@ export function init(root, ctx) {
     if (!running) return;
     let dt = (now - lastTime) / 1000;
     lastTime = now;
-    dt = Math.min(dt, 0.033);
+    dt = Math.max(0, Math.min(dt, 0.033));
     update(dt);
     if (!running) return;   // update kan het spel beëindigen
     draw();
@@ -419,16 +521,29 @@ export function init(root, ctx) {
   on(wrap, 'pointerdown', (e) => { if (e.target === playBtn) return; e.preventDefault(); doFlap(); });
   on(window, 'keydown', (e) => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); doFlap(); } });
   on(playBtn, 'click', startGame);
-  on(window, 'resize', () => { if (!running) { resize(); resetBird(); initClouds(); initMountains(); draw(); } });
+  on(window, 'resize', () => { if (!running) { resize(); resetBird(); initClouds(); initMountains(); initAmbient(); draw(); } });
 
-  // statische voorvertoning achter het startpaneel
+  // voorvertoning achter het start-/game-over-paneel: rustig levend
+  // (dag-nachtklok en twinkelende sterren lopen door, ook zonder te spelen)
+  let previewRaf = null;
+  function startPreview() {
+    if (previewRaf) return;
+    (function previewLoop() {
+      if (running) { previewRaf = null; return; }
+      draw();
+      previewRaf = requestAnimationFrame(previewLoop);
+    })();
+  }
   resize();
   resetBird();
   initClouds();
   initMountains();
-  draw();
+  initAmbient();
+  startPreview();
 
   return () => {
+    running = true; // stopt de preview-lus bij de eerstvolgende frame
+    if (previewRaf) cancelAnimationFrame(previewRaf);
     running = false;
     if (raf) cancelAnimationFrame(raf);
     for (const [t, e, fn, o] of listeners) t.removeEventListener(e, fn, o);

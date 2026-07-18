@@ -27,6 +27,9 @@ mogelijk openingen tussen de buizen. Elke buis die je passeert is één punt.
 4. Je scoort **+1 punt** voor elke buis die je volledig passeert.
 5. De **snelheid loopt geleidelijk op** naarmate je langer vliegt, dus het wordt
    steeds pittiger.
+6. De wereld doorloopt een **dag-nachtcyclus**: overdag zon, wolken en vogeltjes
+   in de verte; via een zonsondergang wordt het nacht met sterren, een
+   maansikkel en vuurvliegjes. De cyclus loopt door tussen potjes.
 
 ### Game over
 

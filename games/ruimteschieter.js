@@ -120,6 +120,7 @@ export function init(root, ctx) {
   let bgFar = null, bgStars = null, clock = 0, bgScroll = 0;
   let comets = [], cometT = 3;
   let muzzleT = 0, bank = 0, introClock = 0, flashT = 0, flashCol = '255,255,255';
+  let boss = null;
   let dir = 1, enemySpeed = 0.14;
   let score = 0, wave = 1, lives = 3;
   let state = 'playing';
@@ -248,7 +249,12 @@ export function init(root, ctx) {
   }
 
   function spawnWave(n) {
+    boss = null;
     enemies = [];
+    introClock = 0;
+    // Hooguit 1 power-up per golf in het begin, later 2. Ze vervallen per golf.
+    powerDropsLeft = n <= 2 ? 1 : 2;
+    if (n % 10 === 0) { spawnBoss(n); return; }   // elke 10e golf een baas
     const cols = 6;
     const rows = Math.min(3 + Math.floor((n - 1) / 2), 5);
     const marginX = 0.10, top = 0.10, gapY = 0.085;
@@ -260,11 +266,43 @@ export function init(root, ctx) {
       }
     }
     dir = 1;
-    introClock = 0;
     enemySpeed = 0.13 + (n - 1) * 0.02;
     enemyFireCd = Math.max(0.35, 1.0 - (n - 1) * 0.08);
-    // Hooguit 1 power-up per golf in het begin, later 2. Ze vervallen per golf.
-    powerDropsLeft = n <= 2 ? 1 : 2;
+  }
+
+  function spawnBoss(n) {
+    const tier = n / 10;                 // 1 bij golf 10, 2 bij golf 20, ...
+    const hp = 55 + tier * 45;
+    boss = { x: 0.5, y: 0.16, dir: 1, tier, hp, maxHp: hp, speed: 0.11 + tier * 0.02, fireCd: 1.4, hitFlash: 0, appear: 0 };
+  }
+
+  // Naar de volgende golf (ook na een verslagen baas): power-ups vervallen,
+  // veld opruimen, korte pauze met een banner.
+  function nextWave() {
+    wave += 1; updateHud();
+    pTriple = 0; pRapid = 0; pShield = 0;
+    powerups = []; eBullets = [];
+    spawnWave(wave);
+    state = 'wavebreak'; breakT = boss ? 1.6 : 1.1;
+    flashT = 0.25; flashCol = '255,255,255';
+    overlay.innerHTML = boss
+      ? `<h2>⚠️ Golf ${wave}: BAAS!</h2><p>Pas op…</p>`
+      : `<h2>Golf ${wave}</h2><p>Maak je klaar…</p>`;
+    overlay.hidden = false;
+    sWave();
+  }
+
+  function bossDefeated() {
+    const bonus = 500 * boss.tier;
+    for (let k = 0; k < 6; k++) {
+      boom(boss.x + (Math.random() - 0.5) * 0.3, boss.y + (Math.random() - 0.5) * 0.14, ['#ff6b6b', '#ffd23d', '#ff3df0'][k % 3], true);
+    }
+    popups.push({ x: boss.x, y: boss.y, text: 'BAAS VERSLAGEN! +' + bonus, life: 1.8, color: '#ffd23d' });
+    score += bonus; updateHud();
+    shake = 0.7; flashT = 0.4; flashCol = '255,255,255';
+    sExplode(); sHit();
+    boss = null;
+    nextWave();
   }
 
   function newGame() {
@@ -273,7 +311,7 @@ export function init(root, ctx) {
     pBullets = []; eBullets = []; particles = []; powerups = []; popups = [];
     invuln = 0; fireCd = 0; pTriple = 0; pRapid = 0; pShield = 0;
     shake = 0; killStreak = 0; streakT = 0;
-    comets = []; cometT = 3; muzzleT = 0; bank = 0; flashT = 0; bgScroll = 0;
+    comets = []; cometT = 3; muzzleT = 0; bank = 0; flashT = 0; bgScroll = 0; boss = null;
     makeStars();
     spawnWave(1);
     state = 'playing';
@@ -405,63 +443,86 @@ export function init(root, ctx) {
     for (const b of pBullets) { b.y -= 1.35 * dt; b.x += (b.vx || 0) * dt; }
     pBullets = pBullets.filter((b) => b.y > -0.05 && b.x > -0.05 && b.x < 1.05);
 
-    // vijanden (formatie) bewegen
-    const halfEW = (S.enemyW / 2) / W;
-    let minX = 1, maxX = 0, lowest = 0, aliveCount = 0;
-    for (const e of enemies) if (e.alive) { minX = Math.min(minX, e.x); maxX = Math.max(maxX, e.x); lowest = Math.max(lowest, e.y); aliveCount++; }
-    if (aliveCount === 0) {
-      wave += 1; updateHud();
-      pTriple = 0; pRapid = 0; pShield = 0;   // power-ups gaan niet mee naar de volgende golf
-      powerups = []; eBullets = [];           // openstaande power-ups/kogels opruimen
-      spawnWave(wave);
-      state = 'wavebreak'; breakT = 1.1;
-      flashT = 0.25; flashCol = '255,255,255';
-      overlay.innerHTML = `<h2>Golf ${wave}</h2><p>Maak je klaar…</p>`;
-      overlay.hidden = false;
-      sWave();
-      return;
-    }
-    let stepDown = 0;
-    if (minX - halfEW < 0.02 && dir < 0) { dir = 1; stepDown = (S.enemyH * 0.5) / H; }
-    else if (maxX + halfEW > 0.98 && dir > 0) { dir = -1; stepDown = (S.enemyH * 0.5) / H; }
-    const spd = enemySpeed * (1 + (1 - aliveCount / enemies.length) * 0.8);
-    for (const e of enemies) if (e.alive) { e.x += dir * spd * dt; e.y += stepDown; }
-
-    if (lowest + (S.enemyH / 2) / H >= player.y - (S.playerH / 2) / H) { loseLife(); if (state === 'over') return; spawnWave(wave); }
-
-    // vijanden schieten
-    enemyFireCd -= dt;
-    if (enemyFireCd <= 0) {
-      const shooters = enemies.filter((e) => e.alive);
-      const e = shooters[Math.floor(Math.random() * shooters.length)];
-      if (e) eBullets.push({ x: e.x, y: e.y });
-      enemyFireCd = Math.max(0.28, (0.95 - (wave - 1) * 0.06) * (0.6 + Math.random() * 0.8));
-    }
-    for (const b of eBullets) b.y += 0.6 * dt;
-    eBullets = eBullets.filter((b) => b.y < 1.05);
-
-    // spelerkogels vs vijanden
-    for (const b of pBullets) {
-      if (b.dead) continue;
-      const bx = b.x * W, by = b.y * H;
-      for (const e of enemies) {
-        if (!e.alive || (introClock - e.delay) < 0.28) continue;
-        if (hit(bx, by, S.pBulletW, S.pBulletH, e.x * W, e.y * H, S.enemyW, S.enemyH)) {
-          e.alive = false; b.dead = true;
-          killStreak += 1; streakT = 1.2;
-          const mult = 1 + Math.min(Math.floor(killStreak / 4), 2);
-          const gained = e.points * mult;
-          score += gained; updateHud();
-          boom(e.x, e.y, e.color);
-          popups.push({ x: e.x, y: e.y, text: '+' + gained + (mult > 1 ? ' ×' + mult : ''), life: 1, color: mult > 1 ? '#ffd23d' : '#eaffff' });
-          shake = Math.max(shake, 0.12);
-          sExplode();
-          maybeDrop(e.x, e.y);
-          break;
+    if (boss) {
+      // ---------- BAAS (elke 10e golf) ----------
+      if (boss.appear < 1) boss.appear = Math.min(1, boss.appear + dt * 1.3);
+      if (boss.hitFlash > 0) boss.hitFlash -= dt;
+      const bw = unit * 0.42, bh = unit * 0.2, halfBW = (bw / 2) / W;
+      boss.x += boss.dir * boss.speed * dt;
+      if (boss.x < halfBW + 0.02) { boss.x = halfBW + 0.02; boss.dir = 1; }
+      else if (boss.x > 1 - halfBW - 0.02) { boss.x = 1 - halfBW - 0.02; boss.dir = -1; }
+      boss.y = 0.15 + Math.sin(clock * 1.4) * 0.03;
+      // schieten: waaier + een gerichte kogel
+      boss.fireCd -= dt;
+      if (boss.appear >= 1 && boss.fireCd <= 0) {
+        const cnt = 3 + boss.tier;
+        for (let i = 0; i < cnt; i++) {
+          const spread = (i - (cnt - 1) / 2) * 0.13;
+          eBullets.push({ x: boss.x, y: boss.y + 0.06, vx: spread, vy: 0.5 });
+        }
+        const ang = Math.atan2(player.y - boss.y, player.x - boss.x);
+        eBullets.push({ x: boss.x, y: boss.y + 0.06, vx: Math.cos(ang) * 0.55, vy: Math.max(0.25, Math.sin(ang) * 0.55) });
+        boss.fireCd = Math.max(0.55, 1.5 - boss.tier * 0.12);
+      }
+      // spelerkogels vs baas
+      for (const b of pBullets) {
+        if (b.dead) continue;
+        if (hit(b.x * W, b.y * H, S.pBulletW, S.pBulletH, boss.x * W, boss.y * H, bw, bh)) {
+          b.dead = true; boss.hp -= 1; boss.hitFlash = 0.07;
+          if (Math.random() < 0.5) boom(b.x, b.y, '#ffd23d');
+          if (boss.hp <= 0) { bossDefeated(); break; }
         }
       }
+      pBullets = pBullets.filter((b) => !b.dead);
+      if (!boss) return; // baas verslagen -> nieuwe golf al gestart
+    } else {
+      // ---------- normale formatie ----------
+      const halfEW = (S.enemyW / 2) / W;
+      let minX = 1, maxX = 0, lowest = 0, aliveCount = 0;
+      for (const e of enemies) if (e.alive) { minX = Math.min(minX, e.x); maxX = Math.max(maxX, e.x); lowest = Math.max(lowest, e.y); aliveCount++; }
+      if (aliveCount === 0) { nextWave(); return; }
+      let stepDown = 0;
+      if (minX - halfEW < 0.02 && dir < 0) { dir = 1; stepDown = (S.enemyH * 0.5) / H; }
+      else if (maxX + halfEW > 0.98 && dir > 0) { dir = -1; stepDown = (S.enemyH * 0.5) / H; }
+      const spd = enemySpeed * (1 + (1 - aliveCount / enemies.length) * 0.8);
+      for (const e of enemies) if (e.alive) { e.x += dir * spd * dt; e.y += stepDown; }
+
+      if (lowest + (S.enemyH / 2) / H >= player.y - (S.playerH / 2) / H) { loseLife(); if (state === 'over') return; spawnWave(wave); }
+
+      enemyFireCd -= dt;
+      if (enemyFireCd <= 0) {
+        const shooters = enemies.filter((e) => e.alive);
+        const e = shooters[Math.floor(Math.random() * shooters.length)];
+        if (e) eBullets.push({ x: e.x, y: e.y });
+        enemyFireCd = Math.max(0.28, (0.95 - (wave - 1) * 0.06) * (0.6 + Math.random() * 0.8));
+      }
+
+      for (const b of pBullets) {
+        if (b.dead) continue;
+        const bx = b.x * W, by = b.y * H;
+        for (const e of enemies) {
+          if (!e.alive || (introClock - e.delay) < 0.28) continue;
+          if (hit(bx, by, S.pBulletW, S.pBulletH, e.x * W, e.y * H, S.enemyW, S.enemyH)) {
+            e.alive = false; b.dead = true;
+            killStreak += 1; streakT = 1.2;
+            const mult = 1 + Math.min(Math.floor(killStreak / 4), 2);
+            const gained = e.points * mult;
+            score += gained; updateHud();
+            boom(e.x, e.y, e.color);
+            popups.push({ x: e.x, y: e.y, text: '+' + gained + (mult > 1 ? ' ×' + mult : ''), life: 1, color: mult > 1 ? '#ffd23d' : '#eaffff' });
+            shake = Math.max(shake, 0.12);
+            sExplode();
+            maybeDrop(e.x, e.y);
+            break;
+          }
+        }
+      }
+      pBullets = pBullets.filter((b) => !b.dead);
     }
-    pBullets = pBullets.filter((b) => !b.dead);
+
+    // vijandkogels bewegen (baas-kogels hebben ook een zijwaartse snelheid)
+    for (const b of eBullets) { b.y += (b.vy != null ? b.vy : 0.6) * dt; if (b.vx) b.x += b.vx * dt; }
+    eBullets = eBullets.filter((b) => b.y < 1.05 && b.x > -0.05 && b.x < 1.05);
 
     // vijandkogels vs speler
     if (invuln <= 0 && pShield <= 0) {
@@ -532,6 +593,7 @@ export function init(root, ctx) {
       if (p <= 0) continue;
       drawEnemy(e.x * W, e.y * H, e.color, p);
     }
+    if (boss) drawBoss();
 
     neon(PLAYER_BULLET, S.glow);
     g.fillStyle = PLAYER_BULLET;
@@ -673,6 +735,38 @@ export function init(root, ctx) {
       g.beginPath(); g.ellipse(cx, cy, w * 0.8, h * 0.72, 0, 0, Math.PI * 2); g.stroke();
       noGlow();
     }
+  }
+
+  function drawBoss() {
+    const cx = boss.x * W, cy = boss.y * H;
+    const bw = unit * 0.42, bh = unit * 0.2;
+    const sc = 0.6 + 0.4 * boss.appear;
+    g.save();
+    g.globalAlpha = boss.appear;
+    g.translate(cx, cy); g.scale(sc, sc); g.translate(-cx, -cy);
+    const col = boss.hitFlash > 0 ? '#ffffff' : '#ff4d6d';
+    neon(col, S.glow * 1.6);
+    g.fillStyle = col;
+    rrect(cx - bw / 2, cy - bh / 2, bw, bh, bh * 0.35); g.fill();
+    noGlow();
+    // oogjes
+    g.fillStyle = '#1a0008';
+    g.fillRect(cx - bw * 0.28, cy - bh * 0.12, bw * 0.16, bh * 0.24);
+    g.fillRect(cx + bw * 0.12, cy - bh * 0.12, bw * 0.16, bh * 0.24);
+    // kanonnetjes
+    g.fillStyle = col;
+    g.fillRect(cx - bw * 0.34, cy + bh * 0.4, bw * 0.1, bh * 0.28);
+    g.fillRect(cx + bw * 0.24, cy + bh * 0.4, bw * 0.1, bh * 0.28);
+    g.restore();
+    // health-balk boven de baas
+    const by = cy - bh / 2 - unit * 0.055, bx = cx - bw / 2, hbh = unit * 0.022;
+    g.globalAlpha = boss.appear;
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    rrect(bx, by, bw, hbh, hbh / 2); g.fill();
+    const frac = Math.max(0, boss.hp / boss.maxHp);
+    g.fillStyle = frac > 0.5 ? '#48ff8e' : frac > 0.25 ? '#ffd23d' : '#ff5b5b';
+    rrect(bx, by, bw * frac, hbh, hbh / 2); g.fill();
+    g.globalAlpha = 1;
   }
 
   function drawEnemy(cx, cy, color, p) {

@@ -69,19 +69,26 @@ export const games = [
   {
     id: 'racen',
     title: 'Racen',
-    icon: `<svg viewBox="0 0 48 48" width="1.1em" height="1.1em" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" aria-label="Racen">
+    icon: `<svg viewBox="0 0 48 48" width="1.15em" height="1.15em" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" aria-label="Racen">
       <defs>
-        <linearGradient id="rc-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#182a52"/><stop offset="1" stop-color="#5a1f5e"/></linearGradient>
-        <linearGradient id="rc-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#ff8a1e"/></linearGradient>
+        <linearGradient id="rc2-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2e36"/><stop offset="1" stop-color="#141519"/></linearGradient>
+        <linearGradient id="rc2-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#45d6ff"/><stop offset="0.5" stop-color="#20a6ec"/><stop offset="1" stop-color="#1385d6"/></linearGradient>
+        <radialGradient id="rc2-glow" cx="0.5" cy="0.55" r="0.5"><stop offset="0" stop-color="#3ec6ff" stop-opacity="0.5"/><stop offset="1" stop-color="#3ec6ff" stop-opacity="0"/></radialGradient>
       </defs>
-      <rect x="1" y="1" width="46" height="46" rx="11" fill="url(#rc-bg)"/>
-      <g fill="#7fe9ff" opacity="0.85"><rect x="3" y="19" width="12" height="2.4" rx="1.2"/><rect x="2" y="25" width="9" height="2.4" rx="1.2"/><rect x="4" y="31" width="11" height="2.4" rx="1.2"/></g>
-      <g><rect x="33" y="4" width="10" height="7" rx="1" fill="#fff"/><g fill="#151515"><rect x="33" y="4" width="2.5" height="1.75"/><rect x="38" y="4" width="2.5" height="1.75"/><rect x="35.5" y="5.75" width="2.5" height="1.75"/><rect x="40.5" y="5.75" width="2.5" height="1.75"/><rect x="33" y="7.5" width="2.5" height="1.75"/><rect x="38" y="7.5" width="2.5" height="1.75"/><rect x="35.5" y="9.25" width="2.5" height="1.75"/><rect x="40.5" y="9.25" width="2.5" height="1.75"/></g></g>
-      <path d="M8 32 C8 27 13 24 19 23 C23 18 29 16 34 17 C39 18 43 22 44 27 C44 30 43 32 41 33 L10 33 C8.5 33 8 32.6 8 32 Z" fill="url(#rc-body)" stroke="#7a3d00" stroke-width="0.8"/>
-      <path d="M22 22.5 C25 19.5 30 18.5 33 19.5 L35 23 L21.5 23 Z" fill="#0c1830" opacity="0.9"/>
-      <rect x="12" y="28.4" width="27" height="2" rx="1" fill="#e63946"/>
-      <circle cx="42.5" cy="26" r="1.5" fill="#fffbe0"/>
-      <g><circle cx="17" cy="33" r="5.2" fill="#15171c"/><circle cx="17" cy="33" r="2" fill="#9aa3b0"/><circle cx="35" cy="33" r="5.2" fill="#15171c"/><circle cx="35" cy="33" r="2" fill="#9aa3b0"/></g>
+      <rect x="1" y="1" width="46" height="46" rx="11" fill="url(#rc2-bg)"/>
+      <ellipse cx="24" cy="25" rx="15" ry="17" fill="url(#rc2-glow)"/>
+      <g><rect x="2.2" y="5" width="2.4" height="38" fill="#d83b37"/><rect x="43.4" y="5" width="2.4" height="38" fill="#d83b37"/>
+        <g fill="#eef0f2"><rect x="2.2" y="7" width="2.4" height="4"/><rect x="2.2" y="15" width="2.4" height="4"/><rect x="2.2" y="23" width="2.4" height="4"/><rect x="2.2" y="31" width="2.4" height="4"/><rect x="2.2" y="39" width="2.4" height="3"/><rect x="43.4" y="7" width="2.4" height="4"/><rect x="43.4" y="15" width="2.4" height="4"/><rect x="43.4" y="23" width="2.4" height="4"/><rect x="43.4" y="31" width="2.4" height="4"/><rect x="43.4" y="39" width="2.4" height="3"/></g></g>
+      <g fill="#cfd3d8" opacity="0.45"><rect x="23.1" y="3.4" width="1.8" height="4.2" rx="0.9"/><rect x="23.1" y="41" width="1.8" height="4.2" rx="0.9"/></g>
+      <g fill="#15161b"><rect x="18.4" y="37" width="2" height="3.6"/><rect x="27.6" y="37" width="2" height="3.6"/><rect x="12.9" y="39" width="22.2" height="2.7" rx="1.2"/><rect x="12.5" y="37.8" width="1.8" height="4.6" rx="0.6"/><rect x="33.7" y="37.8" width="1.8" height="4.6" rx="0.6"/></g>
+      <g fill="#0e0f13"><rect x="12.8" y="14.4" width="3.6" height="6.5" rx="1.3"/><rect x="31.6" y="14.4" width="3.6" height="6.5" rx="1.3"/><rect x="12.3" y="28.6" width="3.8" height="6.9" rx="1.3"/><rect x="31.9" y="28.6" width="3.8" height="6.9" rx="1.3"/></g>
+      <path d="M24 7.5 C18.8 8 15.4 12.6 15 18.6 L15 33 C15 37 18 39.6 24 39.6 C30 39.6 33 37 33 33 L32.6 18.6 C32.4 12.6 29.2 8 24 7.5 Z" fill="url(#rc2-body)" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
+      <path d="M19.4 18 L28.6 18 L26.8 10.8 C25.9 10 22.1 10 21.2 10.8 Z" fill="#191b20"/>
+      <g fill="#eef7ff"><rect x="16.1" y="12.3" width="2.7" height="1.6" rx="0.8"/><rect x="29.2" y="12.3" width="2.7" height="1.6" rx="0.8"/></g>
+      <rect x="19.2" y="18.4" width="9.6" height="14.6" rx="4.2" fill="#0d141d"/>
+      <rect x="20.2" y="19.4" width="7.6" height="4.3" rx="2" fill="#8fc0e6" opacity="0.28"/>
+      <rect x="20.4" y="10.5" width="1.5" height="27" rx="0.75" fill="#ffffff" opacity="0.12"/>
+      <rect x="18" y="35.6" width="12" height="1.5" rx="0.7" fill="#ff3b30"/>
     </svg>`,
     category: 'arcade',
     description: 'Scheur over de weg, ontwijk de tegenliggers en pak munten. Steeds sneller, met turbo! Schermvullend, met de vinger of het toetsenbord.',

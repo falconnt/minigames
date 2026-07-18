@@ -24,6 +24,7 @@ de besturing, de mechanics en de manier van scoren.
 | 🔢 2048 | Puzzel | punten (hoger is beter) — spel wordt automatisch bewaard | [docs/2048.md](docs/2048.md) |
 | 🟩 Blokjes (Tetris) | Puzzel | punten (hoger is beter) — stapel wordt automatisch bewaard | [docs/tetris.md](docs/tetris.md) |
 | 🚀 Ruimteschieter | Arcade | punten (hoger is beter) | [docs/ruimteschieter.md](docs/ruimteschieter.md) |
+| 🏎️ Racen | Arcade | afstand in meters (hoger is beter) | [docs/racen.md](docs/racen.md) |
 | ⚡ Reactietest | Reflex | milliseconden (lager is beter) | [docs/reactietest.md](docs/reactietest.md) |
 | 🏇 Paardensport | Simulatie | wedstrijdpunten (hoger is beter) — voortgang wordt bewaard | [docs/paardensport.md](docs/paardensport.md) |
 

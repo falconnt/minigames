@@ -541,6 +541,60 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 .tet-pad-wide { flex: 1.7; font-size: 1rem; }
 .tet-pad-drop { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
 
+/* ---------- Racen (fullscreen) ---------- */
+
+.race-fs {
+  position: fixed; inset: 0; height: 100dvh; z-index: 60;
+  background: #10151b; color: #eef3f8;
+  display: flex; flex-direction: column; overscroll-behavior: none;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.race-top {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem;
+  padding: calc(0.5rem + env(safe-area-inset-top)) 0.7rem 0.5rem;
+  border-bottom: 1px solid #26303a;
+}
+.race-stat { background: #1a222c; border: 1px solid #2c3a47; border-radius: 0.5rem; padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+.race-stat b { color: #ffd23d; font-variant-numeric: tabular-nums; }
+.race-btn {
+  background: #1a222c; color: #eef3f8; border: 1px solid #2c3a47; border-radius: 0.5rem;
+  padding: 0.35rem 0.7rem; font-size: 0.85rem; font-family: inherit; cursor: pointer;
+}
+.race-btn:hover { border-color: #ffd23d; }
+.race-btn.primary { background: #ffd23d; color: #10151b; border-color: #ffd23d; font-weight: 700; }
+.race-actions { display: flex; gap: 0.4rem; margin-left: auto; }
+
+.race-area { flex: 1 1 auto; min-height: 0; position: relative; }
+.race-canvas { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; }
+
+.race-controls {
+  flex: 0 0 auto; display: flex; gap: 0.5rem; width: 100%; max-width: 34rem;
+  margin: 0 auto; padding: 0.4rem 0.7rem calc(0.5rem + env(safe-area-inset-bottom));
+}
+.race-pad {
+  flex: 1; font-size: 1.6rem; line-height: 1; padding: 0.7rem 0;
+  background: #1a222c; color: #eef3f8; border: 1px solid #2c3a47; border-radius: 0.8rem;
+  cursor: pointer; touch-action: manipulation; user-select: none;
+  -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.race-pad:active { background: #ffd23d; color: #10151b; border-color: #ffd23d; transform: translateY(1px); }
+.race-pad-turbo { flex: 1.5; font-size: 1.05rem; font-weight: 700; background: #ff7a1a; color: #fff; border-color: #ff7a1a; }
+.race-pad-turbo:active { background: #ff9a45; border-color: #ff9a45; color: #2a1400; }
+
+.race-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 0.7rem; text-align: center; background: rgba(6, 10, 14, 0.82);
+  color: #eef3f8; padding: 1rem;
+}
+.race-overlay[hidden] { display: none; }
+.race-overlay h2 { margin: 0; font-size: 1.4rem; color: #ffd23d; text-shadow: 0 0 14px rgba(255, 210, 61, 0.5); }
+.race-overlay p { margin: 0; }
+
+.race-help { max-width: 22rem; background: #1a222c; color: #eef3f8; border: 1px solid #2c3a47; border-radius: 0.8rem; }
+.race-help::backdrop { background: rgba(4, 8, 12, 0.7); }
+.race-help h2 { margin: 0 0 0.6rem; font-size: 1.15rem; color: #ffd23d; }
+.race-help-list { margin: 0 0 1rem; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.9rem; line-height: 1.35; }
+
 /* ---------- Ruimteschieter (neon-editie, fullscreen) ---------- */
 
 .rs-fs {

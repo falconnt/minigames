@@ -45,6 +45,11 @@ donkerblauw, rood) over de motorkap en het kofferdeksel, en **vier uitlaten**. H
 heeft een getunede look: **blauwe neon-underglow**, **bronzen M-velgen met blauwe
 remklauwen** en **blauwe LED-koplampen** met een gloed.
 
+Voor extra realisme is de M4 gedetailleerd nagetekend: **glanzende lak** met
+lichtreflectie en donkere randen (ronding van het plaatwerk), **panelnaden**
+(motorkap, portieren, kofferdeksel), een echte **greenhouse** (voorruit, carbon
+dak en achterruit apart) en **spijlen** in de niervormige grille.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als

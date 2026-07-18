@@ -16,7 +16,7 @@ const CARS = [
   { name: 'Lamborghini SVJ',  col: '#1b8fe2', accent: '#101014', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12', realistic: true, carbonHood: 'full', splitter: true, sideScoops: true, wheelCol: '#26282e', caliper: '#2aa0e8', dualExhaust: true },
   { name: 'Porsche 911',      col: '#1c1d23', accent: '#0c0c0f', stripe: null,      wing: 'big',   shape: 'classic', eng: 'flat6', realistic: true, splitter: true, sideStripe: true, sideStripeCol: '#12b39a', accentLine: '#12b39a', hoodStripes: '#12b39a', roundLights: true, wheelCol: '#24262c', caliper: '#12b39a', dualExhaust: true },
   { name: 'Mustang',          col: '#17171b', accent: '#0c0c0f', stripe: null,      wing: 'small', shape: 'muscle',  eng: 'v8', realistic: true, splitter: true, accentLine: '#8a2be2', underglow: '#8a2be2', headlight: '#5d7bff', lightBar: '#5d7bff', wheelCol: '#e8eaec', quad: true },
-  { name: 'Audi R8',          col: '#9aa1a8', accent: '#15151a', stripe: null,      wing: 'small', shape: 'super',   eng: 'v10' },
+  { name: 'Audi R8',          col: '#141418', accent: '#0a0a0d', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v10', realistic: true, carbonHood: true, splitter: true, sideScoops: true, headlight: '#eef4ff', tailBar: '#ff2f2f', wheelCol: '#22242a', dualExhaust: true },
   { name: 'Pagani',           col: '#c9b06a', accent: '#2a2320', stripe: null,      wing: 'mid',   shape: 'super',   eng: 'v12' },
   { name: 'Mazda RX500',      col: '#dfe4ea', accent: '#15151a', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary' },
   { name: 'Koenigsegg Jesko', col: '#ff7a1a', accent: '#15151a', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v8' },
@@ -909,6 +909,14 @@ export function init(root, ctx) {
     // ---- achterlichten (rode balk) ----
     gg.fillStyle = '#ff3b30';
     gg.fillRect(cx - bw * 0.4, py(-0.82) - h * 0.02, bw * 0.8, h * 0.04);
+    // volle-breedte oplichtende lichtbalk (Audi-signatuur)
+    if (car.tailBar) {
+      gg.save(); gg.globalCompositeOperation = 'lighter';
+      gg.shadowColor = car.tailBar; gg.shadowBlur = w * 0.14;
+      gg.fillStyle = car.tailBar;
+      gg.fillRect(cx - bw * 0.45, py(-0.82) - h * 0.006, bw * 0.9, h * 0.014);
+      gg.restore();
+    }
 
     // ---- uitlaten (quad of dubbel, midden) ----
     const exPos = car.quad ? [-0.27, -0.13, 0.13, 0.27] : car.dualExhaust ? [-0.09, 0.09] : null;

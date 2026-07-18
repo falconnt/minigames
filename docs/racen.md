@@ -76,6 +76,12 @@ een **zwarte** glanzende body met felle **paarse neon-underglow**, **blauw
 oplichtende koplampen** en een **blauwe front-lichtbalk**, **witte velgen**,
 **vier uitlaten** en een **V8**.
 
+De **Audi R8** is nagetekend als de **MANSORY R8 GT "Stealth"**: een volledig
+**zwarte carbon** body (stealth, zonder kleuraccenten), scherpe **witte
+LED-koplampen**, een **rode lichtbalk over de volle breedte** achter
+(Audi-signatuur), zwarte velgen, zwarte splitter/skirts en zij-inlaten, een grote
+**zwarte achtervleugel**, dubbele uitlaten en een **V10**.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als

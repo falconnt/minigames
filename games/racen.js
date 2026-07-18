@@ -12,7 +12,7 @@ const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f9
 const CARS = [
   { name: 'BMW M4',           col: '#f6f6f4', accent: '#0d0d11', stripe: null,      wing: 'big',   shape: 'coupe',   eng: 'i6', grille: 'kidney', quad: true, realistic: true, wheelCol: '#2b2d34', headlight: '#f4d01c', hoodVents: true, splitter: true },
   { name: 'Mercedes GT 63',   col: '#5cbf22', accent: '#141418', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'v8', grille: 'amg', realistic: true, carbonHood: true, wheelCol: '#26282e', caliper: '#f2c40f', accentLine: '#f2c40f', splitter: true, sideStripe: true },
-  { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
+  { name: 'Ferrari Pista',    col: '#22c1e8', accent: '#111114', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v8', realistic: true, carbonHood: true, splitter: true, sideStripe: true, sideScoops: true, wheelCol: '#26282e', caliper: '#e8d21a', dualExhaust: true },
   { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
   { name: 'Porsche 911',      col: '#e9ecf0', accent: '#15151a', stripe: null,      wing: 'mid',   shape: 'classic', eng: 'flat6' },
   { name: 'Mustang',          col: '#1f57c8', accent: '#15151a', stripe: '#ffffff', wing: 'small', shape: 'muscle',  eng: 'v8' },
@@ -752,6 +752,21 @@ export function init(root, ctx) {
       gg.restore();
     }
 
+    // ---- zwarte zij-luchtinlaten (mid-engine scoops) ----
+    if (car.sideScoops) {
+      gg.save(); bodyPath(); gg.clip();
+      gg.fillStyle = 'rgba(9,9,12,0.95)';
+      for (const sx of [-1, 1]) {
+        gg.beginPath();
+        gg.moveTo(px(sx * 0.62), py(-0.02));
+        gg.lineTo(px(sx * 0.92), py(-0.08));
+        gg.lineTo(px(sx * 0.84), py(-0.42));
+        gg.lineTo(px(sx * 0.6), py(-0.36));
+        gg.closePath(); gg.fill();
+      }
+      gg.restore();
+    }
+
     // ---- racestreep over het midden ----
     if (car.stripe) {
       gg.fillStyle = car.stripe;
@@ -852,10 +867,11 @@ export function init(root, ctx) {
     gg.fillStyle = '#ff3b30';
     gg.fillRect(cx - bw * 0.4, py(-0.82) - h * 0.02, bw * 0.8, h * 0.04);
 
-    // ---- BMW quad uitlaten ----
-    if (car.quad) {
+    // ---- uitlaten (quad of dubbel, midden) ----
+    const exPos = car.quad ? [-0.27, -0.13, 0.13, 0.27] : car.dualExhaust ? [-0.09, 0.09] : null;
+    if (exPos) {
       const ey = py(-0.92), er = w * 0.05;
-      for (const f of [-0.27, -0.13, 0.13, 0.27]) {
+      for (const f of exPos) {
         const ex = cx + f * bw;
         gg.fillStyle = '#20222a'; gg.beginPath(); gg.arc(ex, ey, er, 0, Math.PI * 2); gg.fill();
         gg.fillStyle = '#4a4e57'; gg.beginPath(); gg.arc(ex, ey, er * 0.58, 0, Math.PI * 2); gg.fill();

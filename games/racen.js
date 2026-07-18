@@ -95,27 +95,64 @@ export function init(root, ctx) {
     if (actx && actx.state === 'suspended') actx.resume();
     startEngine();
   }
-  // Doorlopend motorgeluid: een lage brom die meestijgt met de snelheid.
+  // Zachte vervormingscurve (tanh) voor wat motor-"grit".
+  function gritCurve(k) {
+    const n = 256, c = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(x * k); }
+    return c;
+  }
+  // Doorlopend, realistisch motorgeluid: meerdere boventonen door een waveshaper
+  // en filter, met een tremolo-"brom" en uitlaat-ruis. Toonhoogte/filter stijgen
+  // mee met de snelheid.
   function startEngine() {
     if (!actx || engine) return;
-    const osc = actx.createOscillator(); osc.type = 'sawtooth';
-    const osc2 = actx.createOscillator(); osc2.type = 'square';
-    const filt = actx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 700;
-    const gain = actx.createGain(); gain.gain.value = 0;
-    osc.connect(filt); osc2.connect(filt); filt.connect(gain); gain.connect(actx.destination);
-    try { osc.start(); osc2.start(); } catch (e) { /* al gestart */ }
-    engine = { osc, osc2, filt, gain };
+    const master = actx.createGain(); master.gain.value = 0; master.connect(actx.destination);
+    // tremolo (amplitude-modulatie geeft het rommelige motorgevoel)
+    const throb = actx.createGain(); throb.gain.value = 1; throb.connect(master);
+    const lfo = actx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 8;
+    const lfoAmt = actx.createGain(); lfoAmt.gain.value = 0.4;
+    lfo.connect(lfoAmt).connect(throb.gain);
+    // lowpass dat opent bij hogere toeren
+    const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 0.8;
+    lp.connect(throb);
+    // grit/vervorming voor textuur
+    const shaper = actx.createWaveShaper(); shaper.curve = gritCurve(2.6); shaper.oversample = '2x';
+    shaper.connect(lp);
+    // oscillatoren: grondtoon + octaaf lager (gewicht) + boventoon (rand)
+    const oscBus = actx.createGain(); oscBus.gain.value = 0.5; oscBus.connect(shaper);
+    const oscMain = actx.createOscillator(); oscMain.type = 'sawtooth';
+    const oscSub = actx.createOscillator(); oscSub.type = 'sawtooth';
+    const oscHi = actx.createOscillator(); oscHi.type = 'square';
+    const gMain = actx.createGain(); gMain.gain.value = 0.6;
+    const gSub = actx.createGain(); gSub.gain.value = 0.5;
+    const gHi = actx.createGain(); gHi.gain.value = 0.12;
+    oscMain.connect(gMain).connect(oscBus);
+    oscSub.connect(gSub).connect(oscBus);
+    oscHi.connect(gHi).connect(oscBus);
+    // uitlaat-ruis door een bandfilter
+    const nb = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
+    const nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    const noise = actx.createBufferSource(); noise.buffer = nb; noise.loop = true;
+    const nBp = actx.createBiquadFilter(); nBp.type = 'bandpass'; nBp.frequency.value = 400; nBp.Q.value = 0.7;
+    const nGain = actx.createGain(); nGain.gain.value = 0.4;
+    noise.connect(nBp).connect(nGain).connect(shaper);
+    try { oscMain.start(); oscSub.start(); oscHi.start(); lfo.start(); noise.start(); } catch (e) { /* al gestart */ }
+    engine = { master, lp, lfo, oscMain, oscSub, oscHi, nBp, nodes: [oscMain, oscSub, oscHi, lfo, noise] };
   }
   function engineUpdate() {
     if (!engine || !actx) return;
     const t = actx.currentTime;
     const on = state === 'playing';
-    const vol = (muted || !on) ? 0 : (turboOn && turbo > 0 ? 0.085 : 0.06);
-    engine.gain.gain.setTargetAtTime(vol, t, 0.08);
-    const base = 52 + speed * 60 + (turboOn && turbo > 0 ? 22 : 0);
-    engine.osc.frequency.setTargetAtTime(base, t, 0.05);
-    engine.osc2.frequency.setTargetAtTime(base * 0.5, t, 0.05);
-    engine.filt.frequency.setTargetAtTime(500 + speed * 800, t, 0.08);
+    const vol = (muted || !on) ? 0 : (turboOn && turbo > 0 ? 0.09 : 0.065);
+    engine.master.gain.setTargetAtTime(vol, t, 0.1);
+    const f = 46 + speed * 130 + (turboOn && turbo > 0 ? 28 : 0); // grondtoon ~ toeren
+    engine.oscMain.frequency.setTargetAtTime(f, t, 0.05);
+    engine.oscSub.frequency.setTargetAtTime(f * 0.5, t, 0.05);
+    engine.oscHi.frequency.setTargetAtTime(f * 2, t, 0.05);
+    engine.lfo.frequency.setTargetAtTime(Math.min(26, Math.max(6, f * 0.14)), t, 0.1); // throb met de toeren mee
+    engine.lp.frequency.setTargetAtTime(350 + speed * 2300, t, 0.08);
+    engine.nBp.frequency.setTargetAtTime(f * 3, t, 0.08);
   }
   function tone(freq, dur, type, vol, slideTo) {
     if (muted || !actx) return;
@@ -589,7 +626,7 @@ export function init(root, ctx) {
       el.removeEventListener('pointercancel', up);
     });
     ro.disconnect();
-    if (engine) { try { engine.osc.stop(); engine.osc2.stop(); } catch (e) { /* al gestopt */ } engine = null; }
+    if (engine) { try { engine.nodes.forEach((n) => n.stop()); } catch (e) { /* al gestopt */ } engine = null; }
     if (actx) { try { actx.close(); } catch (e) { /* al gesloten */ } }
     document.body.style.overflow = prevOverflow;
     fs.remove();

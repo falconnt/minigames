@@ -256,6 +256,8 @@ body {
 .card-cat-simulatie .card-icon { background: rgba(95, 135, 245, 0.18); }
 /* Vogel Vlucht: eigen artwork in een mini-luchtje. */
 .card-game-vogelvlucht .card-icon { background: linear-gradient(180deg, #5b9fee, #bfe0f8); }
+/* 2048: warme creme-tint zoals het klassieke spelbord. */
+.card-game-2048 .card-icon { background: linear-gradient(180deg, #faf8ef, #ecdfc8); }
 .card-body h3 { margin: 0 0 0.25rem; }
 .card-body p { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.9rem; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }

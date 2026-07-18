@@ -21,6 +21,7 @@ const APP_SHELL = [
   './js/sync.js',
   './js/fit.js',
   './js/bird-icon.js',
+  './js/icon-2048.js',
   './js/effects.js',
   './js/sound.js',
   './js/achievements.js',

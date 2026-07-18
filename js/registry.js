@@ -2,6 +2,7 @@
 // plus één module in games/ (zie README.md).
 
 import { BIRD_ICON } from './bird-icon.js';
+import { ICON_2048 } from './icon-2048.js';
 
 export const categories = [
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
@@ -24,7 +25,7 @@ export const games = [
   {
     id: '2048',
     title: '2048',
-    icon: '🔢',
+    icon: ICON_2048,
     category: 'puzzel',
     description: 'Schuif tegels samen tot 2048. Je spel wordt automatisch bewaard.',
     scoreMode: 'higher',

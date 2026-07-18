@@ -59,6 +59,12 @@ zwart **carbon** (motorkap, splitter, side-skirts, diffuser), een donkere
 **zwarte achtervleugel**, **zwarte velgen met gele remklauwen** en **dubbele
 uitlaten**.
 
+De **Lamborghini SVJ** is nagetekend als de blauwe **Mansory Cabrera**
+(Aventador): **blauwe** lak met een **grote zwarte carbon voorkant** met een
+**blauwe pinstripe** in het midden, zwart carbon dak, zwarte splitter/side-skirts,
+zwarte **zij-luchtinlaten**, een grote **zwarte achtervleugel**, **zwarte velgen
+met blauwe remklauwen** en een **V12**.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als

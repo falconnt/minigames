@@ -13,7 +13,7 @@ const CARS = [
   { name: 'BMW M4',           col: '#f6f6f4', accent: '#0d0d11', stripe: null,      wing: 'big',   shape: 'coupe',   eng: 'i6', grille: 'kidney', quad: true, realistic: true, wheelCol: '#2b2d34', headlight: '#f4d01c', hoodVents: true, splitter: true },
   { name: 'Mercedes GT 63',   col: '#5cbf22', accent: '#141418', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'v8', grille: 'amg', realistic: true, carbonHood: true, wheelCol: '#26282e', caliper: '#f2c40f', accentLine: '#f2c40f', splitter: true, sideStripe: true },
   { name: 'Ferrari Pista',    col: '#22c1e8', accent: '#111114', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v8', realistic: true, carbonHood: true, splitter: true, sideStripe: true, sideScoops: true, wheelCol: '#26282e', caliper: '#e8d21a', dualExhaust: true },
-  { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
+  { name: 'Lamborghini SVJ',  col: '#1b8fe2', accent: '#101014', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12', realistic: true, carbonHood: 'full', splitter: true, sideScoops: true, wheelCol: '#26282e', caliper: '#2aa0e8', dualExhaust: true },
   { name: 'Porsche 911',      col: '#e9ecf0', accent: '#15151a', stripe: null,      wing: 'mid',   shape: 'classic', eng: 'flat6' },
   { name: 'Mustang',          col: '#1f57c8', accent: '#15151a', stripe: '#ffffff', wing: 'small', shape: 'muscle',  eng: 'v8' },
   { name: 'Audi R8',          col: '#9aa1a8', accent: '#15151a', stripe: null,      wing: 'small', shape: 'super',   eng: 'v10' },
@@ -716,26 +716,36 @@ export function init(root, ctx) {
       gg.restore();
     }
 
-    // ---- zwarte carbon motorkap (centraal, taps toe naar de neus) ----
+    // ---- zwarte carbon motorkap ('full' = hele voorkant, anders centraal) ----
     if (car.carbonHood) {
       gg.save(); bodyPath(); gg.clip();
-      gg.fillStyle = '#1b1d21';
-      gg.beginPath();
-      gg.moveTo(px(-0.5), py(0.46)); gg.lineTo(px(0.5), py(0.46));
-      gg.lineTo(px(0.3), py(0.93)); gg.lineTo(px(-0.3), py(0.93));
-      gg.closePath(); gg.fill();
-      // carbon weave-hint
-      gg.strokeStyle = 'rgba(255,255,255,0.05)'; gg.lineWidth = Math.max(0.5, w * 0.008);
-      gg.beginPath();
-      for (let i = 0; i < 5; i++) { const yy = py(0.5) + i * (py(0.9) - py(0.5)) / 4; gg.moveTo(px(-0.42), yy); gg.lineTo(px(0.42), yy); }
-      gg.stroke();
-      // twee power-dome vents
-      gg.fillStyle = '#0b0c0f';
-      for (const sx of [-1, 1]) {
+      gg.fillStyle = '#191b1f';
+      if (car.carbonHood === 'full') {
+        // hele voorkant carbon tot aan de voorruit, met pinstripe in autokleur
+        const y0 = py(0.14), y1 = py(1.08), top = Math.min(y0, y1), hgt = Math.abs(y1 - y0);
+        gg.fillRect(cx - bw, top, bw * 2, hgt);
+        gg.strokeStyle = 'rgba(255,255,255,0.05)'; gg.lineWidth = Math.max(0.5, w * 0.008);
         gg.beginPath();
-        gg.moveTo(px(sx * 0.06), py(0.74)); gg.lineTo(px(sx * 0.26), py(0.74));
-        gg.lineTo(px(sx * 0.22), py(0.56)); gg.lineTo(px(sx * 0.1), py(0.56));
+        for (let i = 0; i < 6; i++) { const yy = top + i * hgt / 5; gg.moveTo(cx - bw * 0.7, yy); gg.lineTo(cx + bw * 0.7, yy); }
+        gg.stroke();
+        gg.fillStyle = car.col;
+        gg.fillRect(cx - bw * 0.03, py(0.16), bw * 0.06, py(0.92) - py(0.16));
+      } else {
+        gg.beginPath();
+        gg.moveTo(px(-0.5), py(0.46)); gg.lineTo(px(0.5), py(0.46));
+        gg.lineTo(px(0.3), py(0.93)); gg.lineTo(px(-0.3), py(0.93));
         gg.closePath(); gg.fill();
+        gg.strokeStyle = 'rgba(255,255,255,0.05)'; gg.lineWidth = Math.max(0.5, w * 0.008);
+        gg.beginPath();
+        for (let i = 0; i < 5; i++) { const yy = py(0.5) + i * (py(0.9) - py(0.5)) / 4; gg.moveTo(px(-0.42), yy); gg.lineTo(px(0.42), yy); }
+        gg.stroke();
+        gg.fillStyle = '#0b0c0f';
+        for (const sx of [-1, 1]) {
+          gg.beginPath();
+          gg.moveTo(px(sx * 0.06), py(0.74)); gg.lineTo(px(sx * 0.26), py(0.74));
+          gg.lineTo(px(sx * 0.22), py(0.56)); gg.lineTo(px(sx * 0.1), py(0.56));
+          gg.closePath(); gg.fill();
+        }
       }
       gg.restore();
     }

@@ -53,6 +53,12 @@ De **Mercedes GT 63** is nagetekend als de felgroene **MANSORY AMG GT63 S**: fel
 accenten** (remklauwen, splitter- en diffuser-lijnen), **zwarte velgen**, zwarte
 splitter/side-skirts en een donkere **side-stripe**. Zijn motor is een **V8**.
 
+De **Ferrari** is nagetekend als de **Mansory 488 Siracusa** in fel **cyaan**: veel
+zwart **carbon** (motorkap, splitter, side-skirts, diffuser), een donkere
+**side-swoosh**, **zwarte zij-luchtinlaten** (mid-engine scoops), een grote
+**zwarte achtervleugel**, **zwarte velgen met gele remklauwen** en **dubbele
+uitlaten**.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als

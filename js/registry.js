@@ -67,6 +67,16 @@ export const games = [
     load: () => import('../games/ruimteschieter.js'),
   },
   {
+    id: 'racen',
+    title: 'Racen',
+    icon: '🏎️',
+    category: 'arcade',
+    description: 'Scheur over de weg, ontwijk de tegenliggers en pak munten. Steeds sneller, met turbo! Schermvullend, met de vinger of het toetsenbord.',
+    scoreMode: 'higher',
+    formatScore: (s) => `${s} m`,
+    load: () => import('../games/racen.js'),
+  },
+  {
     id: 'paardensport',
     title: 'Paardensport',
     icon: ICON_PAARD,

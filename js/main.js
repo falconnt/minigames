@@ -461,6 +461,26 @@ function initAccount() {
   refreshButton();
 }
 
+// Flourish: de controller in het logo draait drie rondjes (3×360°) — vanzelf
+// bij het openen van het welkomstscherm, en bij tik/hover op het logo.
+function initLogoSpin() {
+  const spin = (svg) => {
+    if (!svg || svg.classList.contains('spin-now')) return;
+    svg.classList.add('spin-now');
+    setTimeout(() => svg.classList.remove('spin-now'), 1700);
+  };
+  const header = document.querySelector('.app-logo');
+  if (header) {
+    header.addEventListener('pointerenter', () => spin(header));
+    header.addEventListener('pointerdown', () => spin(header));
+  }
+  const welcomeSvg = document.querySelector('.welcome-logo svg');
+  if (welcomeSvg) {
+    setTimeout(() => spin(welcomeSvg), 800);
+    welcomeSvg.closest('.welcome-logo').addEventListener('pointerdown', () => spin(welcomeSvg));
+  }
+}
+
 // Actieve game (of null) op basis van de huidige route — voor het verversen
 // van de highscore-lijst na in-/uitloggen.
 function currentGame() {
@@ -547,6 +567,7 @@ function initSyncStatus() {
   document.getElementById('scores-btn').addEventListener('click', () => { location.hash = '#/scores'; });
   const vEl = document.getElementById('app-version');
   if (vEl) vEl.textContent = 'v' + APP_VERSION;
+  initLogoSpin();
   route();
 
   // Welkomstscherm bij het openen van de app — alleen op de startpagina

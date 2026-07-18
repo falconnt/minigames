@@ -99,6 +99,13 @@ body {
   filter: drop-shadow(0 8px 18px rgba(40, 50, 120, 0.35));
 }
 
+/* De controller doet drie 360's (1080°) — bij openen en bij tik/hover. */
+.ctrl-spin { transform-box: fill-box; transform-origin: 50% 46%; }
+@media (prefers-reduced-motion: no-preference) {
+  .spin-now .ctrl-spin { animation: ctrl-spin3 1.6s cubic-bezier(0.4, 0.05, 0.22, 1); }
+}
+@keyframes ctrl-spin3 { to { transform: rotate(1080deg); } }
+
 .header-actions { display: flex; gap: 0.4rem; flex-shrink: 0; align-items: center; }
 
 /* Ingelogd: accountknop krijgt een accentrandje. */

@@ -10,7 +10,7 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'BMW M4',           col: '#f2c500', col2: '#f4f4f2', accent: '#15151a', stripe: null, wing: 'small', shape: 'coupe', eng: 'i6', grille: 'kidney', mstripes: true, quad: true },
+  { name: 'BMW M4',           col: '#f4f4f2', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'i6', grille: 'kidney', mstripes: true, quad: true },
   { name: 'Mercedes GT 63',   col: '#c7ccd3', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'w12' },
   { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
   { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },

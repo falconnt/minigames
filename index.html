@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Minigames</title>
   <meta name="description" content="Een verzameling minigames met highscores, gebouwd voor GitHub Pages.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 
   <!-- PWA: installeerbaar via Chrome op Android -->
@@ -34,7 +33,27 @@
       <span>🔢</span><span>🐦</span><span>🟩</span><span>🚀</span><span>⚡</span><span>🏇</span>
     </div>
     <div class="welcome-inner">
-      <div class="welcome-logo" aria-hidden="true">🎮</div>
+      <div class="welcome-logo" aria-hidden="true"><svg viewBox="0 0 64 64">
+        <defs><linearGradient id="aglog" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#6b93ff"/><stop offset="1" stop-color="#5b3fd0"/>
+        </linearGradient></defs>
+        <g transform="rotate(-8 32 34)">
+          <circle cx="15" cy="38" r="11" fill="url(#aglog)"/>
+          <circle cx="49" cy="38" r="11" fill="url(#aglog)"/>
+          <rect x="12" y="22" width="40" height="21" rx="10.5" fill="url(#aglog)"/>
+          <path d="M17 26.5 q15 -4.5 30 0" stroke="rgba(255,255,255,0.5)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <g fill="#ffffff">
+            <rect x="19.6" y="27" width="4.4" height="13" rx="1.6"/>
+            <rect x="15.3" y="31.3" width="13" height="4.4" rx="1.6"/>
+          </g>
+          <circle cx="44" cy="28.6" r="2.7" fill="#ffd23d"/>
+          <circle cx="44" cy="38.4" r="2.7" fill="#48d17a"/>
+          <circle cx="39" cy="33.5" r="2.7" fill="#ff5b5b"/>
+          <circle cx="49" cy="33.5" r="2.7" fill="#4fc3ff"/>
+        </g>
+        <path d="M50 7 l1.6 3.4 3.4 1.6 -3.4 1.6 -1.6 3.4 -1.6 -3.4 -3.4 -1.6 3.4 -1.6 Z" fill="#ffd23d"/>
+        <path d="M12 11 l1 2.2 2.2 1 -2.2 1 -1 2.2 -1 -2.2 -2.2 -1 2.2 -1 Z" fill="#a9bcf7"/>
+      </svg></div>
       <h1>Welkom bij Minigames</h1>
       <p>Zes games, highscores, badges en online ranglijsten.<br>
          Druk hieronder om te gaan spelen!</p>
@@ -43,7 +62,26 @@
   </div>
 
   <header class="app-header">
-    <a class="app-title" href="#/">🎮 Minigames</a>
+    <a class="app-title" href="#/"><svg class="app-logo" viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="aglog2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#6b93ff"/><stop offset="1" stop-color="#5b3fd0"/>
+      </linearGradient></defs>
+      <g transform="rotate(-8 32 34)">
+        <circle cx="15" cy="38" r="11" fill="url(#aglog2)"/>
+        <circle cx="49" cy="38" r="11" fill="url(#aglog2)"/>
+        <rect x="12" y="22" width="40" height="21" rx="10.5" fill="url(#aglog2)"/>
+        <path d="M17 26.5 q15 -4.5 30 0" stroke="rgba(255,255,255,0.5)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <g fill="#ffffff">
+          <rect x="19.6" y="27" width="4.4" height="13" rx="1.6"/>
+          <rect x="15.3" y="31.3" width="13" height="4.4" rx="1.6"/>
+        </g>
+        <circle cx="44" cy="28.6" r="2.7" fill="#ffd23d"/>
+        <circle cx="44" cy="38.4" r="2.7" fill="#48d17a"/>
+        <circle cx="39" cy="33.5" r="2.7" fill="#ff5b5b"/>
+        <circle cx="49" cy="33.5" r="2.7" fill="#4fc3ff"/>
+      </g>
+      <path d="M50 7 l1.6 3.4 3.4 1.6 -3.4 1.6 -1.6 3.4 -1.6 -3.4 -3.4 -1.6 3.4 -1.6 Z" fill="#ffd23d"/>
+    </svg> Minigames</a>
     <div class="header-actions">
       <button id="install-btn" class="btn btn-primary" hidden>Installeren</button>
       <button id="sync-status" class="sync-chip" title="Synchronisatiestatus" hidden></button>

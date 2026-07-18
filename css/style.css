@@ -87,6 +87,8 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.app-logo { width: 1.5em; height: 1.5em; vertical-align: -0.42em; }
+.welcome-logo svg { width: 5.5rem; height: 5.5rem; }
 
 .header-actions { display: flex; gap: 0.4rem; flex-shrink: 0; align-items: center; }
 

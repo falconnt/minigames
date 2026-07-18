@@ -43,6 +43,19 @@ naar het menu; **Nieuw spel** vind je in het pauzemenu (of de ❔-knop voor uitl
    en snellere vijanden.
 6. Bij **0 levens** is het game over.
 
+## Power-ups, combo's & geluid
+
+- **Combo:** schiet je snel achter elkaar vijanden kapot, dan loopt je combo op en
+  tellen je punten met een **×-vermenigvuldiger** (tot ×5). Zwevende "+punten"
+  laten zien hoeveel je pakt.
+- **Power-ups** vallen soms uit een vernietigde vijand — vang ze op met je schip:
+  - 🔫 **driedubbel schot** — je schiet drie kogels tegelijk (waaier);
+  - ⚡ **snelvuur** — je schiet veel sneller;
+  - 🛡️ **schild** — een ring om je schip die schoten een tijdje tegenhoudt.
+- **Geluid:** laserschoten, ontploffingen en power-up-geluidjes (WebAudio, geen
+  bestanden). Met de **🔊/🔇-knop** zet je het geluid aan of uit. Er is ook
+  **screenshake** bij explosies voor extra kracht.
+
 ## Score & highscore
 
 - Elke vernietigde vijand levert punten op; vijanden in de **bovenste rijen** zijn

@@ -1,17 +1,19 @@
-// Ruimteschieter — neon-editie.
+// Ruimteschieter — neon-editie (met geluid, power-ups, combo's en screenshake).
 //
-// Een schermvullende space-shooter: bestuur je neon-ruimteschip onderin, schiet
-// de aanvallende vijanden kapot en ontwijk hun schoten. Alles wordt in code op
-// canvas getekend (geen afbeeldingen), met neon-gloed via schaduw-blur.
+// Een schermvullende space-shooter: bestuur je neon-luchtschip onderin, schiet de
+// aanvallende vijanden kapot, pak power-ups en ontwijk hun schoten. Alles wordt in
+// code op canvas getekend (geen afbeeldingen), met neon-gloed via schaduw-blur en
+// geluid via de WebAudio-API (geen geluidsbestanden).
 //
-// Coördinaten zijn genormaliseerd (0..1) zodat de game op elk schermformaat en
-// bij draaien/resizen goed blijft werken; pas bij het tekenen/botsen worden ze
-// omgezet naar pixels.
+// Coördinaten zijn genormaliseerd (0..1) zodat de game op elk schermformaat en bij
+// draaien/resizen goed blijft werken; pas bij tekenen/botsen worden ze pixels.
 
 const PLAYER_COL = '#39f6ff';
 const PLAYER_BULLET = '#aef9ff';
 const ENEMY_BULLET = '#ff9a3d';
 const ROW_COLORS = ['#ff3df0', '#c04bff', '#48ff8e', '#ffd23d', '#ff6b6b'];
+const POWERS = ['triple', 'rapid', 'shield'];
+const POWER_COL = { triple: '#48ff8e', rapid: '#ffd23d', shield: '#39f6ff' };
 
 export function init(root, ctx) {
   // ---------- fullscreen-laag ----------
@@ -28,6 +30,7 @@ export function init(root, ctx) {
       <span class="rs-stat">Golf <b id="rs-wave">1</b></span>
       <span class="rs-stat">Levens <b id="rs-lives">♥♥♥</b></span>
       <span class="rs-actions">
+        <button id="rs-mute" class="rs-btn" aria-label="Geluid aan of uit">🔊</button>
         <button id="rs-pause" class="rs-btn">Pauze</button>
         <button id="rs-help-btn" class="rs-btn" aria-label="Uitleg">❔</button>
       </span>
@@ -46,8 +49,9 @@ export function init(root, ctx) {
       <ul class="rs-help-list">
         <li><b>◀ ▶</b> — vlieg naar links of rechts (of veeg met je vinger over het veld).</li>
         <li><b>🔥 vuur</b> — ingedrukt houden om te schieten. Sleep je met je vinger, dan schiet je vanzelf.</li>
-        <li>Schiet alle vijanden kapot om naar de <b>volgende golf</b> te gaan — die is sneller!</li>
-        <li>Word je geraakt of bereikt een vijand de bodem, dan verlies je een <b>leven</b> (je hebt er 3).</li>
+        <li>Schiet snel achter elkaar voor een <b>combo</b> — dan tellen je punten dubbel!</li>
+        <li>Pak vallende <b>power-ups</b>: 🔫 driedubbel schot, ⚡ snelvuur, 🛡️ schild.</li>
+        <li>Maak een golf op voor de <b>volgende</b> (sneller!). Word je geraakt of bereikt een vijand de bodem, dan verlies je een leven (je hebt er 3).</li>
         <li><b>Toetsenbord:</b> pijltjes bewegen, spatie = schieten, P = pauze.</li>
       </ul>
       <form method="dialog"><button class="rs-btn primary">Sluiten</button></form>
@@ -62,40 +66,77 @@ export function init(root, ctx) {
   const waveEl = fs.querySelector('#rs-wave');
   const livesEl = fs.querySelector('#rs-lives');
   const pauseBtn = fs.querySelector('#rs-pause');
+  const muteBtn = fs.querySelector('#rs-mute');
 
   // ---------- afmetingen ----------
   let W = 320, H = 480, unit = 320, dpr = 1;
-  const S = {}; // afgeleide maten (per layout herberekend)
+  const S = {};
   function sizes() {
     unit = Math.min(W, H);
-    S.playerW = unit * 0.11; S.playerH = unit * 0.085;
+    S.playerW = unit * 0.12; S.playerH = unit * 0.10;
     S.enemyW = unit * 0.09;  S.enemyH = unit * 0.07;
     S.pBulletW = Math.max(3, unit * 0.02); S.pBulletH = unit * 0.06;
     S.eBulletW = Math.max(3, unit * 0.02); S.eBulletH = unit * 0.055;
     S.glow = unit * 0.04;
   }
 
+  // ---------- geluid (WebAudio, geen bestanden) ----------
+  let actx = null, muted = false;
+  function ensureAudio() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+    if (actx && actx.state === 'suspended') actx.resume();
+  }
+  function tone(freq, dur, type, vol, slideTo, at) {
+    if (muted || !actx) return;
+    const t = actx.currentTime + (at || 0);
+    const o = actx.createOscillator(), gN = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t + dur);
+    gN.gain.setValueAtTime(vol, t);
+    gN.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(gN).connect(actx.destination); o.start(t); o.stop(t + dur);
+  }
+  function noiseBurst(dur, vol) {
+    if (muted || !actx) return;
+    const t = actx.currentTime;
+    const buf = actx.createBuffer(1, Math.floor(actx.sampleRate * dur), actx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = actx.createBufferSource(); src.buffer = buf;
+    const f = actx.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(1400, t); f.frequency.exponentialRampToValueAtTime(200, t + dur);
+    const gN = actx.createGain(); gN.gain.setValueAtTime(vol, t); gN.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(gN).connect(actx.destination); src.start(t); src.stop(t + dur);
+  }
+  const sShoot = () => tone(880, 0.08, 'square', 0.05, 480);
+  const sExplode = () => { noiseBurst(0.28, 0.15); tone(180, 0.25, 'sawtooth', 0.07, 60); };
+  const sHit = () => { noiseBurst(0.32, 0.2); tone(120, 0.35, 'square', 0.16, 50); };
+  const sPower = () => { tone(520, 0.09, 'triangle', 0.12, 660); tone(780, 0.12, 'triangle', 0.12, 1040, 0.09); };
+  const sWave = () => { tone(440, 0.1, 'square', 0.09, 660); tone(660, 0.14, 'square', 0.09, 900, 0.1); };
+
   // ---------- spelstatus ----------
   let player = { x: 0.5, y: 0.9 };
-  let pBullets = [];   // { x, y }  (y in genormaliseerde hoogte, beweegt omhoog)
-  let eBullets = [];
-  let enemies = [];    // { x, y, alive, color, points }
-  let particles = [];
-  let stars = [];
-  let dir = 1;         // formatie-richting
-  let enemySpeed = 0.14;
+  let pBullets = [], eBullets = [], enemies = [], particles = [], powerups = [], popups = [], stars = [], nebula = [];
+  let dir = 1, enemySpeed = 0.14;
   let score = 0, wave = 1, lives = 3;
-  let state = 'playing'; // 'playing' | 'wavebreak' | 'paused' | 'over'
-  let breakT = 0;
-  let fireCd = 0, enemyFireCd = 1.2, invuln = 0;
+  let state = 'playing';
+  let breakT = 0, fireCd = 0, enemyFireCd = 1.2, invuln = 0;
+  let pTriple = 0, pRapid = 0, pShield = 0;
+  let shake = 0, killStreak = 0, streakT = 0;
   let moveDir = 0, firing = false, dragging = false, dragX = 0;
   let raf = 0, last = 0;
 
   function makeStars() {
     stars = [];
-    for (let i = 0; i < 70; i++) {
-      stars.push({ x: Math.random(), y: Math.random(), s: Math.random() * 0.6 + 0.2, sp: Math.random() * 0.05 + 0.02 });
+    for (let i = 0; i < 80; i++) {
+      const warp = i < 12;
+      stars.push({ x: Math.random(), y: Math.random(), s: Math.random() * 0.6 + 0.2, sp: warp ? 0.11 + Math.random() * 0.06 : Math.random() * 0.05 + 0.015, warp });
     }
+  }
+  function makeNebula() {
+    const cols = ['rgba(120,40,200,0.15)', 'rgba(30,120,220,0.13)', 'rgba(200,40,140,0.11)'];
+    nebula = [];
+    for (let i = 0; i < 3; i++) nebula.push({ x: Math.random(), y: Math.random(), r: 0.4 + Math.random() * 0.3, c: cols[i], sp: 0.006 + Math.random() * 0.01 });
   }
 
   function spawnWave(n) {
@@ -118,9 +159,10 @@ export function init(root, ctx) {
   function newGame() {
     score = 0; wave = 1; lives = 3;
     player = { x: 0.5, y: 0.9 };
-    pBullets = []; eBullets = []; particles = [];
-    invuln = 0; fireCd = 0;
-    makeStars();
+    pBullets = []; eBullets = []; particles = []; powerups = []; popups = [];
+    invuln = 0; fireCd = 0; pTriple = 0; pRapid = 0; pShield = 0;
+    shake = 0; killStreak = 0; streakT = 0;
+    makeStars(); makeNebula();
     spawnWave(1);
     state = 'playing';
     overlay.hidden = true;
@@ -134,19 +176,26 @@ export function init(root, ctx) {
     livesEl.textContent = lives > 0 ? '♥'.repeat(lives) : '—';
   }
 
-  function boom(nx, ny, color) {
-    for (let i = 0; i < 14; i++) {
-      const a = Math.random() * Math.PI * 2, sp = Math.random() * 0.4 + 0.1;
+  function boom(nx, ny, color, big) {
+    const n = big ? 22 : 12;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = Math.random() * (big ? 0.6 : 0.4) + 0.1;
       particles.push({ x: nx, y: ny, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, color });
     }
+    particles.push({ x: nx, y: ny, ring: 1, color });
+  }
+  function maybeDrop(x, y) {
+    if (Math.random() < 0.13) powerups.push({ x, y, type: POWERS[Math.floor(Math.random() * POWERS.length)] });
   }
 
   function loseLife() {
-    if (invuln > 0) return;
+    if (invuln > 0 || pShield > 0) return;
     lives -= 1;
     invuln = 1.6;
-    boom(player.x, player.y, PLAYER_COL);
+    boom(player.x, player.y, PLAYER_COL, true);
     eBullets = [];
+    shake = 0.4;
+    sHit();
     updateHud();
     if (lives <= 0) gameOver();
   }
@@ -180,26 +229,29 @@ export function init(root, ctx) {
     }
   }
 
-  // ---------- botsing (in pixels) ----------
   function hit(ax, ay, aw, ah, bx, by, bw, bh) {
     return Math.abs(ax - bx) < (aw + bw) / 2 && Math.abs(ay - by) < (ah + bh) / 2;
   }
 
   // ---------- update ----------
   function update(dt) {
-    // sterren bewegen altijd (ook tijdens golfpauze) voor sfeer
-    for (const st of stars) { st.y += st.sp * dt; if (st.y > 1) { st.y = 0; st.x = Math.random(); } }
-    for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.6; }
-    particles = particles.filter((p) => p.life > 0);
+    // sfeer + visuele effecten lopen altijd
+    for (const st of stars) { st.y += st.sp * dt; if (st.y > 1.05) { st.y = -0.05; st.x = Math.random(); } }
+    for (const nb of nebula) { nb.y += nb.sp * dt; if (nb.y > 1.3) nb.y = -0.3; }
+    for (const p of particles) { if (p.ring != null) { p.ring += dt * 4; } else { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.6; } }
+    particles = particles.filter((p) => (p.ring != null ? p.ring < 1.6 : p.life > 0));
+    for (const pp of popups) { pp.y -= 0.12 * dt; pp.life -= dt * 0.9; }
+    popups = popups.filter((pp) => pp.life > 0);
+    if (shake > 0) shake -= dt;
 
-    if (state === 'wavebreak') {
-      breakT -= dt;
-      if (breakT <= 0) { state = 'playing'; overlay.hidden = true; }
-      return;
-    }
+    if (state === 'wavebreak') { breakT -= dt; if (breakT <= 0) { state = 'playing'; overlay.hidden = true; } return; }
     if (state !== 'playing') return;
 
     if (invuln > 0) invuln -= dt;
+    if (pTriple > 0) pTriple -= dt;
+    if (pRapid > 0) pRapid -= dt;
+    if (pShield > 0) pShield -= dt;
+    if (streakT > 0) { streakT -= dt; if (streakT <= 0) killStreak = 0; }
 
     // speler bewegen
     const halfW = (S.playerW / 2) / W;
@@ -209,31 +261,39 @@ export function init(root, ctx) {
     // schieten
     fireCd -= dt;
     if ((firing || dragging) && fireCd <= 0) {
-      pBullets.push({ x: player.x, y: player.y - (S.playerH / 2) / H });
-      fireCd = 0.18;
+      const topY = player.y - (S.playerH / 2) / H;
+      if (pTriple > 0) {
+        pBullets.push({ x: player.x, y: topY, vx: 0 });
+        pBullets.push({ x: player.x, y: topY, vx: -0.35 });
+        pBullets.push({ x: player.x, y: topY, vx: 0.35 });
+      } else {
+        pBullets.push({ x: player.x, y: topY, vx: 0 });
+      }
+      fireCd = pRapid > 0 ? 0.09 : 0.18;
+      sShoot();
     }
-    for (const b of pBullets) b.y -= 1.35 * dt;
-    pBullets = pBullets.filter((b) => b.y > -0.05);
+    for (const b of pBullets) { b.y -= 1.35 * dt; b.x += (b.vx || 0) * dt; }
+    pBullets = pBullets.filter((b) => b.y > -0.05 && b.x > -0.05 && b.x < 1.05);
 
     // vijanden (formatie) bewegen
     const halfEW = (S.enemyW / 2) / W;
     let minX = 1, maxX = 0, lowest = 0, aliveCount = 0;
     for (const e of enemies) if (e.alive) { minX = Math.min(minX, e.x); maxX = Math.max(maxX, e.x); lowest = Math.max(lowest, e.y); aliveCount++; }
-    if (aliveCount === 0) { // golf gehaald
+    if (aliveCount === 0) {
       wave += 1; updateHud();
       spawnWave(wave);
       state = 'wavebreak'; breakT = 1.1;
       overlay.innerHTML = `<h2>Golf ${wave}</h2><p>Maak je klaar…</p>`;
       overlay.hidden = false;
+      sWave();
       return;
     }
     let stepDown = 0;
     if (minX - halfEW < 0.02 && dir < 0) { dir = 1; stepDown = (S.enemyH * 0.5) / H; }
     else if (maxX + halfEW > 0.98 && dir > 0) { dir = -1; stepDown = (S.enemyH * 0.5) / H; }
-    const spd = enemySpeed * (1 + (1 - aliveCount / enemies.length) * 0.8); // sneller als er minder over zijn
+    const spd = enemySpeed * (1 + (1 - aliveCount / enemies.length) * 0.8);
     for (const e of enemies) if (e.alive) { e.x += dir * spd * dt; e.y += stepDown; }
 
-    // vijand bereikt de bodem
     if (lowest + (S.enemyH / 2) / H >= player.y - (S.playerH / 2) / H) { loseLife(); if (state === 'over') return; spawnWave(wave); }
 
     // vijanden schieten
@@ -247,7 +307,7 @@ export function init(root, ctx) {
     for (const b of eBullets) b.y += 0.6 * dt;
     eBullets = eBullets.filter((b) => b.y < 1.05);
 
-    // botsingen: spelerkogels vs vijanden
+    // spelerkogels vs vijanden
     for (const b of pBullets) {
       if (b.dead) continue;
       const bx = b.x * W, by = b.y * H;
@@ -255,8 +315,15 @@ export function init(root, ctx) {
         if (!e.alive) continue;
         if (hit(bx, by, S.pBulletW, S.pBulletH, e.x * W, e.y * H, S.enemyW, S.enemyH)) {
           e.alive = false; b.dead = true;
-          score += e.points; updateHud();
+          killStreak += 1; streakT = 1.5;
+          const mult = 1 + Math.min(Math.floor(killStreak / 3), 4);
+          const gained = e.points * mult;
+          score += gained; updateHud();
           boom(e.x, e.y, e.color);
+          popups.push({ x: e.x, y: e.y, text: '+' + gained + (mult > 1 ? ' ×' + mult : ''), life: 1, color: mult > 1 ? '#ffd23d' : '#eaffff' });
+          shake = Math.max(shake, 0.12);
+          sExplode();
+          maybeDrop(e.x, e.y);
           break;
         }
       }
@@ -264,7 +331,7 @@ export function init(root, ctx) {
     pBullets = pBullets.filter((b) => !b.dead);
 
     // vijandkogels vs speler
-    if (invuln <= 0) {
+    if (invuln <= 0 && pShield <= 0) {
       const px = player.x * W, py = player.y * H;
       for (const b of eBullets) {
         if (hit(px, py, S.playerW * 0.7, S.playerH * 0.7, b.x * W, b.y * H, S.eBulletW, S.eBulletH)) {
@@ -274,55 +341,27 @@ export function init(root, ctx) {
         }
       }
     }
+
+    // power-ups zakken + oppakken
+    for (const pu of powerups) pu.y += 0.28 * dt;
+    powerups = powerups.filter((pu) => pu.y < 1.08);
+    const px2 = player.x * W, py2 = player.y * H;
+    for (const pu of powerups) {
+      if (hit(px2, py2, S.playerW, S.playerH, pu.x * W, pu.y * H, S.enemyW, S.enemyH)) {
+        pu.taken = true;
+        if (pu.type === 'triple') pTriple = 8;
+        else if (pu.type === 'rapid') pRapid = 8;
+        else pShield = 7;
+        popups.push({ x: pu.x, y: Math.min(pu.y, 0.9), text: pu.type === 'triple' ? 'DRIEDUBBEL!' : pu.type === 'rapid' ? 'SNELVUUR!' : 'SCHILD!', life: 1.3, color: POWER_COL[pu.type] });
+        sPower();
+      }
+    }
+    powerups = powerups.filter((pu) => !pu.taken);
   }
 
   // ---------- tekenen ----------
   function neon(color, blur) { g.shadowColor = color; g.shadowBlur = blur; }
   function noGlow() { g.shadowBlur = 0; }
-
-  function draw() {
-    // achtergrond
-    const grad = g.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0a1030'); grad.addColorStop(1, '#05060f');
-    g.fillStyle = grad; g.fillRect(0, 0, W, H);
-    // sterren
-    noGlow();
-    for (const st of stars) {
-      g.globalAlpha = st.s;
-      g.fillStyle = '#bcd8ff';
-      const r = st.s * unit * 0.006 + 0.5;
-      g.fillRect(st.x * W, st.y * H, r, r);
-    }
-    g.globalAlpha = 1;
-
-    // vijanden
-    for (const e of enemies) {
-      if (!e.alive) continue;
-      drawEnemy(e.x * W, e.y * H, e.color);
-    }
-    // spelerkogels
-    neon(PLAYER_BULLET, S.glow);
-    g.fillStyle = PLAYER_BULLET;
-    for (const b of pBullets) g.fillRect(b.x * W - S.pBulletW / 2, b.y * H - S.pBulletH / 2, S.pBulletW, S.pBulletH);
-    // vijandkogels
-    neon(ENEMY_BULLET, S.glow);
-    g.fillStyle = ENEMY_BULLET;
-    for (const b of eBullets) g.fillRect(b.x * W - S.eBulletW / 2, b.y * H - S.eBulletH / 2, S.eBulletW, S.eBulletH);
-    // deeltjes
-    for (const p of particles) {
-      neon(p.color, S.glow);
-      g.globalAlpha = Math.max(0, p.life);
-      g.fillStyle = p.color;
-      const r = unit * 0.012;
-      g.fillRect(p.x * W - r / 2, p.y * H - r / 2, r, r);
-    }
-    g.globalAlpha = 1;
-    // speler (knippert tijdens onkwetsbaarheid)
-    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawPlayer(player.x * W, player.y * H);
-    noGlow();
-  }
-
-  // Afgeronde rechthoek (pad) — helper voor de cabine.
   function rrect(x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     g.beginPath();
@@ -334,11 +373,123 @@ export function init(root, ctx) {
     g.closePath();
   }
 
-  // Speler = een neon-luchtschip: een ovale ballon met een cabine eronder.
+  function draw() {
+    // achtergrond (beweegt niet mee met de shake)
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0a1030'); grad.addColorStop(1, '#05060f');
+    g.fillStyle = grad; g.fillRect(0, 0, W, H);
+    for (const nb of nebula) {
+      const gr = g.createRadialGradient(nb.x * W, nb.y * H, 0, nb.x * W, nb.y * H, nb.r * Math.max(W, H));
+      gr.addColorStop(0, nb.c); gr.addColorStop(1, 'transparent');
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    }
+    noGlow();
+    for (const st of stars) {
+      g.globalAlpha = st.s;
+      g.fillStyle = st.warp ? '#dff0ff' : '#bcd8ff';
+      const r = st.s * unit * 0.006 + 0.5;
+      if (st.warp) g.fillRect(st.x * W, st.y * H, Math.max(1, r * 0.7), r * 4.5);
+      else g.fillRect(st.x * W, st.y * H, r, r);
+    }
+    g.globalAlpha = 1;
+
+    // wereld (beweegt mee met de shake)
+    g.save();
+    if (shake > 0) { const m = shake * unit * 0.16; g.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m); }
+
+    for (const e of enemies) if (e.alive) drawEnemy(e.x * W, e.y * H, e.color);
+
+    neon(PLAYER_BULLET, S.glow);
+    g.fillStyle = PLAYER_BULLET;
+    for (const b of pBullets) g.fillRect(b.x * W - S.pBulletW / 2, b.y * H - S.pBulletH / 2, S.pBulletW, S.pBulletH);
+    neon(ENEMY_BULLET, S.glow);
+    g.fillStyle = ENEMY_BULLET;
+    for (const b of eBullets) g.fillRect(b.x * W - S.eBulletW / 2, b.y * H - S.eBulletH / 2, S.eBulletW, S.eBulletH);
+
+    // power-ups (gekleurde tegel met een getekend pictogram — werkt op elk toestel)
+    for (const pu of powerups) {
+      const x = pu.x * W, y = pu.y * H, s = S.enemyW;
+      neon(POWER_COL[pu.type], S.glow);
+      g.fillStyle = POWER_COL[pu.type];
+      rrect(x - s / 2, y - s / 2, s, s, s * 0.28); g.fill();
+      noGlow();
+      g.fillStyle = '#05060f';
+      if (pu.type === 'triple') {
+        for (const dx of [-0.26, 0, 0.26]) g.fillRect(x + dx * s - s * 0.05, y - s * 0.18, s * 0.10, s * 0.36);
+      } else if (pu.type === 'rapid') {
+        g.beginPath();
+        g.moveTo(x + s * 0.14, y - s * 0.26);
+        g.lineTo(x - s * 0.12, y + s * 0.04);
+        g.lineTo(x + s * 0.02, y + s * 0.04);
+        g.lineTo(x - s * 0.14, y + s * 0.28);
+        g.lineTo(x + s * 0.18, y - s * 0.04);
+        g.lineTo(x + s * 0.02, y - s * 0.04);
+        g.closePath(); g.fill();
+      } else {
+        g.beginPath();
+        g.moveTo(x, y - s * 0.28);
+        g.lineTo(x + s * 0.24, y - s * 0.15);
+        g.lineTo(x + s * 0.24, y + s * 0.06);
+        g.quadraticCurveTo(x + s * 0.24, y + s * 0.26, x, y + s * 0.30);
+        g.quadraticCurveTo(x - s * 0.24, y + s * 0.26, x - s * 0.24, y + s * 0.06);
+        g.lineTo(x - s * 0.24, y - s * 0.15);
+        g.closePath(); g.fill();
+      }
+    }
+
+    // deeltjes + ringen
+    for (const p of particles) {
+      if (p.ring != null) {
+        g.globalAlpha = Math.max(0, 1 - p.ring / 1.6);
+        neon(p.color, S.glow);
+        g.strokeStyle = p.color; g.lineWidth = Math.max(1, unit * 0.008);
+        g.beginPath(); g.arc(p.x * W, p.y * H, p.ring * unit * 0.09, 0, Math.PI * 2); g.stroke();
+      } else {
+        neon(p.color, S.glow * 0.7);
+        g.globalAlpha = Math.max(0, p.life);
+        g.fillStyle = p.color;
+        const r = unit * 0.012;
+        g.fillRect(p.x * W - r / 2, p.y * H - r / 2, r, r);
+      }
+    }
+    g.globalAlpha = 1; noGlow();
+
+    // speler
+    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawPlayer(player.x * W, player.y * H);
+
+    // zwevende punten-popups
+    for (const pp of popups) {
+      g.globalAlpha = Math.max(0, Math.min(1, pp.life));
+      neon(pp.color, S.glow * 0.6);
+      g.fillStyle = pp.color;
+      g.font = 'bold ' + Math.floor(unit * 0.032) + 'px system-ui, sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(pp.text, pp.x * W, pp.y * H);
+    }
+    g.globalAlpha = 1; noGlow();
+    g.textAlign = 'start'; g.textBaseline = 'alphabetic';
+
+    g.restore();
+  }
+
+  // Speler = een neon-luchtschip met motorvlam (en schild-ring bij power-up).
   function drawPlayer(cx, cy) {
     const w = S.playerW, h = S.playerH;
-    const bodyCy = cy - h * 0.08;
-    const rx = w * 0.5, ry = h * 0.34;
+    const bodyCy = cy - h * 0.10;
+    const rx = w * 0.5, ry = h * 0.30;
+    const gW = w * 0.34, gH = h * 0.22, gy = cy + h * 0.22;
+
+    // motorvlam
+    const fl = h * (0.14 + Math.random() * 0.14);
+    neon('#ff9a3d', S.glow);
+    g.fillStyle = '#ffd23d';
+    g.beginPath();
+    g.moveTo(cx - w * 0.10, gy + gH / 2);
+    g.lineTo(cx + w * 0.10, gy + gH / 2);
+    g.lineTo(cx, gy + gH / 2 + fl);
+    g.closePath(); g.fill();
+    noGlow();
+
     // romp (ballon)
     neon(PLAYER_COL, S.glow * 1.3);
     g.fillStyle = PLAYER_COL;
@@ -346,47 +497,48 @@ export function init(root, ctx) {
     g.ellipse(cx, bodyCy, rx, ry, 0, 0, Math.PI * 2);
     g.fill();
     noGlow();
-    // panelen-lijn over de romp
     g.strokeStyle = 'rgba(5, 6, 15, 0.45)';
     g.lineWidth = Math.max(1, h * 0.03);
     g.beginPath(); g.moveTo(cx - rx * 0.9, bodyCy); g.lineTo(cx + rx * 0.9, bodyCy); g.stroke();
-    // lichte glans bovenop
     g.fillStyle = 'rgba(234, 255, 255, 0.85)';
     g.beginPath(); g.ellipse(cx, bodyCy - ry * 0.45, rx * 0.5, ry * 0.26, 0, 0, Math.PI * 2); g.fill();
-    // touwtjes naar de cabine
-    const gW = w * 0.36, gH = h * 0.26, gy = cy + h * 0.26;
-    g.strokeStyle = PLAYER_COL;
-    g.lineWidth = Math.max(1, w * 0.02);
+
+    // touwtjes + cabine
+    g.strokeStyle = PLAYER_COL; g.lineWidth = Math.max(1, w * 0.02);
     g.beginPath();
-    g.moveTo(cx - gW * 0.35, bodyCy + ry * 0.75); g.lineTo(cx - gW * 0.35, gy - gH / 2);
-    g.moveTo(cx + gW * 0.35, bodyCy + ry * 0.75); g.lineTo(cx + gW * 0.35, gy - gH / 2);
+    g.moveTo(cx - gW * 0.35, bodyCy + ry * 0.8); g.lineTo(cx - gW * 0.35, gy - gH / 2);
+    g.moveTo(cx + gW * 0.35, bodyCy + ry * 0.8); g.lineTo(cx + gW * 0.35, gy - gH / 2);
     g.stroke();
-    // cabine (gondel)
     g.fillStyle = '#eaffff';
     rrect(cx - gW / 2, gy - gH / 2, gW, gH, Math.min(gW, gH) * 0.32); g.fill();
-    // raampjes
     g.fillStyle = '#0a1030';
     g.fillRect(cx - gW * 0.30, gy - gH * 0.16, gW * 0.18, gH * 0.4);
     g.fillRect(cx + gW * 0.12, gy - gH * 0.16, gW * 0.18, gH * 0.4);
+
+    // schild-ring (knippert als hij bijna op is)
+    if (pShield > 0 && (pShield > 1.6 || Math.floor(pShield * 8) % 2 === 0)) {
+      neon('#39f6ff', S.glow * 1.2);
+      g.strokeStyle = 'rgba(57, 246, 255, 0.85)';
+      g.lineWidth = Math.max(1.5, w * 0.06);
+      g.beginPath(); g.ellipse(cx, cy, w * 0.8, h * 0.72, 0, 0, Math.PI * 2); g.stroke();
+      noGlow();
+    }
   }
 
   function drawEnemy(cx, cy, color) {
     const w = S.enemyW, h = S.enemyH;
     neon(color, S.glow);
     g.fillStyle = color;
-    // simpel "invader"-lijf: afgeronde romp + twee pootjes
     const x = cx - w / 2, y = cy - h / 2;
-    g.beginPath();
     const rr = Math.min(w, h) * 0.28;
+    g.beginPath();
     g.moveTo(x + rr, y);
     g.arcTo(x + w, y, x + w, y + h, rr);
     g.arcTo(x + w, y + h, x, y + h, rr);
     g.arcTo(x, y + h, x, y, rr);
     g.arcTo(x, y, x + w, y, rr);
-    g.closePath();
-    g.fill();
+    g.closePath(); g.fill();
     noGlow();
-    // oogjes
     g.fillStyle = '#05060f';
     g.fillRect(cx - w * 0.22, cy - h * 0.08, w * 0.14, h * 0.16);
     g.fillRect(cx + w * 0.08, cy - h * 0.08, w * 0.14, h * 0.16);
@@ -402,6 +554,7 @@ export function init(root, ctx) {
 
   // ---------- invoer ----------
   function onKey(e) {
+    ensureAudio();
     if (e.key === 'p' || e.key === 'P') { setPaused(state !== 'paused'); return; }
     if (e.key === 'ArrowLeft' || e.key === 'a') { moveDir = -1; e.preventDefault(); }
     else if (e.key === 'ArrowRight' || e.key === 'd') { moveDir = 1; e.preventDefault(); }
@@ -417,7 +570,7 @@ export function init(root, ctx) {
   function bindPad(el) {
     const act = el.dataset.act;
     const down = (e) => {
-      e.preventDefault();
+      e.preventDefault(); ensureAudio();
       if (act === 'left') moveDir = -1;
       else if (act === 'right') moveDir = 1;
       else if (act === 'fire') firing = true;
@@ -435,17 +588,17 @@ export function init(root, ctx) {
   }
   fs.querySelectorAll('.rs-pad').forEach(bindPad);
 
-  // vinger over het veld = schip volgt vinger + schiet vanzelf
   function areaX(clientX) {
     const rect = canvas.getBoundingClientRect();
     return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
   }
-  function tStart(e) { dragging = true; dragX = areaX(e.touches[0].clientX); }
+  function tStart(e) { ensureAudio(); dragging = true; dragX = areaX(e.touches[0].clientX); }
   function tMove(e) { if (dragging) dragX = areaX(e.touches[0].clientX); }
   function tEnd() { dragging = false; }
 
   // ---------- knoppen ----------
   pauseBtn.addEventListener('click', () => setPaused(state !== 'paused'));
+  muteBtn.addEventListener('click', () => { muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; ensureAudio(); });
   function onBack() {
     if (score > 0 && state !== 'over') ctx.submitScore(score);
     location.hash = '#/';
@@ -508,6 +661,7 @@ export function init(root, ctx) {
       el.removeEventListener('pointercancel', up);
     });
     ro.disconnect();
+    if (actx) { try { actx.close(); } catch (e) { /* al gesloten */ } }
     document.body.style.overflow = prevOverflow;
     fs.remove();
   };

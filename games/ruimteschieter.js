@@ -116,7 +116,8 @@ export function init(root, ctx) {
 
   // ---------- spelstatus ----------
   let player = { x: 0.5, y: 0.9 };
-  let pBullets = [], eBullets = [], enemies = [], particles = [], powerups = [], popups = [], stars = [], nebula = [];
+  let pBullets = [], eBullets = [], enemies = [], particles = [], powerups = [], popups = [], stars = [];
+  let bg = null, clock = 0;
   let dir = 1, enemySpeed = 0.14;
   let score = 0, wave = 1, lives = 3;
   let state = 'playing';
@@ -126,17 +127,100 @@ export function init(root, ctx) {
   let moveDir = 0, firing = false, dragging = false, dragX = 0;
   let raf = 0, last = 0;
 
+  // Zacht driftende voorgrond-sterren (rond, met kleur en twinkeling).
   function makeStars() {
     stars = [];
-    for (let i = 0; i < 80; i++) {
-      const warp = i < 12;
-      stars.push({ x: Math.random(), y: Math.random(), s: Math.random() * 0.6 + 0.2, sp: warp ? 0.11 + Math.random() * 0.06 : Math.random() * 0.05 + 0.015, warp });
+    for (let i = 0; i < 60; i++) {
+      stars.push({
+        x: Math.random(), y: Math.random(),
+        r: Math.random() * 1.1 + 0.4,
+        b: Math.random() * 0.5 + 0.4,
+        sp: Math.random() * 0.02 + 0.006,
+        tw: Math.random() * 6.28, ts: Math.random() * 2 + 1,
+        col: Math.random() < 0.75 ? '#ffffff' : (Math.random() < 0.5 ? '#bcd0ff' : '#ffe9c0'),
+      });
     }
   }
-  function makeNebula() {
-    const cols = ['rgba(120,40,200,0.15)', 'rgba(30,120,220,0.13)', 'rgba(200,40,140,0.11)'];
-    nebula = [];
-    for (let i = 0; i < 3; i++) nebula.push({ x: Math.random(), y: Math.random(), r: 0.4 + Math.random() * 0.3, c: cols[i], sp: 0.006 + Math.random() * 0.01 });
+
+  // Bouwt de realistische ruimte-achtergrond één keer naar een offscreen buffer
+  // (diepe ruimte + nevels + Melkweg-band + honderden sterren + verre planeet).
+  function buildBackground() {
+    const bw = Math.max(1, Math.round(W * dpr)), bh = Math.max(1, Math.round(H * dpr));
+    if (!bg) bg = document.createElement('canvas');
+    bg.width = bw; bg.height = bh;
+    const c = bg.getContext('2d');
+    const U = Math.min(bw, bh);
+
+    // diepe ruimte
+    const base = c.createLinearGradient(0, 0, 0, bh);
+    base.addColorStop(0, '#070912'); base.addColorStop(0.6, '#04050d'); base.addColorStop(1, '#02030a');
+    c.fillStyle = base; c.fillRect(0, 0, bw, bh);
+
+    // verre nevels: zachte, gekleurde wolken (opgeteld licht voor een gloed)
+    c.globalCompositeOperation = 'lighter';
+    const clouds = [
+      { x: 0.25, y: 0.26, col: '138,60,220' },
+      { x: 0.74, y: 0.16, col: '40,120,220' },
+      { x: 0.60, y: 0.48, col: '210,50,150' },
+      { x: 0.16, y: 0.62, col: '40,180,160' },
+    ];
+    for (const cl of clouds) {
+      for (let k = 0; k < 5; k++) {
+        const cx = (cl.x + (Math.random() - 0.5) * 0.22) * bw;
+        const cy = (cl.y + (Math.random() - 0.5) * 0.22) * bh;
+        const rad = U * (0.18 + Math.random() * 0.22);
+        const gr = c.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        gr.addColorStop(0, `rgba(${cl.col},${0.05 + Math.random() * 0.05})`);
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = gr; c.beginPath(); c.arc(cx, cy, rad, 0, Math.PI * 2); c.fill();
+      }
+    }
+
+    // Melkweg-band: schuine zachte lichtband met dichte sterretjes
+    c.save();
+    c.translate(bw * 0.5, bh * 0.42);
+    c.rotate(-0.5);
+    const L = Math.hypot(bw, bh);
+    const band = c.createLinearGradient(0, -L * 0.14, 0, L * 0.14);
+    band.addColorStop(0, 'rgba(120,140,200,0)');
+    band.addColorStop(0.5, 'rgba(150,160,210,0.05)');
+    band.addColorStop(1, 'rgba(120,140,200,0)');
+    c.fillStyle = band; c.fillRect(-L, -L * 0.14, L * 2, L * 0.28);
+    c.fillStyle = '#dfe6ff';
+    for (let i = 0; i < 220; i++) {
+      c.globalAlpha = Math.random() * 0.5 + 0.1;
+      const r = Math.random() * 0.9 * dpr + 0.3;
+      c.beginPath(); c.arc((Math.random() - 0.5) * L * 1.6, (Math.random() - 0.5) * L * 0.16, r, 0, Math.PI * 2); c.fill();
+    }
+    c.globalAlpha = 1;
+    c.restore();
+    c.globalCompositeOperation = 'source-over';
+
+    // verre sterren: veel, klein, rond, met kleurvariatie
+    const N = Math.round(bw * bh / 9000);
+    for (let i = 0; i < N; i++) {
+      const x = Math.random() * bw, y = Math.random() * bh;
+      const r = (Math.random() * Math.random() * 1.4 + 0.3) * dpr;
+      const a = Math.random() * 0.7 + 0.15;
+      const t = Math.random();
+      c.fillStyle = t < 0.72 ? `rgba(255,255,255,${a})` : t < 0.86 ? `rgba(190,210,255,${a})` : `rgba(255,225,180,${a})`;
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    }
+    // een paar heldere sterren met een zachte gloed
+    for (let i = 0; i < 8; i++) {
+      const x = Math.random() * bw, y = Math.random() * bh * 0.85;
+      const gr = c.createRadialGradient(x, y, 0, x, y, 6 * dpr);
+      gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = gr; c.beginPath(); c.arc(x, y, 6 * dpr, 0, Math.PI * 2); c.fill();
+    }
+
+    // verre planeet (dim, met licht van één kant)
+    const px = bw * 0.8, py = bh * 0.15, pr = U * 0.12;
+    const pg = c.createRadialGradient(px - pr * 0.35, py - pr * 0.35, pr * 0.1, px, py, pr);
+    pg.addColorStop(0, 'rgba(95,125,185,0.55)');
+    pg.addColorStop(0.7, 'rgba(38,52,92,0.4)');
+    pg.addColorStop(1, 'rgba(8,12,30,0.12)');
+    c.fillStyle = pg; c.beginPath(); c.arc(px, py, pr, 0, Math.PI * 2); c.fill();
   }
 
   function spawnWave(n) {
@@ -164,7 +248,7 @@ export function init(root, ctx) {
     pBullets = []; eBullets = []; particles = []; powerups = []; popups = [];
     invuln = 0; fireCd = 0; pTriple = 0; pRapid = 0; pShield = 0;
     shake = 0; killStreak = 0; streakT = 0;
-    makeStars(); makeNebula();
+    makeStars();
     spawnWave(1);
     state = 'playing';
     overlay.hidden = true;
@@ -242,8 +326,8 @@ export function init(root, ctx) {
   // ---------- update ----------
   function update(dt) {
     // sfeer + visuele effecten lopen altijd
-    for (const st of stars) { st.y += st.sp * dt; if (st.y > 1.05) { st.y = -0.05; st.x = Math.random(); } }
-    for (const nb of nebula) { nb.y += nb.sp * dt; if (nb.y > 1.3) nb.y = -0.3; }
+    clock += dt;
+    for (const st of stars) { st.y += st.sp * dt; if (st.y > 1.02) { st.y = -0.02; st.x = Math.random(); } }
     for (const p of particles) { if (p.ring != null) { p.ring += dt * 4; } else { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.6; } }
     particles = particles.filter((p) => (p.ring != null ? p.ring < 1.6 : p.life > 0));
     for (const pp of popups) { pp.y -= 0.12 * dt; pp.life -= dt * 0.9; }
@@ -382,22 +466,17 @@ export function init(root, ctx) {
   }
 
   function draw() {
-    // achtergrond (beweegt niet mee met de shake)
-    const grad = g.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0a1030'); grad.addColorStop(1, '#05060f');
-    g.fillStyle = grad; g.fillRect(0, 0, W, H);
-    for (const nb of nebula) {
-      const gr = g.createRadialGradient(nb.x * W, nb.y * H, 0, nb.x * W, nb.y * H, nb.r * Math.max(W, H));
-      gr.addColorStop(0, nb.c); gr.addColorStop(1, 'transparent');
-      g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    }
+    // realistische, vooraf gerenderde ruimte-achtergrond (beweegt niet mee met de
+    // shake), met er zacht overheen driftende + twinkelende sterren
+    if (bg) g.drawImage(bg, 0, 0, W, H);
+    else { g.fillStyle = '#04050d'; g.fillRect(0, 0, W, H); }
     noGlow();
     for (const st of stars) {
-      g.globalAlpha = st.s;
-      g.fillStyle = st.warp ? '#dff0ff' : '#bcd8ff';
-      const r = st.s * unit * 0.006 + 0.5;
-      if (st.warp) g.fillRect(st.x * W, st.y * H, Math.max(1, r * 0.7), r * 4.5);
-      else g.fillRect(st.x * W, st.y * H, r, r);
+      const a = st.b * (0.55 + 0.45 * Math.sin(clock * st.ts + st.tw));
+      if (a <= 0) continue;
+      g.globalAlpha = Math.min(1, a);
+      g.fillStyle = st.col;
+      g.beginPath(); g.arc(st.x * W, st.y * H, st.r, 0, Math.PI * 2); g.fill();
     }
     g.globalAlpha = 1;
 
@@ -628,6 +707,7 @@ export function init(root, ctx) {
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     sizes();
+    buildBackground();
     draw();
   }
   function onResize() { layout(); }

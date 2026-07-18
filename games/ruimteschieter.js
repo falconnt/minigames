@@ -322,21 +322,41 @@ export function init(root, ctx) {
     noGlow();
   }
 
+  // Speler = een neon-racket: een ovaal kopje met snaren en een steeltje.
   function drawPlayer(cx, cy) {
     const w = S.playerW, h = S.playerH;
-    neon(PLAYER_COL, S.glow * 1.4);
-    g.fillStyle = PLAYER_COL;
+    const headCy = cy - h * 0.12;
+    const rx = w * 0.46, ry = h * 0.44;
+    neon(PLAYER_COL, S.glow * 1.3);
+    g.strokeStyle = PLAYER_COL;
+    g.lineCap = 'round';
+    // steeltje
+    g.lineWidth = Math.max(2, w * 0.12);
     g.beginPath();
-    g.moveTo(cx, cy - h / 2);            // neus
-    g.lineTo(cx - w / 2, cy + h / 2);    // linksonder
-    g.lineTo(cx - w * 0.18, cy + h * 0.28);
-    g.lineTo(cx + w * 0.18, cy + h * 0.28);
-    g.lineTo(cx + w / 2, cy + h / 2);    // rechtsonder
-    g.closePath();
-    g.fill();
+    g.moveTo(cx, headCy + ry * 0.75);
+    g.lineTo(cx, cy + h * 0.5);
+    g.stroke();
+    // rand van de kop
+    g.lineWidth = Math.max(2, w * 0.09);
+    g.beginPath();
+    g.ellipse(cx, headCy, rx, ry, 0, 0, Math.PI * 2);
+    g.stroke();
     noGlow();
-    g.fillStyle = '#eaffff';
-    g.fillRect(cx - w * 0.06, cy - h * 0.1, w * 0.12, h * 0.28); // cockpit
+    // snaren binnen de kop
+    g.save();
+    g.beginPath();
+    g.ellipse(cx, headCy, rx * 0.86, ry * 0.86, 0, 0, Math.PI * 2);
+    g.clip();
+    g.strokeStyle = 'rgba(174, 249, 255, 0.55)';
+    g.lineWidth = 1;
+    const n = 4;
+    for (let i = 1; i < n; i++) {
+      const gx = cx - rx + (2 * rx) * (i / n);
+      g.beginPath(); g.moveTo(gx, headCy - ry); g.lineTo(gx, headCy + ry); g.stroke();
+      const gy = headCy - ry + (2 * ry) * (i / n);
+      g.beginPath(); g.moveTo(cx - rx, gy); g.lineTo(cx + rx, gy); g.stroke();
+    }
+    g.restore();
   }
 
   function drawEnemy(cx, cy, color) {

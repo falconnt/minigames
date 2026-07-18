@@ -10,7 +10,7 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'BMW M4',           col: '#f2c500', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'i6', grille: 'kidney', mstripes: true, quad: true },
+  { name: 'BMW M4',           col: '#f2c500', col2: '#f4f4f2', accent: '#15151a', stripe: null, wing: 'small', shape: 'coupe', eng: 'i6', grille: 'kidney', mstripes: true, quad: true },
   { name: 'Mercedes GT 63',   col: '#c7ccd3', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'w12' },
   { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
   { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
@@ -608,21 +608,31 @@ export function init(root, ctx) {
     }
 
     // ---- carrosserie (getaperd silhouet) ----
+    const bodyPath = () => {
+      gg.beginPath();
+      gg.moveTo(px(-noseW), py(0.84));
+      gg.quadraticCurveTo(px(0), py(1.02), px(noseW), py(0.84));
+      gg.lineTo(px(1.0), py(0.16));
+      gg.lineTo(px(tailW), py(-0.86));
+      gg.quadraticCurveTo(px(0), py(-1.0), px(-tailW), py(-0.86));
+      gg.lineTo(px(-1.0), py(0.16));
+      gg.closePath();
+    };
     gg.save();
     gg.shadowColor = car.col; gg.shadowBlur = w * 0.22;
     gg.fillStyle = car.col;
-    gg.beginPath();
-    gg.moveTo(px(-noseW), py(0.84));
-    gg.quadraticCurveTo(px(0), py(1.02), px(noseW), py(0.84));
-    gg.lineTo(px(1.0), py(0.16));
-    gg.lineTo(px(tailW), py(-0.86));
-    gg.quadraticCurveTo(px(0), py(-1.0), px(-tailW), py(-0.86));
-    gg.lineTo(px(-1.0), py(0.16));
-    gg.closePath();
-    gg.fill();
+    bodyPath(); gg.fill();
     gg.shadowBlur = 0;
+    // twee-tone: de achterhelft in een tweede kleur (bv. geel voor, wit achter)
+    if (car.col2) {
+      gg.save(); bodyPath(); gg.clip();
+      const ry0 = py(0.05), ry1 = py(-1.1);
+      gg.fillStyle = car.col2;
+      gg.fillRect(cx - bw, Math.min(ry0, ry1), bw * 2, Math.abs(ry1 - ry0));
+      gg.restore();
+    }
     // glansstreep langs de rand
-    gg.strokeStyle = 'rgba(255,255,255,0.18)'; gg.lineWidth = Math.max(1, w * 0.03); gg.stroke();
+    gg.strokeStyle = 'rgba(255,255,255,0.18)'; gg.lineWidth = Math.max(1, w * 0.03); bodyPath(); gg.stroke();
     gg.restore();
 
     // ---- racestreep over het midden ----

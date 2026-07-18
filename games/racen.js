@@ -10,17 +10,25 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'BMW M4', col: '#ffd23d', eng: 'v8' },
-  { name: 'Mercedes GT 63', col: '#ff5b5b', eng: 'w12' },
-  { name: 'Ferrari Pista', col: '#ff9a3d', eng: 'v8' },
-  { name: 'Lamborghini SVJ', col: '#48ff8e', eng: 'v12' },
-  { name: 'Porsche 911', col: '#4fd0d6', eng: 'flat6' },
-  { name: 'Mustang', col: '#5f97ef', eng: 'v8' },
-  { name: 'Audi R8', col: '#c08ee8', eng: 'v10' },
-  { name: 'Pagani', col: '#ff6ec7', eng: 'v12' },
-  { name: 'Mazda RX500', col: '#cfd6df', eng: 'rotary' },
-  { name: 'Koenigsegg Jesko', col: '#a3e635', eng: 'v8' },
+  { name: 'BMW M4',           col: '#f2c500', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'v8' },
+  { name: 'Mercedes GT 63',   col: '#c7ccd3', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'w12' },
+  { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
+  { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
+  { name: 'Porsche 911',      col: '#e9ecf0', accent: '#15151a', stripe: null,      wing: 'mid',   shape: 'classic', eng: 'flat6' },
+  { name: 'Mustang',          col: '#1f57c8', accent: '#15151a', stripe: '#ffffff', wing: 'small', shape: 'muscle',  eng: 'v8' },
+  { name: 'Audi R8',          col: '#9aa1a8', accent: '#15151a', stripe: null,      wing: 'small', shape: 'super',   eng: 'v10' },
+  { name: 'Pagani',           col: '#c9b06a', accent: '#2a2320', stripe: null,      wing: 'mid',   shape: 'super',   eng: 'v12' },
+  { name: 'Mazda RX500',      col: '#dfe4ea', accent: '#15151a', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary' },
+  { name: 'Koenigsegg Jesko', col: '#ff7a1a', accent: '#15151a', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v8' },
 ];
+const SHAPES = {
+  super:   { wF: 1.0,  lF: 0.98, r: 0.26, cabF: 0.34 },
+  hyper:   { wF: 1.0,  lF: 1.0,  r: 0.16, cabF: 0.30 },
+  coupe:   { wF: 0.9,  lF: 0.98, r: 0.34, cabF: 0.42 },
+  muscle:  { wF: 0.98, lF: 1.0,  r: 0.16, cabF: 0.44 },
+  classic: { wF: 0.9,  lF: 0.92, r: 0.46, cabF: 0.42 },
+  wedge:   { wF: 0.94, lF: 1.0,  r: 0.12, cabF: 0.32 },
+};
 // Motorprofielen: base/rev = ontstekingsfrequentie (Hz) van stationair tot rood;
 // rumble = sub-octaaf (V8-lope), bright = felheid/formant, vol = volume.
 const ENGINES = {
@@ -238,7 +246,7 @@ export function init(root, ctx) {
       const cv = document.createElement('canvas');
       cv.width = 160; cv.height = 200; cv.style.width = '80px'; cv.style.height = '100px';
       const g2 = cv.getContext('2d'); g2.setTransform(2, 0, 0, 2, 0, 0);
-      drawCarShape(g2, 40, 54, 44, 78, car.col, -1);
+      drawSuperCar(g2, 40, 48, 42, 68, car, -1);
       const nm = document.createElement('span'); nm.textContent = car.name;
       const eg = document.createElement('small'); eg.className = 'race-car-eng'; eg.textContent = ENG_LABEL[car.eng] || car.eng;
       card.appendChild(cv); card.appendChild(nm); card.appendChild(eg);
@@ -487,6 +495,102 @@ export function init(root, ctx) {
   }
   function drawCar(cx, cy, color, front) { drawCarShape(g, cx, cy, S.carW, S.carH, color, front); }
 
+  // Echte supercar van bovenaf (voor de spelerauto + keuzescherm). Elke auto
+  // krijgt zijn eigen silhouet (SHAPES), kleur, evt. streep, spiegels en
+  // achtervleugel, zodat hij lijkt op de auto waar hij naar vernoemd is.
+  // front = -1 (neus naar boven). ly = +1 is de neus, -1 de achterkant.
+  function drawSuperCar(gg, cx, cy, w, h, car, front) {
+    const S2 = SHAPES[car.shape] || SHAPES.coupe;
+    const bw = w * S2.wF, bh = h * S2.lF;
+    const px = (lx) => cx + lx * (bw / 2);
+    const py = (ly) => cy + front * ly * (bh / 2);
+    const noseW = { super: 0.58, hyper: 0.50, wedge: 0.46, coupe: 0.80, muscle: 0.86, classic: 0.78 }[car.shape] ?? 0.7;
+    const tailW = { super: 0.92, hyper: 0.96, wedge: 1.0, coupe: 0.92, muscle: 0.98, classic: 0.86 }[car.shape] ?? 0.9;
+
+    // ---- achtervleugel (achter de auto, dus eerst) ----
+    if (car.wing && car.wing !== 'none') {
+      const big = car.wing === 'big';
+      const span = bw * (big ? 1.14 : car.wing === 'mid' ? 0.98 : 0.84);
+      const wy0 = py(-0.9), wy1 = py(big ? -1.14 : -1.05);
+      const top = Math.min(wy0, wy1), ht = Math.abs(wy1 - wy0);
+      // steunen
+      gg.fillStyle = 'rgba(0,0,0,0.5)';
+      gg.fillRect(cx - span * 0.30, Math.min(py(-0.72), top), span * 0.05, Math.abs(py(-0.72) - top) + ht * 0.3);
+      gg.fillRect(cx + span * 0.25, Math.min(py(-0.72), top), span * 0.05, Math.abs(py(-0.72) - top) + ht * 0.3);
+      // hoofdvlak
+      gg.fillStyle = '#141318';
+      rrPath(gg, cx - span / 2, top, span, ht, ht * 0.35); gg.fill();
+      gg.fillStyle = car.accent;
+      gg.fillRect(cx - span / 2, top, span, Math.max(1, ht * 0.22));
+      if (big) {
+        // dubbel vlak + eindplaten
+        const t2 = front < 0 ? top - ht * 0.9 : top + ht * 0.9;
+        gg.fillStyle = '#141318';
+        rrPath(gg, cx - span / 2, t2, span, ht * 0.7, ht * 0.3); gg.fill();
+        gg.fillStyle = car.accent;
+        gg.fillRect(cx - span / 2 - w * 0.03, Math.min(top, t2), w * 0.05, Math.abs(top - t2) + ht);
+        gg.fillRect(cx + span / 2 - w * 0.02, Math.min(top, t2), w * 0.05, Math.abs(top - t2) + ht);
+      }
+    }
+
+    // ---- wielen ----
+    gg.fillStyle = '#0d0f14';
+    const ww = w * 0.15, wh = h * 0.2, wx = bw / 2 - ww * 0.25;
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+      rrPath(gg, cx + sx * wx - ww / 2, cy + sy * h * 0.25 - wh / 2, ww, wh, ww * 0.35); gg.fill();
+    }
+
+    // ---- carrosserie (getaperd silhouet) ----
+    gg.save();
+    gg.shadowColor = car.col; gg.shadowBlur = w * 0.22;
+    gg.fillStyle = car.col;
+    gg.beginPath();
+    gg.moveTo(px(-noseW), py(0.84));
+    gg.quadraticCurveTo(px(0), py(1.02), px(noseW), py(0.84));
+    gg.lineTo(px(1.0), py(0.16));
+    gg.lineTo(px(tailW), py(-0.86));
+    gg.quadraticCurveTo(px(0), py(-1.0), px(-tailW), py(-0.86));
+    gg.lineTo(px(-1.0), py(0.16));
+    gg.closePath();
+    gg.fill();
+    gg.shadowBlur = 0;
+    // glansstreep langs de rand
+    gg.strokeStyle = 'rgba(255,255,255,0.18)'; gg.lineWidth = Math.max(1, w * 0.03); gg.stroke();
+    gg.restore();
+
+    // ---- racestreep over het midden ----
+    if (car.stripe) {
+      gg.fillStyle = car.stripe;
+      const sw = bw * 0.16;
+      gg.fillRect(cx - sw / 2, py(0.84), sw, py(-0.86) - py(0.84));
+    }
+
+    // ---- cockpit / canopy ----
+    const cpW = bw * 0.5, cpH = bh * S2.cabF * 1.15;
+    const cpCy = cy + front * 0.04 * (bh / 2);
+    gg.fillStyle = 'rgba(9,12,20,0.9)';
+    rrPath(gg, cx - cpW / 2, cpCy - cpH / 2, cpW, cpH, cpW * 0.42); gg.fill();
+    // voorruit-reflectie
+    gg.fillStyle = 'rgba(130,180,230,0.28)';
+    rrPath(gg, cx - cpW * 0.36, cpCy + front * cpH * 0.12, cpW * 0.72, cpH * 0.28, cpW * 0.2); gg.fill();
+
+    // ---- spiegels (accentkleur) ----
+    gg.fillStyle = car.accent;
+    const mw = w * 0.1, mh = h * 0.05, my = py(0.34);
+    gg.fillRect(px(-1.0) - mw * 0.3, my - mh / 2, mw, mh);
+    gg.fillRect(px(1.0) - mw * 0.7, my - mh / 2, mw, mh);
+
+    // ---- koplampen ----
+    gg.fillStyle = '#fff7d0';
+    const hw = w * 0.15, hh = h * 0.045, hy = py(0.7);
+    rrPath(gg, cx - w * 0.38, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
+    rrPath(gg, cx + w * 0.23, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
+
+    // ---- achterlichten (rode balk) ----
+    gg.fillStyle = '#ff3b30';
+    gg.fillRect(cx - bw * 0.4, py(-0.82) - h * 0.02, bw * 0.8, h * 0.04);
+  }
+
   function draw() {
     drawRoad();
     drawScenery();
@@ -515,7 +619,7 @@ export function init(root, ctx) {
     }
     g.globalAlpha = 1; noGlow();
     // speler (knippert bij onkwetsbaarheid)
-    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawCar(player.x * W, 0.82 * H, carColor, -1);
+    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawSuperCar(g, player.x * W, 0.82 * H, S.carW, S.carH, CARS[selected], -1);
 
     g.restore();
 

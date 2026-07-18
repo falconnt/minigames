@@ -92,6 +92,11 @@ De **Mazda RX500** is nagetekend als de retro **Mazda RX-500 (1970)**: een
 motorkap en de achterklep, kleine **ronde koplampen**, klassieke **chromen
 velgen**, geen spoiler en een **Rotary**-motor.
 
+De **Koenigsegg Jesko** is nagetekend als een **MANSORY Koenigsegg** in
+**geel-goud**: gladde teardrop-vorm met een zwarte **carbon motorkap**, zwarte
+splitter/side-skirts en **zij-inlaten**, **zwarte velgen**, de enorme
+**Koenigsegg-achtervleugel**, dubbele uitlaten en een **V8**.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als
@@ -104,11 +109,12 @@ spel** vind je in het pauzemenu (of de ❔-knop voor uitleg).
 
 ## Startscherm: kies je auto
 
-Voor de race verschijnt een **keuzescherm** met **10 auto's** (elk een eigen kleur
-en naam: Bliksem, Vuurbal, Turbo, Smaragd, Oceaan, Storm, Druif, Roze Raket,
-Zilver en Limoen). Tik op een auto om hem te kiezen en druk op **🏁 Start!**. Je
-gekozen kleur zie je terug op de weg. Via **Andere auto** (in het pauzemenu of na
-game over) kun je opnieuw kiezen.
+Voor de race verschijnt een **keuzescherm** met **10 auto's**, elk met een eigen
+naam, kleur, motortype én uiterlijk dat is nagetekend naar de echte (getunede)
+auto: **BMW M4, Mercedes GT 63, Ferrari, Lamborghini SVJ, Porsche 911, Mustang,
+Audi R8, Pagani, Mazda RX500** en **Koenigsegg Jesko**. Tik op een auto om hem te
+kiezen en druk op **🏁 Start!**. Je gekozen auto zie je terug op de weg. Via
+**Andere auto** (in het pauzemenu of na game over) kun je opnieuw kiezen.
 
 ## Spelverloop
 

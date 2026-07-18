@@ -19,7 +19,7 @@ const CARS = [
   { name: 'Audi R8',          col: '#141418', accent: '#0a0a0d', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v10', realistic: true, carbonHood: true, splitter: true, sideScoops: true, headlight: '#eef4ff', tailBar: '#ff2f2f', wheelCol: '#22242a', dualExhaust: true },
   { name: 'Pagani',           col: '#22345e', accent: '#0f1119', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v12', realistic: true, carbonHood: true, splitter: true, centerStripe: ['#f2c40f', '#1f6fe0'], roundLights: 'quad', lightBar: '#f2d21a', wheelCol: '#23252b', caliper: '#f2c40f', centerExhaust: true },
   { name: 'Mazda RX500',      col: '#c6cad0', accent: '#1a1b20', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary', realistic: true, roundLights: true, hoodLouvers: true, rearLouvers: true, wheelCol: '#aeb4bd', dualExhaust: true },
-  { name: 'Koenigsegg Jesko', col: '#ff7a1a', accent: '#15151a', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v8' },
+  { name: 'Koenigsegg Jesko', col: '#e6c357', accent: '#0e0e12', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v8', realistic: true, carbonHood: true, splitter: true, sideScoops: true, wheelCol: '#24262c', dualExhaust: true },
 ];
 const SHAPES = {
   super:   { wF: 1.0,  lF: 0.98, r: 0.26, cabF: 0.34 },

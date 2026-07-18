@@ -24,14 +24,16 @@ Speelbaar met de **vinger**, de **muis** of het **toetsenbord**.
 | Actie | Vinger | Toetsenbord |
 | --- | --- | --- |
 | Naar links / rechts | knop ◀ ▶ of veeg opzij | ← → (of A / D) |
-| Draaien | knop ⟳ of **tik** op het veld | ↑ (of W / X) |
-| Zakken (sneller omlaag) | knop **⬇ zakken** of veeg omlaag | ↓ (of S) |
-| Laten vallen (in één keer) | knop **⏬ vallen** of grote veeg omlaag | spatie |
+| Draaien | knop ⟳ (tussen de pijltjes) of **tik** op het veld | ↑ (of W / X) |
+| Zakken | knop **⬇ vallen** ingedrukt houden of veeg omlaag | ↓ (of S) |
+| In één keer laten vallen | — | spatie |
 | Pauze | knop **Pauze** | P |
 
-De richtingsknoppen herhalen als je ze **ingedrukt houdt**. Er verschijnt een
-doorzichtig **spookblok** dat laat zien waar het blok terechtkomt, zodat mikken
-makkelijker is.
+De richtingsknoppen herhalen als je ze **ingedrukt houdt**. De **⬇ vallen**-knop
+laat je blok zakken zolang je hem vasthoudt; laat je los, dan valt het blok verder
+op eigen tempo — zo kun je het vlak voor de landing nog opzij schuiven om ergens
+in te passen. Er verschijnt een doorzichtig **spookblok** dat laat zien waar het
+blok terechtkomt, zodat mikken makkelijker is.
 
 ## Spelverloop
 

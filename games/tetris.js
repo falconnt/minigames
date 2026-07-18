@@ -75,10 +75,9 @@ export function init(root, ctx) {
       <button class="tet-pad" data-act="left"  aria-label="Naar links">◀</button>
       <button class="tet-pad" data-act="rotate" aria-label="Draaien">⟳</button>
       <button class="tet-pad" data-act="right" aria-label="Naar rechts">▶</button>
-      <button class="tet-pad tet-pad-wide" data-act="soft" aria-label="Zakken">⬇ zakken</button>
-      <button class="tet-pad tet-pad-wide tet-pad-drop" data-act="hard" aria-label="Laten vallen">⏬ vallen</button>
+      <button class="tet-pad tet-pad-wide tet-pad-drop" data-act="soft" aria-label="Vallen (ingedrukt houden)">⬇ vallen</button>
     </div>
-    <p class="game-hint">Vinger: gebruik de knoppen of veeg over het veld (tik = draaien, veeg omlaag = vallen). Toetsenbord: pijltjes, ↑ draaien, spatie laten vallen, P pauze.</p>`;
+    <p class="game-hint">Houd <b>⬇ vallen</b> ingedrukt om te zakken; laat los om op eigen tempo verder te gaan. Of veeg over het veld (tik = draaien). Toetsenbord: pijltjes, ↑ draaien, ↓ zakken, spatie ineens vallen, P pauze.</p>`;
 
   const boardCanvas = root.querySelector('#tet-board');
   const nextCanvas = root.querySelector('#tet-next');
@@ -145,12 +144,13 @@ export function init(root, ctx) {
     }
   }
 
+  // Zacht zakken: één cel omlaag als het kan. NIET hier vastzetten — dat doet de
+  // zwaartekracht na de normale vertraging, zodat je na loslaten nog even opzij
+  // kunt schuiven voordat het blok landt.
   function softDrop() {
     if (state !== 'playing' || !piece) return;
     if (!collides(piece.cells, piece.x, piece.y + 1)) {
       piece.y += 1; score += 1; dropTimer = 0; updateStats(); draw();
-    } else {
-      lock();
     }
   }
 
@@ -427,12 +427,14 @@ export function init(root, ctx) {
     };
     let delayTimer = 0, repeatTimer = 0;
     const repeats = act === 'left' || act === 'right' || act === 'soft';
+    const firstDelay = act === 'soft' ? 60 : 170; // vallen zakt meteen door
+    const interval = act === 'soft' ? 45 : 55;    // vallen iets sneller
     const stop = () => { clearTimeout(delayTimer); clearInterval(repeatTimer); delayTimer = repeatTimer = 0; };
     const start = (e) => {
       e.preventDefault();
       once();
       if (repeats) {
-        delayTimer = setTimeout(() => { repeatTimer = setInterval(once, 55); }, 170);
+        delayTimer = setTimeout(() => { repeatTimer = setInterval(once, interval); }, firstDelay);
       }
     };
     el.addEventListener('pointerdown', start);
@@ -465,7 +467,6 @@ export function init(root, ctx) {
     const t = e.changedTouches[0];
     const dx = t.clientX - sw.ox, dy = t.clientY - sw.oy;
     if (!sw.moved && Math.abs(dx) < 14 && Math.abs(dy) < 14) rotate();            // tik = draaien
-    else if (dy > cell * 4 && Math.abs(dx) < Math.abs(dy)) hardDrop();            // flinke veeg omlaag = vallen
     sw = null;
   }
 

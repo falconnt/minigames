@@ -457,6 +457,82 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
   .g2048-appear, .g2048-pop { animation: none; }
 }
 
+/* ---------- Blokjes (Tetris, Minecraft-editie) ---------- */
+
+.tetris-stage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.tetris-boardwrap { flex: 0 0 auto; }
+
+.tetris-board {
+  display: block;
+  border-radius: 0.4rem;
+  border: 3px solid #3a3d46;
+  box-shadow: inset 0 0 0 2px #1a1c22, 0 4px 12px rgb(0 0 0 / 0.35);
+  touch-action: none;
+  user-select: none;
+  image-rendering: pixelated;
+}
+
+.tetris-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+.tetris-side-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.tetris-next {
+  width: 88px;
+  height: 88px;
+  background: #24262d;
+  border-radius: 0.4rem;
+  border: 2px solid #3a3d46;
+  image-rendering: pixelated;
+}
+
+.tetris-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  max-width: 26rem;
+  margin: 1rem auto 0;
+}
+.tet-pad {
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0.85rem 0;
+  background: var(--bg-inset);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tet-pad:active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); transform: translateY(1px); }
+.tet-pad-wide { font-size: 1.1rem; grid-column: span 3; padding: 0.7rem 0; }
+.tet-pad-drop { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+
+@media (max-width: 359px) {
+  .tetris-side { flex-direction: row; }
+}
+
 .t2 { background: #eee4da; color: #776e65; }
 .t4 { background: #ede0c8; color: #776e65; }
 .t8 { background: #f2b179; color: #fff; }

@@ -40,6 +40,16 @@ export const games = [
     load: () => import('../games/reaction.js'),
   },
   {
+    id: 'tetris',
+    title: 'Blokjes',
+    icon: '🟩',
+    category: 'puzzel',
+    description: 'Tetris met Minecraft-blokken! Stapel gras, diamant en goud tot volle rijen. Speel met je vinger, de muis of het toetsenbord.',
+    scoreMode: 'higher',
+    formatScore: (s) => `${s} punten`,
+    load: () => import('../games/tetris.js'),
+  },
+  {
     id: 'paardensport',
     title: 'Paardensport',
     icon: '🏇',

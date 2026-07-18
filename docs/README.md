@@ -7,6 +7,7 @@ scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
 | --- | --- | --- |
 | 🐦 Vogel Vlucht | Arcade | [vogelvlucht.md](vogelvlucht.md) |
 | 🔢 2048 | Puzzel | [2048.md](2048.md) |
+| 🟩 Blokjes (Tetris) | Puzzel | [tetris.md](tetris.md) |
 | ⚡ Reactietest | Reflex | [reactietest.md](reactietest.md) |
 | 🏇 Paardensport | Simulatie | [paardensport.md](paardensport.md) |
 

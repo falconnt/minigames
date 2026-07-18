@@ -47,6 +47,12 @@ met spijlen, **zwarte hoekige motorkap-vents**, een grote **zwarte GT-vleugel**,
 en donkere randen (ronding van het plaatwerk), **panelnaden** en een echte
 **greenhouse** (voorruit, dak en achterruit apart).
 
+De **Mercedes GT 63** is nagetekend als de felgroene **MANSORY AMG GT63 S**: fel
+**groene** lak met een **zwarte carbon motorkap** (met vents) en carbon dak, de
+**AMG-grille** met verticale spijlen en een rond **Mercedes-ster**-badge, **gele
+accenten** (remklauwen, splitter- en diffuser-lijnen), **zwarte velgen**, zwarte
+splitter/side-skirts en een donkere **side-stripe**. Zijn motor is een **V8**.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als

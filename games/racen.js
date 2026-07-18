@@ -11,7 +11,7 @@ const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f9
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
   { name: 'BMW M4',           col: '#f6f6f4', accent: '#0d0d11', stripe: null,      wing: 'big',   shape: 'coupe',   eng: 'i6', grille: 'kidney', quad: true, realistic: true, wheelCol: '#2b2d34', headlight: '#f4d01c', hoodVents: true, splitter: true },
-  { name: 'Mercedes GT 63',   col: '#c7ccd3', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'w12' },
+  { name: 'Mercedes GT 63',   col: '#5cbf22', accent: '#141418', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'v8', grille: 'amg', realistic: true, carbonHood: true, wheelCol: '#26282e', caliper: '#f2c40f', accentLine: '#f2c40f', splitter: true, sideStripe: true },
   { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
   { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
   { name: 'Porsche 911',      col: '#e9ecf0', accent: '#15151a', stripe: null,      wing: 'mid',   shape: 'classic', eng: 'flat6' },
@@ -692,6 +692,11 @@ export function init(root, ctx) {
       gg.fillStyle = '#0b0b0e';
       gg.fillRect(cx - bw * 0.44, py(0.9) - h * 0.008, bw * 0.88, h * 0.02);   // voorsplitter
       gg.fillRect(cx - bw * 0.42, py(-0.86) - h * 0.006, bw * 0.84, h * 0.02); // achterdiffuser
+      if (car.accentLine) { // gele lijn op splitter + diffuser (AMG-accent)
+        gg.fillStyle = car.accentLine;
+        gg.fillRect(cx - bw * 0.4, py(0.9) + h * 0.012, bw * 0.8, h * 0.006);
+        gg.fillRect(cx - bw * 0.38, py(-0.86) - h * 0.014, bw * 0.76, h * 0.006);
+      }
     }
 
     // ---- zwarte motorkap-vents (hoekige gleuven, zoals op de foto) ----
@@ -708,6 +713,42 @@ export function init(root, ctx) {
       vent(0.15, 0.52, 0.28, 0.055, 0.06);
       vent(-0.36, 0.48, 0.3, 0.04, -0.05);   // zij-gills
       vent(0.36, 0.48, 0.3, 0.04, 0.05);
+      gg.restore();
+    }
+
+    // ---- zwarte carbon motorkap (centraal, taps toe naar de neus) ----
+    if (car.carbonHood) {
+      gg.save(); bodyPath(); gg.clip();
+      gg.fillStyle = '#1b1d21';
+      gg.beginPath();
+      gg.moveTo(px(-0.5), py(0.46)); gg.lineTo(px(0.5), py(0.46));
+      gg.lineTo(px(0.3), py(0.93)); gg.lineTo(px(-0.3), py(0.93));
+      gg.closePath(); gg.fill();
+      // carbon weave-hint
+      gg.strokeStyle = 'rgba(255,255,255,0.05)'; gg.lineWidth = Math.max(0.5, w * 0.008);
+      gg.beginPath();
+      for (let i = 0; i < 5; i++) { const yy = py(0.5) + i * (py(0.9) - py(0.5)) / 4; gg.moveTo(px(-0.42), yy); gg.lineTo(px(0.42), yy); }
+      gg.stroke();
+      // twee power-dome vents
+      gg.fillStyle = '#0b0c0f';
+      for (const sx of [-1, 1]) {
+        gg.beginPath();
+        gg.moveTo(px(sx * 0.06), py(0.74)); gg.lineTo(px(sx * 0.26), py(0.74));
+        gg.lineTo(px(sx * 0.22), py(0.56)); gg.lineTo(px(sx * 0.1), py(0.56));
+        gg.closePath(); gg.fill();
+      }
+      gg.restore();
+    }
+
+    // ---- donkere side-stripe met accentlijn (langs de dorpels) ----
+    if (car.sideStripe) {
+      gg.save(); bodyPath(); gg.clip();
+      const y0 = py(0.05), y1 = py(-0.6), top = Math.min(y0, y1), hgt = Math.abs(y1 - y0);
+      for (const sx of [-1, 1]) {
+        const x = sx < 0 ? px(-1.0) : px(1.0) - bw * 0.16;
+        gg.fillStyle = 'rgba(22,22,26,0.9)'; gg.fillRect(x, top, bw * 0.16, hgt);
+        if (car.accentLine) { gg.fillStyle = car.accentLine; gg.fillRect(x + (sx < 0 ? bw * 0.16 : -bw * 0.02), top, bw * 0.02, hgt); }
+      }
       gg.restore();
     }
 
@@ -786,6 +827,25 @@ export function init(root, ctx) {
         gg.fillStyle = '#33353c';
         for (let s = 0; s < 4; s++) { gg.fillRect(gx + gw * (0.14 + s * 0.24), gtop + gh2 * 0.12, gw * 0.06, gh2 * 0.76); }
       }
+    }
+
+    // ---- AMG-grille (brede grille met verticale spijlen + stervormig badge) ----
+    if (car.grille === 'amg') {
+      const gtop = Math.min(py(0.92), py(0.56)), gh2 = Math.abs(py(0.92) - py(0.56));
+      const gw = w * 0.5;
+      gg.fillStyle = '#0b0b0d'; rrPath(gg, cx - gw / 2, gtop, gw, gh2, gw * 0.12); gg.fill();
+      gg.fillStyle = '#34363d';
+      const n = 9;
+      for (let i = 0; i < n; i++) { const sx = cx - gw * 0.42 + i * (gw * 0.84 / (n - 1)); gg.fillRect(sx - gw * 0.014, gtop + gh2 * 0.12, gw * 0.028, gh2 * 0.76); }
+      // rond AMG-badge met Mercedes-ster
+      const bcy = gtop + gh2 * 0.5, br = gw * 0.14;
+      gg.fillStyle = '#0b0b0d'; gg.beginPath(); gg.arc(cx, bcy, br * 1.15, 0, Math.PI * 2); gg.fill();
+      gg.fillStyle = '#cfcfd4'; gg.beginPath(); gg.arc(cx, bcy, br, 0, Math.PI * 2); gg.fill();
+      gg.fillStyle = '#0b0b0d'; gg.beginPath(); gg.arc(cx, bcy, br * 0.68, 0, Math.PI * 2); gg.fill();
+      gg.strokeStyle = '#cfcfd4'; gg.lineWidth = Math.max(0.8, w * 0.018);
+      gg.beginPath();
+      for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + k * 2 * Math.PI / 3; gg.moveTo(cx, bcy); gg.lineTo(cx + Math.cos(a) * br * 0.62, bcy + Math.sin(a) * br * 0.62); }
+      gg.stroke();
     }
 
     // ---- achterlichten (rode balk) ----

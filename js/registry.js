@@ -62,7 +62,20 @@ export const games = [
   {
     id: 'racen',
     title: 'Racen',
-    icon: '🏎️',
+    icon: `<svg viewBox="0 0 48 48" width="1.1em" height="1.1em" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" aria-label="Racen">
+      <defs>
+        <linearGradient id="rc-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#182a52"/><stop offset="1" stop-color="#5a1f5e"/></linearGradient>
+        <linearGradient id="rc-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#ff8a1e"/></linearGradient>
+      </defs>
+      <rect x="1" y="1" width="46" height="46" rx="11" fill="url(#rc-bg)"/>
+      <g fill="#7fe9ff" opacity="0.85"><rect x="3" y="19" width="12" height="2.4" rx="1.2"/><rect x="2" y="25" width="9" height="2.4" rx="1.2"/><rect x="4" y="31" width="11" height="2.4" rx="1.2"/></g>
+      <g><rect x="33" y="4" width="10" height="7" rx="1" fill="#fff"/><g fill="#151515"><rect x="33" y="4" width="2.5" height="1.75"/><rect x="38" y="4" width="2.5" height="1.75"/><rect x="35.5" y="5.75" width="2.5" height="1.75"/><rect x="40.5" y="5.75" width="2.5" height="1.75"/><rect x="33" y="7.5" width="2.5" height="1.75"/><rect x="38" y="7.5" width="2.5" height="1.75"/><rect x="35.5" y="9.25" width="2.5" height="1.75"/><rect x="40.5" y="9.25" width="2.5" height="1.75"/></g></g>
+      <path d="M8 32 C8 27 13 24 19 23 C23 18 29 16 34 17 C39 18 43 22 44 27 C44 30 43 32 41 33 L10 33 C8.5 33 8 32.6 8 32 Z" fill="url(#rc-body)" stroke="#7a3d00" stroke-width="0.8"/>
+      <path d="M22 22.5 C25 19.5 30 18.5 33 19.5 L35 23 L21.5 23 Z" fill="#0c1830" opacity="0.9"/>
+      <rect x="12" y="28.4" width="27" height="2" rx="1" fill="#e63946"/>
+      <circle cx="42.5" cy="26" r="1.5" fill="#fffbe0"/>
+      <g><circle cx="17" cy="33" r="5.2" fill="#15171c"/><circle cx="17" cy="33" r="2" fill="#9aa3b0"/><circle cx="35" cy="33" r="5.2" fill="#15171c"/><circle cx="35" cy="33" r="2" fill="#9aa3b0"/></g>
+    </svg>`,
     category: 'arcade',
     description: 'Scheur over de weg, ontwijk de tegenliggers en pak munten. Steeds sneller, met turbo! Schermvullend, met de vinger of het toetsenbord.',
     scoreMode: 'higher',

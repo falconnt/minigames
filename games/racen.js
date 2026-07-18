@@ -10,7 +10,7 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'BMW M4',           col: '#f4f4f2', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'i6', grille: 'kidney', mstripes: true, quad: true, wheelCol: '#c8892e', caliper: '#1f7ad0', underglow: '#17a8ff', ledlights: true },
+  { name: 'BMW M4',           col: '#f4f4f2', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'i6', grille: 'kidney', mstripes: true, quad: true, wheelCol: '#c8892e', caliper: '#1f7ad0', underglow: '#17a8ff', ledlights: true, realistic: true },
   { name: 'Mercedes GT 63',   col: '#c7ccd3', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'w12' },
   { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
   { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
@@ -657,6 +657,33 @@ export function init(root, ctx) {
     gg.strokeStyle = 'rgba(255,255,255,0.18)'; gg.lineWidth = Math.max(1, w * 0.03); bodyPath(); gg.stroke();
     gg.restore();
 
+    // ---- realistische lak: rondingen (donkere randen) + reflectie + naden ----
+    if (car.realistic) {
+      gg.save(); bodyPath(); gg.clip();
+      // zijkanten donkerder → ronding van het plaatwerk
+      const grd = gg.createLinearGradient(px(-1), 0, px(1), 0);
+      grd.addColorStop(0, 'rgba(0,0,0,0.30)');
+      grd.addColorStop(0.28, 'rgba(0,0,0,0)');
+      grd.addColorStop(0.72, 'rgba(0,0,0,0)');
+      grd.addColorStop(1, 'rgba(0,0,0,0.24)');
+      gg.fillStyle = grd; gg.fillRect(cx - bw, cy - bh, bw * 2, bh * 2);
+      // glansreflectie iets links van het midden
+      gg.fillStyle = 'rgba(255,255,255,0.16)';
+      gg.fillRect(cx - bw * 0.2, cy - bh, bw * 0.09, bh * 2);
+      gg.fillStyle = 'rgba(255,255,255,0.08)';
+      gg.fillRect(cx + bw * 0.14, cy - bh, bw * 0.05, bh * 2);
+      // panelnaden (motorkap, portieren, kofferdeksel)
+      gg.strokeStyle = 'rgba(0,0,0,0.26)'; gg.lineWidth = Math.max(0.6, w * 0.012);
+      gg.beginPath();
+      gg.moveTo(px(-0.5), py(0.52)); gg.lineTo(px(-0.4), py(0.88));
+      gg.moveTo(px(0.5), py(0.52)); gg.lineTo(px(0.4), py(0.88));
+      gg.moveTo(px(-0.64), py(0.2)); gg.lineTo(px(-0.66), py(-0.42));
+      gg.moveTo(px(0.64), py(0.2)); gg.lineTo(px(0.66), py(-0.42));
+      gg.moveTo(px(-0.6), py(-0.56)); gg.lineTo(px(0.6), py(-0.56));
+      gg.stroke();
+      gg.restore();
+    }
+
     // ---- racestreep over het midden ----
     if (car.stripe) {
       gg.fillStyle = car.stripe;
@@ -671,14 +698,34 @@ export function init(root, ctx) {
       for (let i = 0; i < 3; i++) { gg.fillStyle = cols[i]; gg.fillRect(cx + (i - 1) * gap - sw / 2, top, sw, hgt); }
     }
 
-    // ---- cockpit / canopy ----
-    const cpW = bw * 0.5, cpH = bh * S2.cabF * 1.15;
-    const cpCy = cy + front * 0.04 * (bh / 2);
-    gg.fillStyle = 'rgba(9,12,20,0.9)';
-    rrPath(gg, cx - cpW / 2, cpCy - cpH / 2, cpW, cpH, cpW * 0.42); gg.fill();
-    // voorruit-reflectie
-    gg.fillStyle = 'rgba(130,180,230,0.28)';
-    rrPath(gg, cx - cpW * 0.36, cpCy + front * cpH * 0.12, cpW * 0.72, cpH * 0.28, cpW * 0.2); gg.fill();
+    // ---- cockpit ----
+    if (car.realistic) {
+      // Echte greenhouse: donker frame, voorruit, carbon dak en achterruit.
+      const zone = (lyA, lyB, wFrac, color, r) => {
+        const yTop = Math.min(py(lyA), py(lyB)), hgt = Math.abs(py(lyB) - py(lyA));
+        const zw = bw * wFrac;
+        gg.fillStyle = color; rrPath(gg, cx - zw / 2, yTop, zw, hgt, zw * (r ?? 0.26)); gg.fill();
+      };
+      zone(0.56, -0.54, 0.54, 'rgba(8,10,14,0.96)', 0.32); // frame
+      zone(0.5, 0.18, 0.44, '#14273a');                    // voorruit (blauwig glas)
+      zone(0.16, -0.16, 0.48, '#25272c', 0.22);            // carbon dak
+      zone(-0.18, -0.5, 0.42, '#101b26');                  // achterruit
+      // reflectie op de voorruit
+      gg.fillStyle = 'rgba(150,195,235,0.22)';
+      rrPath(gg, cx - bw * 0.17, py(0.48), bw * 0.34, py(0.24) - py(0.48), bw * 0.08); gg.fill();
+      // carbon-dak: fijne weave-hint
+      gg.strokeStyle = 'rgba(255,255,255,0.05)'; gg.lineWidth = Math.max(0.5, w * 0.008);
+      gg.beginPath();
+      for (let i = -2; i <= 2; i++) { const yy = cy + i * bh * 0.03; gg.moveTo(cx - bw * 0.22, yy); gg.lineTo(cx + bw * 0.22, yy); }
+      gg.stroke();
+    } else {
+      const cpW = bw * 0.5, cpH = bh * S2.cabF * 1.15;
+      const cpCy = cy + front * 0.04 * (bh / 2);
+      gg.fillStyle = 'rgba(9,12,20,0.9)';
+      rrPath(gg, cx - cpW / 2, cpCy - cpH / 2, cpW, cpH, cpW * 0.42); gg.fill();
+      gg.fillStyle = 'rgba(130,180,230,0.28)';
+      rrPath(gg, cx - cpW * 0.36, cpCy + front * cpH * 0.12, cpW * 0.72, cpH * 0.28, cpW * 0.2); gg.fill();
+    }
 
     // ---- spiegels (accentkleur) ----
     gg.fillStyle = car.accent;
@@ -707,6 +754,9 @@ export function init(root, ctx) {
         const gx = cx + sx * (gw / 2 + gap / 2) - gw / 2;
         gg.fillStyle = '#0b0b0d'; rrPath(gg, gx - w * 0.012, gtop - gh2 * 0.03, gw + w * 0.024, gh2 * 1.06, gw * 0.4); gg.fill();
         gg.fillStyle = '#1b1c22'; rrPath(gg, gx, gtop, gw, gh2, gw * 0.35); gg.fill();
+        // verticale spijlen
+        gg.fillStyle = '#33353c';
+        for (let s = 0; s < 4; s++) { gg.fillRect(gx + gw * (0.14 + s * 0.24), gtop + gh2 * 0.12, gw * 0.06, gh2 * 0.76); }
       }
     }
 

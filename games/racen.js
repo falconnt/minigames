@@ -10,7 +10,7 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'BMW M4',           col: '#f4f4f2', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'i6', grille: 'kidney', mstripes: true, quad: true, wheelCol: '#c8892e', caliper: '#1f7ad0', underglow: '#17a8ff', ledlights: true, realistic: true },
+  { name: 'BMW M4',           col: '#f6f6f4', accent: '#0d0d11', stripe: null,      wing: 'big',   shape: 'coupe',   eng: 'i6', grille: 'kidney', quad: true, realistic: true, wheelCol: '#2b2d34', headlight: '#f4d01c', hoodVents: true, splitter: true },
   { name: 'Mercedes GT 63',   col: '#c7ccd3', accent: '#15151a', stripe: null,      wing: 'small', shape: 'coupe',   eng: 'w12' },
   { name: 'Ferrari Pista',    col: '#e8261c', accent: '#1436a4', stripe: '#1436a4', wing: 'small', shape: 'super',   eng: 'v8' },
   { name: 'Lamborghini SVJ',  col: '#37d24a', accent: '#101319', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12' },
@@ -684,6 +684,33 @@ export function init(root, ctx) {
       gg.restore();
     }
 
+    // ---- zwarte side-skirts / widebody-rand + voorsplitter + diffuser ----
+    if (car.splitter) {
+      gg.save(); bodyPath(); gg.clip();
+      gg.strokeStyle = '#0b0b0e'; gg.lineWidth = Math.max(2, w * 0.07); bodyPath(); gg.stroke();
+      gg.restore();
+      gg.fillStyle = '#0b0b0e';
+      gg.fillRect(cx - bw * 0.44, py(0.9) - h * 0.008, bw * 0.88, h * 0.02);   // voorsplitter
+      gg.fillRect(cx - bw * 0.42, py(-0.86) - h * 0.006, bw * 0.84, h * 0.02); // achterdiffuser
+    }
+
+    // ---- zwarte motorkap-vents (hoekige gleuven, zoals op de foto) ----
+    if (car.hoodVents) {
+      gg.save(); bodyPath(); gg.clip();
+      gg.fillStyle = 'rgba(8,8,11,0.95)';
+      const vent = (lx, lyTop, lyBot, wd, skew) => {
+        gg.beginPath();
+        gg.moveTo(px(lx - wd), py(lyTop)); gg.lineTo(px(lx + wd), py(lyTop));
+        gg.lineTo(px(lx + wd + skew), py(lyBot)); gg.lineTo(px(lx - wd + skew), py(lyBot));
+        gg.closePath(); gg.fill();
+      };
+      vent(-0.15, 0.52, 0.28, 0.055, -0.06); // centrale nostrils
+      vent(0.15, 0.52, 0.28, 0.055, 0.06);
+      vent(-0.36, 0.48, 0.3, 0.04, -0.05);   // zij-gills
+      vent(0.36, 0.48, 0.3, 0.04, 0.05);
+      gg.restore();
+    }
+
     // ---- racestreep over het midden ----
     if (car.stripe) {
       gg.fillStyle = car.stripe;
@@ -733,16 +760,17 @@ export function init(root, ctx) {
     gg.fillRect(px(-1.0) - mw * 0.3, my - mh / 2, mw, mh);
     gg.fillRect(px(1.0) - mw * 0.7, my - mh / 2, mw, mh);
 
-    // ---- koplampen (evt. koele LED met blauwe gloed) ----
+    // ---- koplampen (kleur per auto, met gloed) ----
     const hw = w * 0.15, hh = h * 0.045, hy = py(0.7);
-    if (car.ledlights) { gg.save(); gg.shadowColor = '#bfe4ff'; gg.shadowBlur = w * 0.12; }
-    gg.fillStyle = car.ledlights ? '#eaf6ff' : '#fff7d0';
+    const hlc = car.headlight || (car.ledlights ? '#eaf6ff' : null);
+    if (hlc) { gg.save(); gg.shadowColor = hlc; gg.shadowBlur = w * 0.14; }
+    gg.fillStyle = hlc || '#fff7d0';
     rrPath(gg, cx - w * 0.38, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
     rrPath(gg, cx + w * 0.23, hy - hh / 2, hw, hh, hh * 0.5); gg.fill();
-    if (car.ledlights) {
-      gg.shadowBlur = 0; gg.fillStyle = '#4db6ff';
-      rrPath(gg, cx - w * 0.38, hy - hh * 0.18, hw, hh * 0.36, hh * 0.3); gg.fill();
-      rrPath(gg, cx + w * 0.23, hy - hh * 0.18, hw, hh * 0.36, hh * 0.3); gg.fill();
+    if (hlc) {
+      gg.shadowBlur = 0; gg.fillStyle = 'rgba(255,255,255,0.72)';
+      rrPath(gg, cx - w * 0.38, hy - hh * 0.16, hw, hh * 0.32, hh * 0.3); gg.fill();
+      rrPath(gg, cx + w * 0.23, hy - hh * 0.16, hw, hh * 0.32, hh * 0.3); gg.fill();
       gg.restore();
     }
 

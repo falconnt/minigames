@@ -39,16 +39,13 @@ zwaar (lope), een **V12** giert hoog en glad, en er zijn ook **6-in-lijn** (de
 BMW M4 heeft net als in het echt een turbo-zescilinder in lijn), **W12, V10,
 Flat-6 en Rotary**. Met de **🔊/🔇-knop** zet je het geluid aan of uit.
 
-De **BMW M4** is nagetekend als de echte, in het **wit** (Alpine White), met de
-kenmerkende hoge **niervormige grille**, de **BMW M-strepen** (lichtblauw,
-donkerblauw, rood) over de motorkap en het kofferdeksel, en **vier uitlaten**. Hij
-heeft een getunede look: **blauwe neon-underglow**, **bronzen M-velgen met blauwe
-remklauwen** en **blauwe LED-koplampen** met een gloed.
-
-Voor extra realisme is de M4 gedetailleerd nagetekend: **glanzende lak** met
-lichtreflectie en donkere randen (ronding van het plaatwerk), **panelnaden**
-(motorkap, portieren, kofferdeksel), een echte **greenhouse** (voorruit, carbon
-dak en achterruit apart) en **spijlen** in de niervormige grille.
+De **BMW M4** is nagetekend als een getunede **Pearl White**-versie: witte
+glanzende lak met **gele koplampen**, de kenmerkende zwarte **niervormige grille**
+met spijlen, **zwarte hoekige motorkap-vents**, een grote **zwarte GT-vleugel**,
+**zwarte velgen**, zwarte **splitter en side-skirts**, een **carbon dak** en
+**vier uitlaten**. Voor extra realisme heeft hij glanzende lak met lichtreflectie
+en donkere randen (ronding van het plaatwerk), **panelnaden** en een echte
+**greenhouse** (voorruit, dak en achterruit apart).
 
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een

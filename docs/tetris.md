@@ -35,6 +35,12 @@ op eigen tempo — zo kun je het vlak voor de landing nog opzij schuiven om erge
 in te passen. Er verschijnt een doorzichtig **spookblok** dat laat zien waar het
 blok terechtkomt, zodat mikken makkelijker is.
 
+De game speelt **schermvullend**: een eigen laag over de hele schermhoogte, zodat
+het speelveld zo groot mogelijk is en alles zonder scrollen in beeld staat. Boven
+staan Score/Rijen/Level, een mini-**Volgende** en de knoppen **Pauze** en **❔**
+(uitleg — opent dit spiekbriefje en zet het spel op pauze). Met **← Terug** ga je
+naar het menu; **Nieuw spel** vind je in het pauzemenu.
+
 ## Spelverloop
 
 1. Steeds valt er één van de zeven blokvormen; rechts zie je onder **Volgende**

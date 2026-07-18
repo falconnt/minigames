@@ -28,31 +28,74 @@
   </script>
 </head>
 <body>
+  <!-- Gedeelde gradients/filters voor het app-logo (blijft altijd in de DOM). -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="lg-body" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="0.6" stop-color="#eef1f8"/>
+        <stop offset="1" stop-color="#c6cfe4"/>
+      </linearGradient>
+      <linearGradient id="lg-dpad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#4a71e8"/><stop offset="1" stop-color="#1f3c8f"/>
+      </linearGradient>
+      <radialGradient id="lg-by" cx="0.35" cy="0.3" r="1">
+        <stop offset="0" stop-color="#ffe98a"/><stop offset="0.55" stop-color="#ffd23d"/><stop offset="1" stop-color="#cf9d12"/>
+      </radialGradient>
+      <radialGradient id="lg-bg" cx="0.35" cy="0.3" r="1">
+        <stop offset="0" stop-color="#8af0b0"/><stop offset="0.55" stop-color="#48d17a"/><stop offset="1" stop-color="#1c9450"/>
+      </radialGradient>
+      <radialGradient id="lg-br" cx="0.35" cy="0.3" r="1">
+        <stop offset="0" stop-color="#ff9d9d"/><stop offset="0.55" stop-color="#ff5b5b"/><stop offset="1" stop-color="#c23434"/>
+      </radialGradient>
+      <radialGradient id="lg-bb" cx="0.35" cy="0.3" r="1">
+        <stop offset="0" stop-color="#a5e2ff"/><stop offset="0.55" stop-color="#4fc3ff"/><stop offset="1" stop-color="#2381c2"/>
+      </radialGradient>
+      <filter id="lg-soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.6"/></filter>
+      <linearGradient id="lg-tile" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#6b93ff"/><stop offset="0.55" stop-color="#4a63e0"/><stop offset="1" stop-color="#5b3fd0"/>
+      </linearGradient>
+      <radialGradient id="lg-sheen" cx="0.28" cy="0.18" r="0.95">
+        <stop offset="0" stop-color="rgba(255,255,255,0.32)"/><stop offset="0.6" stop-color="rgba(255,255,255,0)"/>
+      </radialGradient>
+    </defs>
+  </svg>
+
   <div id="welcome" class="welcome" hidden>
     <div class="welcome-icons" aria-hidden="true">
       <span>🔢</span><span>🐦</span><span>🟩</span><span>🚀</span><span>⚡</span><span>🏇</span>
     </div>
     <div class="welcome-inner">
       <div class="welcome-logo" aria-hidden="true"><svg viewBox="0 0 64 64">
-        <defs><linearGradient id="aglog" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#6b93ff"/><stop offset="1" stop-color="#5b3fd0"/>
-        </linearGradient></defs>
-        <g transform="rotate(-8 32 34)">
-          <circle cx="15" cy="38" r="11" fill="url(#aglog)"/>
-          <circle cx="49" cy="38" r="11" fill="url(#aglog)"/>
-          <rect x="12" y="22" width="40" height="21" rx="10.5" fill="url(#aglog)"/>
-          <path d="M17 26.5 q15 -4.5 30 0" stroke="rgba(255,255,255,0.5)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-          <g fill="#ffffff">
-            <rect x="19.6" y="27" width="4.4" height="13" rx="1.6"/>
-            <rect x="15.3" y="31.3" width="13" height="4.4" rx="1.6"/>
-          </g>
-          <circle cx="44" cy="28.6" r="2.7" fill="#ffd23d"/>
-          <circle cx="44" cy="38.4" r="2.7" fill="#48d17a"/>
-          <circle cx="39" cy="33.5" r="2.7" fill="#ff5b5b"/>
-          <circle cx="49" cy="33.5" r="2.7" fill="#4fc3ff"/>
+        <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#lg-tile)"/>
+        <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#lg-sheen)"/>
+        <g transform="translate(32 33) scale(0.78) rotate(-6) translate(-32 -33)">
+          <ellipse cx="32" cy="51" rx="23" ry="4.5" fill="rgba(15,20,60,0.45)" filter="url(#lg-soft)"/>
+          <circle cx="15" cy="38" r="11" fill="url(#lg-body)"/>
+          <circle cx="49" cy="38" r="11" fill="url(#lg-body)"/>
+          <rect x="12" y="22" width="40" height="21" rx="10.5" fill="url(#lg-body)"/>
+          <path d="M15 24.5 q17 -5.5 34 0" stroke="rgba(255,255,255,0.95)" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+          <path d="M8.5 41 q4.5 6 11 5.5 M55.5 41 q-4.5 6 -11 5.5" stroke="rgba(90,105,150,0.4)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <rect x="19.9" y="27.7" width="4.4" height="13" rx="1.6" fill="rgba(15,25,60,0.45)"/>
+          <rect x="15.6" y="32" width="13" height="4.4" rx="1.6" fill="rgba(15,25,60,0.45)"/>
+          <rect x="19.6" y="27" width="4.4" height="13" rx="1.6" fill="url(#lg-dpad)"/>
+          <rect x="15.3" y="31.3" width="13" height="4.4" rx="1.6" fill="url(#lg-dpad)"/>
+          <rect x="20.3" y="27.7" width="3" height="1.3" rx="0.65" fill="rgba(255,255,255,0.6)"/>
+          <circle cx="44" cy="29.3" r="2.7" fill="rgba(15,25,60,0.4)"/>
+          <circle cx="44" cy="28.6" r="2.7" fill="url(#lg-by)"/>
+          <circle cx="43.2" cy="27.7" r="0.7" fill="rgba(255,255,255,0.95)"/>
+          <circle cx="44" cy="39.1" r="2.7" fill="rgba(15,25,60,0.4)"/>
+          <circle cx="44" cy="38.4" r="2.7" fill="url(#lg-bg)"/>
+          <circle cx="43.2" cy="37.5" r="0.7" fill="rgba(255,255,255,0.95)"/>
+          <circle cx="39" cy="34.2" r="2.7" fill="rgba(15,25,60,0.4)"/>
+          <circle cx="39" cy="33.5" r="2.7" fill="url(#lg-br)"/>
+          <circle cx="38.2" cy="32.6" r="0.7" fill="rgba(255,255,255,0.95)"/>
+          <circle cx="49" cy="34.2" r="2.7" fill="rgba(15,25,60,0.4)"/>
+          <circle cx="49" cy="33.5" r="2.7" fill="url(#lg-bb)"/>
+          <circle cx="48.2" cy="32.6" r="0.7" fill="rgba(255,255,255,0.95)"/>
         </g>
-        <path d="M50 7 l1.6 3.4 3.4 1.6 -3.4 1.6 -1.6 3.4 -1.6 -3.4 -3.4 -1.6 3.4 -1.6 Z" fill="#ffd23d"/>
-        <path d="M12 11 l1 2.2 2.2 1 -2.2 1 -1 2.2 -1 -2.2 -2.2 -1 2.2 -1 Z" fill="#a9bcf7"/>
+        <path d="M50 9 l1.6 3.4 3.4 1.6 -3.4 1.6 -1.6 3.4 -1.6 -3.4 -3.4 -1.6 3.4 -1.6 Z" fill="#ffe98a"/>
+        <path d="M13 12 l1 2.2 2.2 1 -2.2 1 -1 2.2 -1 -2.2 -2.2 -1 2.2 -1 Z" fill="#c9d6ff"/>
       </svg></div>
       <h1>Welkom bij Minigames</h1>
       <p>Zes games, highscores, badges en online ranglijsten.<br>
@@ -63,24 +106,28 @@
 
   <header class="app-header">
     <a class="app-title" href="#/"><svg class="app-logo" viewBox="0 0 64 64" aria-hidden="true">
-      <defs><linearGradient id="aglog2" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#6b93ff"/><stop offset="1" stop-color="#5b3fd0"/>
-      </linearGradient></defs>
-      <g transform="rotate(-8 32 34)">
-        <circle cx="15" cy="38" r="11" fill="url(#aglog2)"/>
-        <circle cx="49" cy="38" r="11" fill="url(#aglog2)"/>
-        <rect x="12" y="22" width="40" height="21" rx="10.5" fill="url(#aglog2)"/>
-        <path d="M17 26.5 q15 -4.5 30 0" stroke="rgba(255,255,255,0.5)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-        <g fill="#ffffff">
-          <rect x="19.6" y="27" width="4.4" height="13" rx="1.6"/>
-          <rect x="15.3" y="31.3" width="13" height="4.4" rx="1.6"/>
-        </g>
-        <circle cx="44" cy="28.6" r="2.7" fill="#ffd23d"/>
-        <circle cx="44" cy="38.4" r="2.7" fill="#48d17a"/>
-        <circle cx="39" cy="33.5" r="2.7" fill="#ff5b5b"/>
-        <circle cx="49" cy="33.5" r="2.7" fill="#4fc3ff"/>
+      <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#lg-tile)"/>
+      <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#lg-sheen)"/>
+      <g transform="translate(32 33) scale(0.78) rotate(-6) translate(-32 -33)">
+        <ellipse cx="32" cy="51" rx="23" ry="4.5" fill="rgba(15,20,60,0.45)" filter="url(#lg-soft)"/>
+        <circle cx="15" cy="38" r="11" fill="url(#lg-body)"/>
+        <circle cx="49" cy="38" r="11" fill="url(#lg-body)"/>
+        <rect x="12" y="22" width="40" height="21" rx="10.5" fill="url(#lg-body)"/>
+        <path d="M15 24.5 q17 -5.5 34 0" stroke="rgba(255,255,255,0.95)" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+        <rect x="19.9" y="27.7" width="4.4" height="13" rx="1.6" fill="rgba(15,25,60,0.45)"/>
+        <rect x="15.6" y="32" width="13" height="4.4" rx="1.6" fill="rgba(15,25,60,0.45)"/>
+        <rect x="19.6" y="27" width="4.4" height="13" rx="1.6" fill="url(#lg-dpad)"/>
+        <rect x="15.3" y="31.3" width="13" height="4.4" rx="1.6" fill="url(#lg-dpad)"/>
+        <circle cx="44" cy="29.3" r="2.7" fill="rgba(15,25,60,0.4)"/>
+        <circle cx="44" cy="28.6" r="2.7" fill="url(#lg-by)"/>
+        <circle cx="44" cy="39.1" r="2.7" fill="rgba(15,25,60,0.4)"/>
+        <circle cx="44" cy="38.4" r="2.7" fill="url(#lg-bg)"/>
+        <circle cx="39" cy="34.2" r="2.7" fill="rgba(15,25,60,0.4)"/>
+        <circle cx="39" cy="33.5" r="2.7" fill="url(#lg-br)"/>
+        <circle cx="49" cy="34.2" r="2.7" fill="rgba(15,25,60,0.4)"/>
+        <circle cx="49" cy="33.5" r="2.7" fill="url(#lg-bb)"/>
       </g>
-      <path d="M50 7 l1.6 3.4 3.4 1.6 -3.4 1.6 -1.6 3.4 -1.6 -3.4 -3.4 -1.6 3.4 -1.6 Z" fill="#ffd23d"/>
+      <path d="M50 9 l1.6 3.4 3.4 1.6 -3.4 1.6 -1.6 3.4 -1.6 -3.4 -3.4 -1.6 3.4 -1.6 Z" fill="#ffe98a"/>
     </svg> Minigames</a>
     <div class="header-actions">
       <button id="install-btn" class="btn btn-primary" hidden>Installeren</button>

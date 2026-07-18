@@ -590,6 +590,28 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 .race-overlay h2 { margin: 0; font-size: 1.4rem; color: #ffd23d; text-shadow: 0 0 14px rgba(255, 210, 61, 0.5); }
 .race-overlay p { margin: 0; }
 
+/* Auto-keuze (startscherm) */
+.race-select {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  gap: 0.7rem; padding: 0.9rem 0.7rem calc(0.7rem + env(safe-area-inset-bottom));
+  background: rgba(6, 10, 14, 0.9);
+}
+.race-select h2 { margin: 0.2rem 0 0; color: #ffd23d; font-size: 1.3rem; }
+.race-cars {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; max-width: 30rem;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 0.6rem;
+  align-content: start; padding: 0.2rem;
+}
+.race-car {
+  display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+  background: #1a222c; border: 2px solid #2c3a47; border-radius: 0.7rem; padding: 0.5rem 0.3rem;
+  color: #eef3f8; font-family: inherit; font-size: 0.8rem; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.race-car.sel { border-color: #ffd23d; box-shadow: 0 0 12px rgba(255, 210, 61, 0.5); }
+.race-car canvas { pointer-events: none; }
+.race-start { flex: 0 0 auto; font-size: 1.1rem; padding: 0.65rem 1.6rem; }
+
 .race-help { max-width: 22rem; background: #1a222c; color: #eef3f8; border: 1px solid #2c3a47; border-radius: 0.8rem; }
 .race-help::backdrop { background: rgba(4, 8, 12, 0.7); }
 .race-help h2 { margin: 0 0 0.6rem; font-size: 1.15rem; color: #ffd23d; }

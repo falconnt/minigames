@@ -8,6 +8,19 @@
 
 const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
+// 10 kiesbare auto's (naam + kleur).
+const CARS = [
+  { name: 'Bliksem', col: '#ffd23d' },
+  { name: 'Vuurbal', col: '#ff5b5b' },
+  { name: 'Turbo', col: '#ff9a3d' },
+  { name: 'Smaragd', col: '#48ff8e' },
+  { name: 'Oceaan', col: '#4fd0d6' },
+  { name: 'Storm', col: '#5f97ef' },
+  { name: 'Druif', col: '#c08ee8' },
+  { name: 'Roze Raket', col: '#ff6ec7' },
+  { name: 'Zilver', col: '#cfd6df' },
+  { name: 'Limoen', col: '#a3e635' },
+];
 const ROAD = '#2c2f36', GRASS = '#1f3d24', CURB1 = '#e8433f', CURB2 = '#f5f5f5';
 
 export function init(root, ctx) {
@@ -109,25 +122,67 @@ export function init(root, ctx) {
   let enemies = [], coins = [], scenery = [], marks = [], particles = [];
   let scroll = 0, speed = 0.42, dist = 0, lives = 3;
   let spawnCd = 1, coinCd = 2, turbo = 1, invuln = 0, shake = 0, flashT = 0;
-  let state = 'playing';
+  let state = 'select';
+  let carColor = CARS[0].col, selected = 0, sel = null;
   let moveDir = 0, turboOn = false, dragging = false, dragX = 0;
   let raf = 0, last = 0;
 
-  function reset() {
-    player = { x: 0.5 };
-    enemies = []; coins = []; particles = [];
-    scroll = 0; speed = 0.42; dist = 0; lives = 3;
-    spawnCd = 1; coinCd = 2; turbo = 1; invuln = 0; shake = 0; flashT = 0;
+  function initScene() {
     // wegmarkeringen (stippellijnen tussen de rijstroken)
     marks = [];
     for (let i = 0; i < 14; i++) marks.push(i / 14);
     // bomen/struiken langs de weg
     scenery = [];
     for (let i = 0; i < 8; i++) scenery.push({ x: Math.random() < 0.5 ? S.roadL * 0.5 : (S.roadR + (1 - S.roadR) * 0.5), y: Math.random(), left: Math.random() < 0.5 });
+  }
+
+  function reset() {
+    player = { x: 0.5 };
+    enemies = []; coins = []; particles = [];
+    scroll = 0; speed = 0.42; dist = 0; lives = 3;
+    spawnCd = 1; coinCd = 2; turbo = 1; invuln = 0; shake = 0; flashT = 0;
+    initScene();
     state = 'playing';
     overlay.hidden = true;
     pauseBtn.textContent = 'Pauze';
     updateHud();
+  }
+
+  // ---------- auto-keuze (startscherm) ----------
+  function buildSelect() {
+    sel = document.createElement('div');
+    sel.className = 'race-select';
+    sel.innerHTML = `<h2>Kies je auto</h2><div class="race-cars" id="rc-cars"></div><button id="rc-start" class="race-btn primary race-start">🏁 Start!</button>`;
+    area.appendChild(sel);
+    const wrap = sel.querySelector('#rc-cars');
+    CARS.forEach((car, i) => {
+      const card = document.createElement('button');
+      card.className = 'race-car' + (i === selected ? ' sel' : '');
+      const cv = document.createElement('canvas');
+      cv.width = 160; cv.height = 200; cv.style.width = '80px'; cv.style.height = '100px';
+      const g2 = cv.getContext('2d'); g2.setTransform(2, 0, 0, 2, 0, 0);
+      drawCarShape(g2, 40, 54, 44, 78, car.col, -1);
+      const nm = document.createElement('span'); nm.textContent = car.name;
+      card.appendChild(cv); card.appendChild(nm);
+      card.addEventListener('click', () => selectCar(i));
+      wrap.appendChild(card);
+    });
+    sel.querySelector('#rc-start').addEventListener('click', () => { ensureAudio(); startRace(); });
+  }
+  function selectCar(i) {
+    selected = i; carColor = CARS[i].col;
+    sel.querySelectorAll('.race-car').forEach((el, k) => el.classList.toggle('sel', k === i));
+  }
+  function goToSelect() {
+    state = 'select';
+    overlay.hidden = true;
+    pauseBtn.textContent = 'Pauze';
+    if (sel) sel.style.display = 'flex';
+  }
+  function startRace() {
+    carColor = CARS[selected].col;
+    if (sel) sel.style.display = 'none';
+    reset();
   }
 
   function updateHud() {
@@ -161,9 +216,11 @@ export function init(root, ctx) {
     overlay.innerHTML = `
       <h2>🏁 Finish!</h2>
       <p>Afstand: ${Math.floor(dist)} m${result?.isRecord ? ' — 🥇 nieuw record!' : result?.rank ? ` — plek ${result.rank} in de top 10` : ''}</p>
-      <button id="rc-again" class="race-btn primary">Nog een keer</button>`;
+      <button id="rc-again" class="race-btn primary">Nog een keer</button>
+      <button id="rc-pick" class="race-btn">Andere auto</button>`;
     overlay.hidden = false;
     overlay.querySelector('#rc-again').addEventListener('click', reset);
+    overlay.querySelector('#rc-pick').addEventListener('click', goToSelect);
   }
 
   function setPaused(on) {
@@ -172,10 +229,10 @@ export function init(root, ctx) {
       state = 'paused'; pauseBtn.textContent = 'Verder';
       overlay.innerHTML = `<h2>⏸️ Pauze</h2>
         <button id="rc-resume" class="race-btn primary">Verder spelen</button>
-        <button id="rc-newp" class="race-btn">Nieuw spel</button>`;
+        <button id="rc-newp" class="race-btn">Andere auto</button>`;
       overlay.hidden = false;
       overlay.querySelector('#rc-resume').addEventListener('click', () => setPaused(false));
-      overlay.querySelector('#rc-newp').addEventListener('click', reset);
+      overlay.querySelector('#rc-newp').addEventListener('click', goToSelect);
     } else if (!on && state === 'paused') {
       state = 'playing'; pauseBtn.textContent = 'Pauze'; overlay.hidden = true;
     }
@@ -203,6 +260,14 @@ export function init(root, ctx) {
     if (shake > 0) shake -= dt;
     if (flashT > 0) flashT -= dt;
 
+    if (state === 'select') {
+      // rustig scrollende weg als achtergrond bij het kiezen
+      const amb = 0.25;
+      scroll += amb * dt;
+      for (let i = 0; i < marks.length; i++) { marks[i] += amb * dt; if (marks[i] > 1.05) marks[i] -= 1.1; }
+      for (const s of scenery) { s.y += amb * dt; if (s.y > 1.1) s.y -= 1.2; }
+      return;
+    }
     if (state !== 'playing') return;
     if (invuln > 0) invuln -= dt;
 
@@ -268,16 +333,17 @@ export function init(root, ctx) {
   // ---------- tekenen ----------
   function neon(color, blur) { g.shadowColor = color; g.shadowBlur = blur; }
   function noGlow() { g.shadowBlur = 0; }
-  function rrect(x, y, w, h, r) {
+  function rrPath(gg, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
-    g.beginPath();
-    g.moveTo(x + r, y);
-    g.arcTo(x + w, y, x + w, y + h, r);
-    g.arcTo(x + w, y + h, x, y + h, r);
-    g.arcTo(x, y + h, x, y, r);
-    g.arcTo(x, y, x + w, y, r);
-    g.closePath();
+    gg.beginPath();
+    gg.moveTo(x + r, y);
+    gg.arcTo(x + w, y, x + w, y + h, r);
+    gg.arcTo(x + w, y + h, x, y + h, r);
+    gg.arcTo(x, y + h, x, y, r);
+    gg.arcTo(x, y, x + w, y, r);
+    gg.closePath();
   }
+  function rrect(x, y, w, h, r) { rrPath(g, x, y, w, h, r); }
 
   function drawRoad() {
     g.fillStyle = GRASS; g.fillRect(0, 0, W, H);
@@ -314,32 +380,33 @@ export function init(root, ctx) {
     }
   }
 
-  // Auto van bovenaf. front = -1 (naar boven, speler) of +1 (naar beneden).
-  function drawCar(cx, cy, color, front) {
-    const w = S.carW, h = S.carH;
+  // Auto van bovenaf op een willekeurige context. front = -1 (naar boven,
+  // speler) of +1 (naar beneden, tegenligger).
+  function drawCarShape(gg, cx, cy, w, h, color, front) {
     // wielen
-    g.fillStyle = '#111318';
+    gg.fillStyle = '#111318';
     const ww = w * 0.16, wh = h * 0.24;
-    g.fillRect(cx - w / 2 - ww * 0.3, cy - h * 0.28, ww, wh);
-    g.fillRect(cx + w / 2 - ww * 0.7, cy - h * 0.28, ww, wh);
-    g.fillRect(cx - w / 2 - ww * 0.3, cy + h * 0.05, ww, wh);
-    g.fillRect(cx + w / 2 - ww * 0.7, cy + h * 0.05, ww, wh);
+    gg.fillRect(cx - w / 2 - ww * 0.3, cy - h * 0.28, ww, wh);
+    gg.fillRect(cx + w / 2 - ww * 0.7, cy - h * 0.28, ww, wh);
+    gg.fillRect(cx - w / 2 - ww * 0.3, cy + h * 0.05, ww, wh);
+    gg.fillRect(cx + w / 2 - ww * 0.7, cy + h * 0.05, ww, wh);
     // body
-    neon(color, unit * 0.02);
-    g.fillStyle = color;
-    rrect(cx - w / 2, cy - h / 2, w, h, w * 0.24); g.fill();
-    noGlow();
+    gg.shadowColor = color; gg.shadowBlur = w * 0.2;
+    gg.fillStyle = color;
+    rrPath(gg, cx - w / 2, cy - h / 2, w, h, w * 0.24); gg.fill();
+    gg.shadowBlur = 0;
     // cabine / voorruit (donker, richting voorkant)
-    g.fillStyle = 'rgba(10,14,24,0.85)';
-    rrect(cx - w * 0.34, cy + front * h * 0.02, w * 0.68, h * 0.34, w * 0.14); g.fill();
+    gg.fillStyle = 'rgba(10,14,24,0.85)';
+    rrPath(gg, cx - w * 0.34, cy + front * h * 0.02, w * 0.68, h * 0.34, w * 0.14); gg.fill();
     // spoiler achter
-    g.fillStyle = 'rgba(0,0,0,0.4)';
-    g.fillRect(cx - w * 0.42, cy - front * h * 0.45, w * 0.84, h * 0.07);
+    gg.fillStyle = 'rgba(0,0,0,0.4)';
+    gg.fillRect(cx - w * 0.42, cy - front * h * 0.45, w * 0.84, h * 0.07);
     // koplampen aan de voorkant
-    g.fillStyle = '#fff6c8';
-    g.fillRect(cx - w * 0.34, cy + front * h * 0.42, w * 0.16, h * 0.05);
-    g.fillRect(cx + w * 0.18, cy + front * h * 0.42, w * 0.16, h * 0.05);
+    gg.fillStyle = '#fff6c8';
+    gg.fillRect(cx - w * 0.34, cy + front * h * 0.42, w * 0.16, h * 0.05);
+    gg.fillRect(cx + w * 0.18, cy + front * h * 0.42, w * 0.16, h * 0.05);
   }
+  function drawCar(cx, cy, color, front) { drawCarShape(g, cx, cy, S.carW, S.carH, color, front); }
 
   function draw() {
     drawRoad();
@@ -369,7 +436,7 @@ export function init(root, ctx) {
     }
     g.globalAlpha = 1; noGlow();
     // speler (knippert bij onkwetsbaarheid)
-    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawCar(player.x * W, 0.82 * H, PLAYER_COL, -1);
+    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawCar(player.x * W, 0.82 * H, carColor, -1);
 
     g.restore();
 
@@ -473,7 +540,9 @@ export function init(root, ctx) {
   ro.observe(area);
 
   layout();
-  reset();
+  initScene();
+  buildSelect();
+  goToSelect();
   requestAnimationFrame(layout);
   setTimeout(layout, 200);
   raf = requestAnimationFrame(loop);

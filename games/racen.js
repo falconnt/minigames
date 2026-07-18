@@ -10,7 +10,7 @@ const PLAYER_COL = '#ffd23d';
 const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f97ef'];
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
-  { name: 'Bliksem', col: '#ffd23d' },
+  { name: 'BMW M4', col: '#ffd23d' },
   { name: 'Vuurbal', col: '#ff5b5b' },
   { name: 'Turbo', col: '#ff9a3d' },
   { name: 'Smaragd', col: '#48ff8e' },

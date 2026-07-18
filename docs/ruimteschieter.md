@@ -59,6 +59,14 @@ naar het menu; **Nieuw spel** vind je in het pauzemenu (of de ❔-knop voor uitl
   bestanden). Met de **🔊/🔇-knop** zet je het geluid aan of uit. Er is ook
   **screenshake** bij explosies voor extra kracht.
 
+## Testmodus: 🧪 Eindbaas
+
+Zet je **testmodus** aan in Instellingen, dan verschijnt linksboven in de
+speelbalk een **🧪 Eindbaas**-knop. Die springt direct naar de eerstvolgende
+baasgolf (elke 10e golf), zodat je de eindbaas kunt testen zonder eerst tien
+golven te spelen. In testmodus worden er **geen highscores opgeslagen**, dus
+je beïnvloedt de ranglijst niet.
+
 ## Score & highscore
 
 - Elke vernietigde vijand levert punten op; vijanden in de **bovenste rijen** zijn

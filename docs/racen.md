@@ -25,6 +25,9 @@ Speelbaar met de **vinger** of het **toetsenbord**.
 | Turbo (boost) | knop **🚀 turbo** ingedrukt houden | spatie |
 | Pauze | knop **Pauze** | P |
 
+Er is een **motorgeluid** dat meestijgt met je snelheid (en extra bromt bij
+turbo); met de **🔊/🔇-knop** zet je het geluid aan of uit.
+
 Sleep je met je vinger over de weg, dan volgt je auto je vinger. **Turbo** geeft
 een flinke snelheidsboost maar gebruikt je **turbo-balk** (linksonder); die laadt
 vanzelf weer op als je 'm loslaat. Met **← Terug** ga je naar het menu; **Nieuw

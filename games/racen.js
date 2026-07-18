@@ -89,10 +89,33 @@ export function init(root, ctx) {
   const laneX = (i) => S.roadL + (i + 0.5) * S.laneW;
 
   // ---------- geluid ----------
-  let actx = null, muted = false;
+  let actx = null, muted = false, engine = null;
   function ensureAudio() {
     if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
     if (actx && actx.state === 'suspended') actx.resume();
+    startEngine();
+  }
+  // Doorlopend motorgeluid: een lage brom die meestijgt met de snelheid.
+  function startEngine() {
+    if (!actx || engine) return;
+    const osc = actx.createOscillator(); osc.type = 'sawtooth';
+    const osc2 = actx.createOscillator(); osc2.type = 'square';
+    const filt = actx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 700;
+    const gain = actx.createGain(); gain.gain.value = 0;
+    osc.connect(filt); osc2.connect(filt); filt.connect(gain); gain.connect(actx.destination);
+    try { osc.start(); osc2.start(); } catch (e) { /* al gestart */ }
+    engine = { osc, osc2, filt, gain };
+  }
+  function engineUpdate() {
+    if (!engine || !actx) return;
+    const t = actx.currentTime;
+    const on = state === 'playing';
+    const vol = (muted || !on) ? 0 : (turboOn && turbo > 0 ? 0.085 : 0.06);
+    engine.gain.gain.setTargetAtTime(vol, t, 0.08);
+    const base = 52 + speed * 60 + (turboOn && turbo > 0 ? 22 : 0);
+    engine.osc.frequency.setTargetAtTime(base, t, 0.05);
+    engine.osc2.frequency.setTargetAtTime(base * 0.5, t, 0.05);
+    engine.filt.frequency.setTargetAtTime(500 + speed * 800, t, 0.08);
   }
   function tone(freq, dur, type, vol, slideTo) {
     if (muted || !actx) return;
@@ -259,6 +282,7 @@ export function init(root, ctx) {
     particles = particles.filter((p) => p.life > 0);
     if (shake > 0) shake -= dt;
     if (flashT > 0) flashT -= dt;
+    engineUpdate();
 
     if (state === 'select') {
       // rustig scrollende weg als achtergrond bij het kiezen
@@ -565,6 +589,7 @@ export function init(root, ctx) {
       el.removeEventListener('pointercancel', up);
     });
     ro.disconnect();
+    if (engine) { try { engine.osc.stop(); engine.osc2.stop(); } catch (e) { /* al gestopt */ } engine = null; }
     if (actx) { try { actx.close(); } catch (e) { /* al gesloten */ } }
     document.body.style.overflow = prevOverflow;
     fs.remove();

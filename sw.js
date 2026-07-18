@@ -20,6 +20,8 @@ const APP_SHELL = [
   './js/cloud-key.js',
   './js/sync.js',
   './js/fit.js',
+  './js/effects.js',
+  './js/sound.js',
   './js/version.js',
   './manifest.webmanifest',
   './icons/icon-192.png',

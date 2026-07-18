@@ -217,9 +217,43 @@ body {
   box-shadow: var(--shadow);
   transition: transform 0.12s ease, border-color 0.12s ease;
 }
-.card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.14);
+}
 
-.card-icon { font-size: 2.4rem; line-height: 1; }
+/* Kaarten vliegen gestaggerd in bij het openen van het startscherm. */
+@media (prefers-reduced-motion: no-preference) {
+  .cards .card { animation: card-in 0.38s ease backwards; }
+  .cards .card:nth-child(2) { animation-delay: 0.05s; }
+  .cards .card:nth-child(3) { animation-delay: 0.1s; }
+  .cards .card:nth-child(4) { animation-delay: 0.15s; }
+  .cards .card:nth-child(5) { animation-delay: 0.2s; }
+  .cards .card:nth-child(6) { animation-delay: 0.25s; }
+  .cards .card:nth-child(n+7) { animation-delay: 0.3s; }
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+.card-icon {
+  font-size: 2rem;
+  line-height: 1;
+  width: 3.6rem;
+  height: 3.6rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: var(--bg-inset);
+}
+/* Gekleurde icoontegel per categorie (werkt in licht én donker thema). */
+.card-cat-arcade .card-icon { background: rgba(240, 150, 60, 0.18); }
+.card-cat-puzzel .card-icon { background: rgba(70, 170, 95, 0.18); }
+.card-cat-reflex .card-icon { background: rgba(240, 200, 60, 0.22); }
+.card-cat-simulatie .card-icon { background: rgba(95, 135, 245, 0.18); }
 .card-body h3 { margin: 0 0 0.25rem; }
 .card-body p { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.9rem; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }
@@ -272,6 +306,7 @@ body {
 .score-list { margin: 0; padding-left: 1.4rem; }
 .score-list li { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.15rem 0; }
 .score-list li:first-child { font-weight: 700; color: var(--accent); }
+.highscores .score-list li:first-child::before { content: '👑'; margin-right: 0.15rem; }
 .score-date { color: var(--text-muted); font-size: 0.82rem; }
 .hs-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -411,6 +446,30 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 .reaction-zone.go { background: #27ae60; }
 
 .game-hint { margin-top: 1rem; color: var(--text-muted); }
+
+/* ---------- feest-effecten (records) ---------- */
+
+.fx-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 200; }
+
+.fx-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translate(-50%, 1rem);
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 2rem;
+  padding: 0.6rem 1.2rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 210;
+  max-width: 90vw;
+  text-align: center;
+}
+.fx-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ---------- schermvullend spelen (zie richtlijn in README) ---------- */
 

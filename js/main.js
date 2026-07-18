@@ -8,6 +8,8 @@ import { cloudEnabled } from './cloud-config.js';
 import * as cloud from './cloud.js';
 import * as sync from './sync.js';
 import { APP_VERSION } from './version.js';
+import * as fx from './effects.js';
+import * as sound from './sound.js';
 
 const view = document.getElementById('view');
 let destroyCurrentGame = null;
@@ -32,7 +34,7 @@ function renderHome() {
       const best = storage.getBest(g.id, g.scoreMode);
       const cat = getCategory(g.category);
       const hasSave = storage.getSave(g.id) !== null;
-      return `<a class="card" href="#/game/${g.id}">
+      return `<a class="card card-cat-${g.category}" href="#/game/${g.id}">
         <div class="card-icon">${g.icon}</div>
         <div class="card-body">
           <h3>${g.title}</h3>
@@ -145,6 +147,23 @@ function renderScores() {
   }
 }
 
+// ---------- record-feestje ----------
+
+// Eén keer per game (per app-lading) de volle confetti; daarna alleen nog een
+// toast — zo blijft het feestelijk zonder spam (bv. bij cumulatieve scores).
+const celebrated = new Set();
+function celebrate(game, result, score) {
+  if (!result.isRecord || !(score > 0)) return;
+  fx.toast(`🥇 Nieuw record: ${game.formatScore(score)}!`);
+  if (!celebrated.has(game.id)) {
+    celebrated.add(game.id);
+    fx.confetti();
+    sound.play('record');
+  } else {
+    sound.play('score');
+  }
+}
+
 // ---------- gamepagina ----------
 
 function renderHighscores(game) {
@@ -236,6 +255,7 @@ async function renderGame(id) {
     submitScore(score) {
       const result = storage.submitScore(game.id, score, game.scoreMode);
       renderHighscores(game);
+      celebrate(game, result, score);
       // Online: lokaal in de wachtrij + versturen zodra er verbinding is.
       sync.enqueueScore(game.id, score).then(() => {
         if (hsView === 'online') renderHighscores(game);
@@ -289,6 +309,13 @@ function renderSettings() {
       </div>
     </div>
     <div class="settings-row">
+      <span class="settings-label">Geluid</span>
+      <div class="hs-tabs theme-tabs">
+        <button class="btn ${sound.soundOn() ? 'btn-primary' : ''}" data-sound="on">Aan</button>
+        <button class="btn ${!sound.soundOn() ? 'btn-primary' : ''}" data-sound="off">Uit</button>
+      </div>
+    </div>
+    <div class="settings-row">
       <span class="settings-label">App-versie</span>
       <span class="muted-line">${APP_VERSION}</span>
     </div>
@@ -301,6 +328,13 @@ function renderSettings() {
 
   dialog.querySelectorAll('[data-theme]').forEach((b) =>
     b.addEventListener('click', () => { setTheme(b.dataset.theme); renderSettings(); })
+  );
+  dialog.querySelectorAll('[data-sound]').forEach((b) =>
+    b.addEventListener('click', () => {
+      sound.setSound(b.dataset.sound === 'on');
+      if (b.dataset.sound === 'on') sound.play('score'); // hoorbaar voorbeeldje
+      renderSettings();
+    })
   );
   dialog.querySelector('#app-refresh').addEventListener('click', (e) => forceUpdate(e.currentTarget));
   dialog.querySelector('#reset-btn').addEventListener('click', () => {

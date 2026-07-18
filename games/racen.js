@@ -11,15 +11,15 @@ const ENEMY_COLS = ['#ff5b5b', '#48ff8e', '#4fd0d6', '#c08ee8', '#ff9a3d', '#5f9
 // 10 kiesbare auto's (naam + kleur).
 const CARS = [
   { name: 'BMW M4', col: '#ffd23d' },
-  { name: 'Vuurbal', col: '#ff5b5b' },
-  { name: 'Turbo', col: '#ff9a3d' },
-  { name: 'Smaragd', col: '#48ff8e' },
-  { name: 'Oceaan', col: '#4fd0d6' },
-  { name: 'Storm', col: '#5f97ef' },
-  { name: 'Druif', col: '#c08ee8' },
-  { name: 'Roze Raket', col: '#ff6ec7' },
-  { name: 'Zilver', col: '#cfd6df' },
-  { name: 'Limoen', col: '#a3e635' },
+  { name: 'Mercedes GT 63', col: '#ff5b5b' },
+  { name: 'Ferrari Pista', col: '#ff9a3d' },
+  { name: 'Lamborghini SVJ', col: '#48ff8e' },
+  { name: 'Porsche 911', col: '#4fd0d6' },
+  { name: 'Mustang', col: '#5f97ef' },
+  { name: 'Audi R8', col: '#c08ee8' },
+  { name: 'Pagani', col: '#ff6ec7' },
+  { name: 'Mazda RX500', col: '#cfd6df' },
+  { name: 'Koenigsegg Jesko', col: '#a3e635' },
 ];
 const ROAD = '#2c2f36', GRASS = '#1f3d24', CURB1 = '#e8433f', CURB2 = '#f5f5f5';
 

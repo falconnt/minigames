@@ -108,7 +108,7 @@ export function init(root, ctx) {
   const laneX = (i) => S.roadL + (i + 0.5) * S.laneW;
 
   // ---------- geluid ----------
-  let actx = null, muted = false, engine = null;
+  let actx = null, muted = false, engine = null, engRev = 0;
   function ensureAudio() {
     if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
     if (actx && actx.state === 'suspended') actx.resume();
@@ -156,28 +156,56 @@ export function init(root, ctx) {
     const nGain = actx.createGain(); nGain.gain.value = 0.25;
     noise.connect(nBp).connect(nGain).connect(throb);
     try { oscMain.start(); oscSub.start(); oscHi.start(); lfo.start(); noise.start(); } catch (e) { /* al gestart */ }
-    engine = { master, form, lfo, lfoAmt, oscMain, oscSub, oscHi, gSub, gHi, nBp, nodes: [oscMain, oscSub, oscHi, lfo, noise] };
+    engine = { master, form, lfo, lfoAmt, oscMain, oscSub, oscHi, gSub, gHi, nBp, nGain, nodes: [oscMain, oscSub, oscHi, lfo, noise] };
   }
-  function engineUpdate() {
+  function engineUpdate(dt) {
     if (!engine || !actx) return;
     const t = actx.currentTime;
+    if (!(dt > 0) || dt > 0.1) dt = 0.016;
     const prof = ENGINES[carEngine] || ENGINES.v8;
     const on = state === 'playing';
     const boost = (turboOn && turbo > 0) ? 1 : 0;
-    // toeren: van stationair (lage speed) tot rood; ontstekingsfrequentie = toon
-    const revFrac = Math.max(0, speed - 0.35);
-    const f = Math.min(prof.base + prof.rev * 1.4, prof.base + revFrac * prof.rev * 1.15 + boost * prof.rev * 0.14);
-    const vol = (muted || !on) ? 0 : prof.vol * (0.85 + revFrac * 0.4 + boost * 0.15);
-    engine.master.gain.setTargetAtTime(vol, t, 0.08);
-    engine.oscMain.frequency.setTargetAtTime(f, t, 0.04);
-    engine.oscSub.frequency.setTargetAtTime(f * 0.5, t, 0.04);
-    engine.oscHi.frequency.setTargetAtTime(f * 2, t, 0.04);
-    engine.gSub.gain.setTargetAtTime(prof.rumble, t, 0.1);            // V8-lope vs. gladde V12
-    engine.gHi.gain.setTargetAtTime(0.08 + prof.bright * 0.12 + boost * 0.06, t, 0.1); // wail
+
+    // Toeren via een simpele automaat: RPM loopt op binnen een versnelling en
+    // "schakelt" terug bij hogere snelheid, zodat de toon in een muzikale band
+    // blijft i.p.v. eindeloos omhoog te pitchen. Basissnelheid (zonder de
+    // turbo-×1.7) is vloeiend, dus de gearbox springt niet bij het gas geven.
+    const base = speed / (boost ? 1.7 : 1);            // 0.42..0.97, vloeiend
+    const NGEARS = 6;
+    const sp = Math.min(1.1, Math.max(0, (base - 0.42) / 0.55));
+    const span = 1 / NGEARS;
+    const gear = Math.min(NGEARS - 1, Math.floor(sp / span));
+    const local = Math.min(1, (sp - gear * span) / span);
+    let targetRev = 0.32 + local * 0.60;               // stationair-cruise → rood
+    targetRev = Math.min(1.08, targetRev + boost * 0.16); // gas = toeren omhoog (vloeiend)
+    if (!on) targetRev = 0.16;                          // stationair in menu/pauze
+    // Vloeiend naar de doeltoeren: snel terug bij schakelen, geleidelijk omhoog
+    // bij optrekken — geen harde pitch-sprong meer bij de turbo.
+    const half = targetRev < engRev ? 0.10 : 0.30;
+    engRev += (targetRev - engRev) * (1 - Math.pow(0.5, dt / half));
+
+    // Ontstekingsfrequentie = de toon, nu netjes begrensd; begrenzer-flutter
+    // net onder rood met gas erop.
+    let f = prof.base + engRev * prof.rev;
+    if (boost && engRev > 0.98) f *= 1 + Math.sin(t * 78) * 0.012;
+
+    const load = boost; // "throttle": harder werken hoor je als volume + felheid
+    const vol = (muted || !on) ? 0 : prof.vol * (0.6 + engRev * 0.42 + load * 0.22);
+    engine.master.gain.setTargetAtTime(vol, t, 0.09);
+    engine.oscMain.frequency.setTargetAtTime(f, t, 0.05);
+    engine.oscSub.frequency.setTargetAtTime(f * 0.5, t, 0.05);
+    engine.oscHi.frequency.setTargetAtTime(f * 2, t, 0.05);
+    engine.gSub.gain.setTargetAtTime(prof.rumble, t, 0.12);           // V8-lope vs. gladde V12
+    engine.gHi.gain.setTargetAtTime(0.06 + prof.bright * 0.10 + engRev * 0.05 + load * 0.12, t, 0.1);
     engine.lfoAmt.gain.setTargetAtTime(0.08 + prof.rumble * 0.35, t, 0.1);
-    engine.lfo.frequency.setTargetAtTime(Math.min(30, Math.max(7, f * 0.12)), t, 0.1);
-    engine.form.frequency.setTargetAtTime(Math.min(6500, f * (2.4 * prof.bright) + 300), t, 0.06);
-    engine.nBp.frequency.setTargetAtTime(f * 2, t, 0.06);
+    engine.lfo.frequency.setTargetAtTime(Math.min(30, Math.max(6, f * 0.11)), t, 0.1);
+    // Uitlaat-formant opent flink onder gas → het "opendraaien" van de motor
+    // i.p.v. simpelweg een hogere toon.
+    const bright = Math.min(7000, f * (2.2 * prof.bright) + 300 + load * 2200 + engRev * 400);
+    engine.form.frequency.setTargetAtTime(bright, t, 0.07);
+    // Inductie/uitlaatruis werkt hoorbaar harder onder gas.
+    engine.nGain.gain.setTargetAtTime(0.12 + engRev * 0.14 + load * 0.16, t, 0.09);
+    engine.nBp.frequency.setTargetAtTime(f * 2, t, 0.07);
   }
   function tone(freq, dur, type, vol, slideTo) {
     if (muted || !actx) return;
@@ -345,7 +373,7 @@ export function init(root, ctx) {
     particles = particles.filter((p) => p.life > 0);
     if (shake > 0) shake -= dt;
     if (flashT > 0) flashT -= dt;
-    engineUpdate();
+    engineUpdate(dt);
 
     if (state === 'select') {
       // rustig scrollende weg als achtergrond bij het kiezen

@@ -117,7 +117,9 @@ export function init(root, ctx) {
   // ---------- spelstatus ----------
   let player = { x: 0.5, y: 0.9 };
   let pBullets = [], eBullets = [], enemies = [], particles = [], powerups = [], popups = [], stars = [];
-  let bg = null, clock = 0;
+  let bgFar = null, bgStars = null, clock = 0, bgScroll = 0;
+  let comets = [], cometT = 3;
+  let muzzleT = 0, bank = 0, introClock = 0, flashT = 0, flashCol = '255,255,255';
   let dir = 1, enemySpeed = 0.14;
   let score = 0, wave = 1, lives = 3;
   let state = 'playing';
@@ -142,21 +144,20 @@ export function init(root, ctx) {
     }
   }
 
-  // Bouwt de realistische ruimte-achtergrond één keer naar een offscreen buffer
-  // (diepe ruimte + nevels + Melkweg-band + honderden sterren + verre planeet).
+  // Bouwt de achtergrond in twee lagen: een statische "verre" laag (diepe ruimte
+  // + nevels + Melkweg + planeet) en een transparante sterren-laag die langzaam
+  // scrollt voor het gevoel dat je door de ruimte vliegt.
   function buildBackground() {
     const bw = Math.max(1, Math.round(W * dpr)), bh = Math.max(1, Math.round(H * dpr));
-    if (!bg) bg = document.createElement('canvas');
-    bg.width = bw; bg.height = bh;
-    const c = bg.getContext('2d');
     const U = Math.min(bw, bh);
 
-    // diepe ruimte
+    if (!bgFar) bgFar = document.createElement('canvas');
+    bgFar.width = bw; bgFar.height = bh;
+    const c = bgFar.getContext('2d');
     const base = c.createLinearGradient(0, 0, 0, bh);
     base.addColorStop(0, '#070912'); base.addColorStop(0.6, '#04050d'); base.addColorStop(1, '#02030a');
     c.fillStyle = base; c.fillRect(0, 0, bw, bh);
 
-    // verre nevels: zachte, gekleurde wolken (opgeteld licht voor een gloed)
     c.globalCompositeOperation = 'lighter';
     const clouds = [
       { x: 0.25, y: 0.26, col: '138,60,220' },
@@ -175,11 +176,8 @@ export function init(root, ctx) {
         c.fillStyle = gr; c.beginPath(); c.arc(cx, cy, rad, 0, Math.PI * 2); c.fill();
       }
     }
-
-    // Melkweg-band: schuine zachte lichtband met dichte sterretjes
     c.save();
-    c.translate(bw * 0.5, bh * 0.42);
-    c.rotate(-0.5);
+    c.translate(bw * 0.5, bh * 0.42); c.rotate(-0.5);
     const L = Math.hypot(bw, bh);
     const band = c.createLinearGradient(0, -L * 0.14, 0, L * 0.14);
     band.addColorStop(0, 'rgba(120,140,200,0)');
@@ -192,35 +190,61 @@ export function init(root, ctx) {
       const r = Math.random() * 0.9 * dpr + 0.3;
       c.beginPath(); c.arc((Math.random() - 0.5) * L * 1.6, (Math.random() - 0.5) * L * 0.16, r, 0, Math.PI * 2); c.fill();
     }
-    c.globalAlpha = 1;
-    c.restore();
+    c.globalAlpha = 1; c.restore();
     c.globalCompositeOperation = 'source-over';
-
-    // verre sterren: veel, klein, rond, met kleurvariatie
-    const N = Math.round(bw * bh / 9000);
-    for (let i = 0; i < N; i++) {
-      const x = Math.random() * bw, y = Math.random() * bh;
-      const r = (Math.random() * Math.random() * 1.4 + 0.3) * dpr;
-      const a = Math.random() * 0.7 + 0.15;
-      const t = Math.random();
-      c.fillStyle = t < 0.72 ? `rgba(255,255,255,${a})` : t < 0.86 ? `rgba(190,210,255,${a})` : `rgba(255,225,180,${a})`;
+    // heel vage verre sterren (statisch)
+    for (let i = 0; i < Math.round(bw * bh / 22000); i++) {
+      const x = Math.random() * bw, y = Math.random() * bh, r = (Math.random() * 0.9 + 0.2) * dpr, a = Math.random() * 0.35 + 0.08;
+      c.fillStyle = `rgba(210,220,255,${a})`;
       c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
     }
-    // een paar heldere sterren met een zachte gloed
-    for (let i = 0; i < 8; i++) {
-      const x = Math.random() * bw, y = Math.random() * bh * 0.85;
-      const gr = c.createRadialGradient(x, y, 0, x, y, 6 * dpr);
-      gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      c.fillStyle = gr; c.beginPath(); c.arc(x, y, 6 * dpr, 0, Math.PI * 2); c.fill();
-    }
-
-    // verre planeet (dim, met licht van één kant)
     const px = bw * 0.8, py = bh * 0.15, pr = U * 0.12;
     const pg = c.createRadialGradient(px - pr * 0.35, py - pr * 0.35, pr * 0.1, px, py, pr);
     pg.addColorStop(0, 'rgba(95,125,185,0.55)');
     pg.addColorStop(0.7, 'rgba(38,52,92,0.4)');
     pg.addColorStop(1, 'rgba(8,12,30,0.12)');
     c.fillStyle = pg; c.beginPath(); c.arc(px, py, pr, 0, Math.PI * 2); c.fill();
+
+    // scrollende sterren-laag (transparant, tegelt naadloos)
+    if (!bgStars) bgStars = document.createElement('canvas');
+    bgStars.width = bw; bgStars.height = bh;
+    const s = bgStars.getContext('2d');
+    s.clearRect(0, 0, bw, bh);
+    const N = Math.round(bw * bh / 11000);
+    for (let i = 0; i < N; i++) {
+      const x = Math.random() * bw, y = Math.random() * bh;
+      const r = (Math.random() * Math.random() * 1.4 + 0.3) * dpr;
+      const a = Math.random() * 0.7 + 0.15;
+      const t = Math.random();
+      s.fillStyle = t < 0.72 ? `rgba(255,255,255,${a})` : t < 0.86 ? `rgba(190,210,255,${a})` : `rgba(255,225,180,${a})`;
+      s.beginPath(); s.arc(x, y, r, 0, Math.PI * 2); s.fill();
+    }
+    for (let i = 0; i < 8; i++) {
+      const x = Math.random() * bw, y = Math.random() * bh;
+      const gr = s.createRadialGradient(x, y, 0, x, y, 6 * dpr);
+      gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      s.fillStyle = gr; s.beginPath(); s.arc(x, y, 6 * dpr, 0, Math.PI * 2); s.fill();
+    }
+  }
+
+  function spawnComet() {
+    const fromLeft = Math.random() < 0.5;
+    let dx = (fromLeft ? 1 : -1) * (0.6 + Math.random() * 0.3);
+    let dy = 0.6 + Math.random() * 0.3;
+    const m = Math.hypot(dx, dy); dx /= m; dy /= m;
+    comets.push({ x: fromLeft ? -0.05 : 1.05, y: Math.random() * 0.3, dx, dy, sp: 0.5 + Math.random() * 0.4 });
+  }
+  function drawComet(cm) {
+    const hx = cm.x * W, hy = cm.y * H;
+    const tx = (cm.x - cm.dx * 0.12) * W, ty = (cm.y - cm.dy * 0.12) * H;
+    const grad = g.createLinearGradient(hx, hy, tx, ty);
+    grad.addColorStop(0, 'rgba(255,255,255,0.9)'); grad.addColorStop(1, 'rgba(150,210,255,0)');
+    neon('#bfe6ff', S.glow);
+    g.strokeStyle = grad; g.lineWidth = Math.max(1.5, unit * 0.01); g.lineCap = 'round';
+    g.beginPath(); g.moveTo(hx, hy); g.lineTo(tx, ty); g.stroke();
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.arc(hx, hy, Math.max(1.5, unit * 0.008), 0, Math.PI * 2); g.fill();
+    noGlow();
   }
 
   function spawnWave(n) {
@@ -232,10 +256,11 @@ export function init(root, ctx) {
       for (let c = 0; c < cols; c++) {
         const x = marginX + (c + 0.5) * ((1 - 2 * marginX) / cols);
         const y = top + r * gapY;
-        enemies.push({ x, y, alive: true, color: ROW_COLORS[r % ROW_COLORS.length], points: (rows - r) * 10 });
+        enemies.push({ x, y, alive: true, color: ROW_COLORS[r % ROW_COLORS.length], points: (rows - r) * 10, delay: r * 0.06 + c * 0.015 });
       }
     }
     dir = 1;
+    introClock = 0;
     enemySpeed = 0.13 + (n - 1) * 0.02;
     enemyFireCd = Math.max(0.35, 1.0 - (n - 1) * 0.08);
     // Hooguit 1 power-up per golf in het begin, later 2. Ze vervallen per golf.
@@ -248,6 +273,7 @@ export function init(root, ctx) {
     pBullets = []; eBullets = []; particles = []; powerups = []; popups = [];
     invuln = 0; fireCd = 0; pTriple = 0; pRapid = 0; pShield = 0;
     shake = 0; killStreak = 0; streakT = 0;
+    comets = []; cometT = 3; muzzleT = 0; bank = 0; flashT = 0; bgScroll = 0;
     makeStars();
     spawnWave(1);
     state = 'playing';
@@ -285,6 +311,7 @@ export function init(root, ctx) {
     boom(player.x, player.y, PLAYER_COL, true);
     eBullets = [];
     shake = 0.4;
+    flashT = 0.3; flashCol = '255,60,60';
     sHit();
     updateHud();
     if (lives <= 0) gameOver();
@@ -327,7 +354,14 @@ export function init(root, ctx) {
   function update(dt) {
     // sfeer + visuele effecten lopen altijd
     clock += dt;
+    bgScroll += dt * H * 0.03;
+    if (muzzleT > 0) muzzleT -= dt;
+    if (flashT > 0) flashT -= dt;
     for (const st of stars) { st.y += st.sp * dt; if (st.y > 1.02) { st.y = -0.02; st.x = Math.random(); } }
+    cometT -= dt;
+    if (cometT <= 0) { spawnComet(); cometT = 5 + Math.random() * 6; }
+    for (const cm of comets) { cm.x += cm.dx * cm.sp * dt; cm.y += cm.dy * cm.sp * dt; }
+    comets = comets.filter((cm) => cm.x > -0.25 && cm.x < 1.25 && cm.y < 1.25);
     for (const p of particles) { if (p.ring != null) { p.ring += dt * 4; } else { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.6; } }
     particles = particles.filter((p) => (p.ring != null ? p.ring < 1.6 : p.life > 0));
     for (const pp of popups) { pp.y -= 0.12 * dt; pp.life -= dt * 0.9; }
@@ -342,6 +376,11 @@ export function init(root, ctx) {
     if (pRapid > 0) pRapid -= dt;
     if (pShield > 0) pShield -= dt;
     if (streakT > 0) { streakT -= dt; if (streakT <= 0) killStreak = 0; }
+    introClock += dt;
+    const targetBank = Math.max(-0.22, Math.min(0.22, (dragging ? (dragX - player.x) * 6 : moveDir) * 0.22));
+    bank += (targetBank - bank) * Math.min(1, dt * 10);
+    // motor-spoor achter het schip
+    particles.push({ x: player.x + (Math.random() - 0.5) * 0.012, y: player.y + (S.playerH * 0.45) / H, vx: (Math.random() - 0.5) * 0.05, vy: 0.22 + Math.random() * 0.15, life: 0.5, color: Math.random() < 0.5 ? '#39f6ff' : '#ffd23d' });
 
     // speler bewegen
     const halfW = (S.playerW / 2) / W;
@@ -360,6 +399,7 @@ export function init(root, ctx) {
         pBullets.push({ x: player.x, y: topY, vx: 0 });
       }
       fireCd = pRapid > 0 ? 0.09 : 0.18;
+      muzzleT = 0.06;
       sShoot();
     }
     for (const b of pBullets) { b.y -= 1.35 * dt; b.x += (b.vx || 0) * dt; }
@@ -375,6 +415,7 @@ export function init(root, ctx) {
       powerups = []; eBullets = [];           // openstaande power-ups/kogels opruimen
       spawnWave(wave);
       state = 'wavebreak'; breakT = 1.1;
+      flashT = 0.25; flashCol = '255,255,255';
       overlay.innerHTML = `<h2>Golf ${wave}</h2><p>Maak je klaar…</p>`;
       overlay.hidden = false;
       sWave();
@@ -404,7 +445,7 @@ export function init(root, ctx) {
       if (b.dead) continue;
       const bx = b.x * W, by = b.y * H;
       for (const e of enemies) {
-        if (!e.alive) continue;
+        if (!e.alive || (introClock - e.delay) < 0.28) continue;
         if (hit(bx, by, S.pBulletW, S.pBulletH, e.x * W, e.y * H, S.enemyW, S.enemyH)) {
           e.alive = false; b.dead = true;
           killStreak += 1; streakT = 1.2;
@@ -466,10 +507,10 @@ export function init(root, ctx) {
   }
 
   function draw() {
-    // realistische, vooraf gerenderde ruimte-achtergrond (beweegt niet mee met de
-    // shake), met er zacht overheen driftende + twinkelende sterren
-    if (bg) g.drawImage(bg, 0, 0, W, H);
+    // realistische ruimte: statische verre laag + langzaam scrollende sterren
+    if (bgFar) g.drawImage(bgFar, 0, 0, W, H);
     else { g.fillStyle = '#04050d'; g.fillRect(0, 0, W, H); }
+    if (bgStars) { const y = ((bgScroll % H) + H) % H; g.drawImage(bgStars, 0, y - H, W, H); g.drawImage(bgStars, 0, y, W, H); }
     noGlow();
     for (const st of stars) {
       const a = st.b * (0.55 + 0.45 * Math.sin(clock * st.ts + st.tw));
@@ -479,12 +520,18 @@ export function init(root, ctx) {
       g.beginPath(); g.arc(st.x * W, st.y * H, st.r, 0, Math.PI * 2); g.fill();
     }
     g.globalAlpha = 1;
+    for (const cm of comets) drawComet(cm);
 
     // wereld (beweegt mee met de shake)
     g.save();
     if (shake > 0) { const m = shake * unit * 0.16; g.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m); }
 
-    for (const e of enemies) if (e.alive) drawEnemy(e.x * W, e.y * H, e.color);
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      const p = Math.max(0, Math.min(1, (introClock - e.delay) / 0.28));
+      if (p <= 0) continue;
+      drawEnemy(e.x * W, e.y * H, e.color, p);
+    }
 
     neon(PLAYER_BULLET, S.glow);
     g.fillStyle = PLAYER_BULLET;
@@ -541,8 +588,21 @@ export function init(root, ctx) {
     }
     g.globalAlpha = 1; noGlow();
 
-    // speler
-    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) drawPlayer(player.x * W, player.y * H);
+    // speler (met lichte kanteling bij bewegen) + mondingsflits
+    if (!(invuln > 0 && Math.floor(invuln * 12) % 2 === 0)) {
+      g.save();
+      g.translate(player.x * W, player.y * H);
+      g.rotate(bank);
+      drawPlayer(0, 0);
+      g.restore();
+      if (muzzleT > 0) {
+        neon('#aef9ff', S.glow * 1.5);
+        g.globalAlpha = Math.min(1, muzzleT / 0.06);
+        g.fillStyle = '#eaffff';
+        g.beginPath(); g.arc(player.x * W, player.y * H - S.playerH * 0.5, S.playerW * 0.22, 0, Math.PI * 2); g.fill();
+        g.globalAlpha = 1; noGlow();
+      }
+    }
 
     // zwevende punten-popups
     for (const pp of popups) {
@@ -557,6 +617,9 @@ export function init(root, ctx) {
     g.textAlign = 'start'; g.textBaseline = 'alphabetic';
 
     g.restore();
+
+    // scherm-flits (rood bij hit, wit bij nieuwe golf)
+    if (flashT > 0) { g.fillStyle = `rgba(${flashCol},${Math.min(0.5, flashT * 1.6)})`; g.fillRect(0, 0, W, H); }
   }
 
   // Speler = een neon-luchtschip met motorvlam (en schild-ring bij power-up).
@@ -612,7 +675,12 @@ export function init(root, ctx) {
     }
   }
 
-  function drawEnemy(cx, cy, color) {
+  function drawEnemy(cx, cy, color, p) {
+    p = p == null ? 1 : p;
+    const sc = 0.4 + 0.6 * (1 - Math.pow(1 - p, 3)); // easeOutCubic pop-in
+    g.save();
+    g.globalAlpha = p;
+    g.translate(cx, cy); g.scale(sc, sc); g.translate(-cx, -cy);
     const w = S.enemyW, h = S.enemyH;
     neon(color, S.glow);
     g.fillStyle = color;
@@ -629,6 +697,7 @@ export function init(root, ctx) {
     g.fillStyle = '#05060f';
     g.fillRect(cx - w * 0.22, cy - h * 0.08, w * 0.14, h * 0.16);
     g.fillRect(cx + w * 0.08, cy - h * 0.08, w * 0.14, h * 0.16);
+    g.restore();
   }
 
   function loop(t) {

@@ -548,6 +548,20 @@ function initSyncStatus() {
   const vEl = document.getElementById('app-version');
   if (vEl) vEl.textContent = 'v' + APP_VERSION;
   route();
+
+  // Welkomstscherm bij het openen van de app — alleen op de startpagina
+  // (deeplinks naar een game gaan er direct langs).
+  const welcome = document.getElementById('welcome');
+  if (welcome && (!location.hash || location.hash === '#' || location.hash === '#/')) {
+    welcome.hidden = false;
+    const playBtn = document.getElementById('welcome-play');
+    playBtn.focus();
+    playBtn.addEventListener('click', () => {
+      sound.play('score');
+      welcome.classList.add('welcome-hide');
+      setTimeout(() => welcome.remove(), 500);
+    }, { once: true });
+  }
 })();
 
 // Service worker registreren: nodig om de app installeerbaar te maken (PWA)

@@ -494,6 +494,64 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 
 .game-hint { margin-top: 1rem; color: var(--text-muted); }
 
+/* ---------- welkomstscherm ---------- */
+
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  overflow: hidden;
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, rgba(95, 135, 245, 0.28), transparent 60%),
+    radial-gradient(50rem 35rem at 110% 110%, rgba(240, 150, 60, 0.2), transparent 60%),
+    var(--bg);
+  opacity: 1;
+  transition: opacity 0.45s ease;
+}
+.welcome.welcome-hide { opacity: 0; pointer-events: none; }
+
+.welcome-inner { position: relative; max-width: 26rem; }
+.welcome-logo { font-size: 4.5rem; line-height: 1; margin-bottom: 0.6rem; }
+.welcome h1 { margin: 0 0 0.6rem; font-size: 2rem; text-wrap: balance; }
+.welcome p { color: var(--text-muted); margin: 0 0 1.8rem; line-height: 1.55; }
+
+.welcome-play {
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 0.9rem 2.8rem;
+  border-radius: 2rem;
+  box-shadow: 0 6px 20px rgba(59, 110, 245, 0.4);
+}
+
+.welcome-icons { position: absolute; inset: 0; pointer-events: none; }
+.welcome-icons span { position: absolute; font-size: 2.2rem; opacity: 0.22; }
+.welcome-icons span:nth-child(1) { left: 8%; top: 16%; }
+.welcome-icons span:nth-child(2) { right: 10%; top: 12%; }
+.welcome-icons span:nth-child(3) { left: 14%; bottom: 18%; }
+.welcome-icons span:nth-child(4) { right: 12%; bottom: 22%; }
+.welcome-icons span:nth-child(5) { left: 45%; top: 7%; }
+.welcome-icons span:nth-child(6) { right: 42%; bottom: 8%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .welcome-inner { animation: card-in 0.5s ease backwards; }
+  .welcome-logo { animation: welcome-wob 2.4s ease-in-out infinite; }
+  .welcome-play { animation: welcome-pulse 1.8s ease-in-out infinite; }
+  .welcome-icons span { animation: welcome-float 5s ease-in-out infinite; }
+  .welcome-icons span:nth-child(2n) { animation-duration: 6.5s; animation-delay: 1.2s; }
+  .welcome-icons span:nth-child(3n) { animation-duration: 7.5s; animation-delay: 0.6s; }
+}
+@keyframes welcome-wob { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes welcome-pulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(59, 110, 245, 0.4); }
+  50% { box-shadow: 0 8px 30px rgba(59, 110, 245, 0.7); }
+}
+@keyframes welcome-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+
 /* ---------- feest-effecten (records) ---------- */
 
 .fx-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 200; }

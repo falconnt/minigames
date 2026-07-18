@@ -41,7 +41,10 @@ naar het menu; **Nieuw spel** vind je in het pauzemenu (of de ❔-knop voor uitl
    **leven** (je schip knippert dan even en is heel kort onkwetsbaar).
 5. Schiet je alle vijanden kapot, dan begin je aan de **volgende golf**, met meer
    en snellere vijanden.
-6. Bij **0 levens** is het game over.
+6. Elke **10e golf** verschijnt een **eindbaas** met een health-balk: hij zweeft
+   heen en weer en vuurt waaiers kogels af. Sloop hem helemaal leeg voor een
+   flinke bonus en ga door naar de volgende golf.
+7. Bij **0 levens** is het game over.
 
 ## Power-ups, combo's & geluid
 

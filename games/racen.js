@@ -18,7 +18,7 @@ const CARS = [
   { name: 'Mustang',          col: '#17171b', accent: '#0c0c0f', stripe: null,      wing: 'small', shape: 'muscle',  eng: 'v8', realistic: true, splitter: true, accentLine: '#8a2be2', underglow: '#8a2be2', headlight: '#5d7bff', lightBar: '#5d7bff', wheelCol: '#e8eaec', quad: true },
   { name: 'Audi R8',          col: '#141418', accent: '#0a0a0d', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v10', realistic: true, carbonHood: true, splitter: true, sideScoops: true, headlight: '#eef4ff', tailBar: '#ff2f2f', wheelCol: '#22242a', dualExhaust: true },
   { name: 'Pagani',           col: '#22345e', accent: '#0f1119', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v12', realistic: true, carbonHood: true, splitter: true, centerStripe: ['#f2c40f', '#1f6fe0'], roundLights: 'quad', lightBar: '#f2d21a', wheelCol: '#23252b', caliper: '#f2c40f', centerExhaust: true },
-  { name: 'Mazda RX500',      col: '#dfe4ea', accent: '#15151a', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary' },
+  { name: 'Mazda RX500',      col: '#c6cad0', accent: '#1a1b20', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary', realistic: true, roundLights: true, hoodLouvers: true, rearLouvers: true, wheelCol: '#aeb4bd', dualExhaust: true },
   { name: 'Koenigsegg Jesko', col: '#ff7a1a', accent: '#15151a', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v8' },
 ];
 const SHAPES = {
@@ -773,6 +773,22 @@ export function init(root, ctx) {
       gg.restore();
     }
 
+    // ---- motorkap-louvres (retro vent-panelen op de kap) ----
+    if (car.hoodLouvers) {
+      gg.save(); bodyPath(); gg.clip();
+      for (const sx of [-1, 1]) {
+        const cxp = cx + sx * bw * 0.2, pw = bw * 0.2;
+        const top = Math.min(py(0.52), py(0.72)), ph = Math.abs(py(0.52) - py(0.72));
+        gg.fillStyle = 'rgba(14,14,18,0.9)';
+        rrPath(gg, cxp - pw / 2, top, pw, ph, pw * 0.12); gg.fill();
+        gg.strokeStyle = 'rgba(150,154,160,0.35)'; gg.lineWidth = Math.max(0.5, w * 0.006);
+        gg.beginPath();
+        for (let i = 1; i < 4; i++) { const yy = top + ph * i / 4; gg.moveTo(cxp - pw / 2, yy); gg.lineTo(cxp + pw / 2, yy); }
+        gg.stroke();
+      }
+      gg.restore();
+    }
+
     // ---- zwarte zij-luchtinlaten (mid-engine scoops) ----
     if (car.sideScoops) {
       gg.save(); bodyPath(); gg.clip();
@@ -836,6 +852,17 @@ export function init(root, ctx) {
       rrPath(gg, cx - cpW / 2, cpCy - cpH / 2, cpW, cpH, cpW * 0.42); gg.fill();
       gg.fillStyle = 'rgba(130,180,230,0.28)';
       rrPath(gg, cx - cpW * 0.36, cpCy + front * cpH * 0.12, cpW * 0.72, cpH * 0.28, cpW * 0.2); gg.fill();
+    }
+
+    // ---- louvres op de achterklep (engine-cover slats) ----
+    if (car.rearLouvers) {
+      gg.save(); bodyPath(); gg.clip();
+      gg.strokeStyle = 'rgba(0,0,0,0.5)'; gg.lineWidth = Math.max(1, h * 0.008);
+      const y0 = py(-0.52), y1 = py(-0.82), n = 6;
+      gg.beginPath();
+      for (let i = 0; i < n; i++) { const yy = y0 + (y1 - y0) * i / (n - 1); gg.moveTo(px(-0.48), yy); gg.lineTo(px(0.48), yy); }
+      gg.stroke();
+      gg.restore();
     }
 
     // ---- spiegels (accentkleur) ----

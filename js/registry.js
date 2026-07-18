@@ -5,6 +5,7 @@ import { BIRD_ICON } from './bird-icon.js';
 import { ICON_2048 } from './icon-2048.js';
 import { ICON_REACTIE } from './icon-reactie.js';
 import { ICON_TETRIS } from './icon-tetris.js';
+import { ICON_RUIMTE } from './icon-ruimteschieter.js';
 
 export const categories = [
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
@@ -57,7 +58,7 @@ export const games = [
   {
     id: 'ruimteschieter',
     title: 'Ruimteschieter',
-    icon: '🚀',
+    icon: ICON_RUIMTE,
     category: 'arcade',
     description: 'Neon space-shooter: knal in je gloeiende ruimteschip de aanvallende vijanden uit de lucht en ontwijk hun schoten. Schermvullend, met de vinger of het toetsenbord.',
     scoreMode: 'higher',

@@ -262,6 +262,8 @@ body {
 .card-game-reactie .card-icon { background: linear-gradient(180deg, #e9f9ef, #c6ecd4); }
 /* Blokjes: donkere steengroeve zoals het speelveld. */
 .card-game-tetris .card-icon { background: linear-gradient(180deg, #32363f, #24262d); }
+/* Ruimteschieter: diepe ruimte zoals het speelveld. */
+.card-game-ruimteschieter .card-icon { background: linear-gradient(180deg, #10132b, #04050d); }
 .card-body h3 { margin: 0 0 0.25rem; }
 .card-body p { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.9rem; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }

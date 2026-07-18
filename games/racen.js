@@ -15,7 +15,7 @@ const CARS = [
   { name: 'Ferrari Pista',    col: '#22c1e8', accent: '#111114', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v8', realistic: true, carbonHood: true, splitter: true, sideStripe: true, sideScoops: true, wheelCol: '#26282e', caliper: '#e8d21a', dualExhaust: true },
   { name: 'Lamborghini SVJ',  col: '#1b8fe2', accent: '#101014', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v12', realistic: true, carbonHood: 'full', splitter: true, sideScoops: true, wheelCol: '#26282e', caliper: '#2aa0e8', dualExhaust: true },
   { name: 'Porsche 911',      col: '#1c1d23', accent: '#0c0c0f', stripe: null,      wing: 'big',   shape: 'classic', eng: 'flat6', realistic: true, splitter: true, sideStripe: true, sideStripeCol: '#12b39a', accentLine: '#12b39a', hoodStripes: '#12b39a', roundLights: true, wheelCol: '#24262c', caliper: '#12b39a', dualExhaust: true },
-  { name: 'Mustang',          col: '#1f57c8', accent: '#15151a', stripe: '#ffffff', wing: 'small', shape: 'muscle',  eng: 'v8' },
+  { name: 'Mustang',          col: '#17171b', accent: '#0c0c0f', stripe: null,      wing: 'small', shape: 'muscle',  eng: 'v8', realistic: true, splitter: true, accentLine: '#8a2be2', underglow: '#8a2be2', headlight: '#5d7bff', lightBar: '#5d7bff', wheelCol: '#e8eaec', quad: true },
   { name: 'Audi R8',          col: '#9aa1a8', accent: '#15151a', stripe: null,      wing: 'small', shape: 'super',   eng: 'v10' },
   { name: 'Pagani',           col: '#c9b06a', accent: '#2a2320', stripe: null,      wing: 'mid',   shape: 'super',   eng: 'v12' },
   { name: 'Mazda RX500',      col: '#dfe4ea', accent: '#15151a', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary' },
@@ -895,6 +895,15 @@ export function init(root, ctx) {
       gg.beginPath();
       for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + k * 2 * Math.PI / 3; gg.moveTo(cx, bcy); gg.lineTo(cx + Math.cos(a) * br * 0.62, bcy + Math.sin(a) * br * 0.62); }
       gg.stroke();
+    }
+
+    // ---- oplichtende front-lichtbalk (bv. blauw neon in de grille) ----
+    if (car.lightBar) {
+      gg.save(); gg.globalCompositeOperation = 'lighter';
+      gg.shadowColor = car.lightBar; gg.shadowBlur = w * 0.2;
+      gg.fillStyle = car.lightBar;
+      gg.fillRect(cx - bw * 0.32, py(0.8) - h * 0.008, bw * 0.64, h * 0.016);
+      gg.restore();
     }
 
     // ---- achterlichten (rode balk) ----

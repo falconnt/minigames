@@ -3,6 +3,8 @@
 // het gedeelde save-mechanisme (ctx.submitScore) en de game rendert binnen het
 // spelpaneel in plaats van fullscreen.
 
+import { availableHeight } from '../js/fit.js';
+
 function injectStyles() {
   if (document.getElementById('vogelvlucht-style')) return;
   const style = document.createElement('style');
@@ -74,7 +76,9 @@ export function init(root, ctx) {
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = canvas.clientWidth || wrap.clientWidth || 320;
-    H = Math.round(Math.min(Math.max(window.innerHeight * 0.62, 340), 660));
+    // Vul de resterende schermhoogte (schermvullend-richtlijn), met een
+    // bovengrens zodat het speelveld op grote schermen niet absurd hoog wordt.
+    H = Math.min(660, availableHeight(wrap, 14, 280));
     canvas.width = W * DPR;
     canvas.height = H * DPR;
     canvas.style.height = H + 'px';

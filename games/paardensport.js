@@ -10,6 +10,8 @@
 // erf met stallen en buitenbak, en paarden in zijaanzicht met vachtkleuren,
 // schaduw en dag/nacht-belichting.
 
+import { availableHeight, heightBelow } from '../js/fit.js';
+
 // ============================================================
 //  Gegevens: rassen, vachtkleuren, tuig
 // ============================================================
@@ -83,7 +85,7 @@ function injectStyles() {
     .ps-hud .stat { display:flex; align-items:center; gap:.35rem; }
     .ps-spacer { flex:1; }
     .ps-canvas-wrap { position:relative; }
-    .ps canvas { width:100%; border-radius:.75rem; display:block; touch-action:manipulation; }
+    .ps canvas { width:100%; border-radius:.75rem; display:block; margin-inline:auto; touch-action:manipulation; }
     .ps-nav { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.85rem; }
     .ps-panel { background:var(--bg-inset); border:1px solid var(--border); border-radius:.85rem; padding:1rem 1.15rem; margin-top:1rem; }
     .ps-panel h3 { margin:.1rem 0 .8rem; }
@@ -581,6 +583,20 @@ export function init(root, ctx) {
   function on(target, ev, fn, opts) { target.addEventListener(ev, fn, opts); listeners.push([target, ev, fn, opts]); }
   function stopRaf() { if (raf) { cancelAnimationFrame(raf); raf = null; } }
 
+  // Schermvullend-richtlijn: begrens de weergavebreedte van een canvas zó dat
+  // hij (met alles wat er binnen het scherm nog onder staat) in beeld past.
+  let refit = null;
+  function fitCanvas(id, min = 160) {
+    const cv = app.querySelector('#' + id);
+    if (!cv) return;
+    const wrap = cv.closest('.ps-canvas-wrap') || cv;
+    const below = heightBelow(wrap) + 24;
+    const h = availableHeight(cv, below, min);
+    cv.style.maxWidth = Math.round(h * (cv.width / cv.height)) + 'px';
+  }
+  function setRefit(fn) { refit = fn; if (fn) requestAnimationFrame(fn); }
+  on(window, 'resize', () => { if (refit) refit(); });
+
   root.className = 'ps';
   root.innerHTML = '<div id="ps-app"></div>';
   const app = root.querySelector('#ps-app');
@@ -776,6 +792,7 @@ export function init(root, ctx) {
         save.money += DAILY_BONUS; save.lastBonus = todayKey(); persist(); render();
       });
     }
+    setRefit(() => fitCanvas('ps-farm'));
   }
 
   // ============================================================
@@ -1040,6 +1057,7 @@ export function init(root, ctx) {
       course.push(80); drawFenceList(); drawCourse();
     });
     on(app.querySelector('#ps-ride'), 'click', () => rideCourse());
+    setRefit(() => fitCanvas('ps-course', 120));
   }
 
   function rideCourse() {
@@ -1125,6 +1143,7 @@ export function init(root, ctx) {
       }
       raf = requestAnimationFrame(loop);
     };
+    setRefit(() => fitCanvas('ps-ride'));
     raf = requestAnimationFrame(loop);
   }
 
@@ -1223,6 +1242,7 @@ export function init(root, ctx) {
       if (save.night) { g.fillStyle = 'rgba(20,30,70,.28)'; g.fillRect(0, 0, W, H); }
       if (!finished) raf = requestAnimationFrame(loop);
     };
+    setRefit(() => fitCanvas('ps-dress'));
     raf = requestAnimationFrame(loop);
   }
 
@@ -1315,6 +1335,7 @@ export function init(root, ctx) {
       }
       if (!finished) raf = requestAnimationFrame(loop);
     };
+    setRefit(() => fitCanvas('ps-race'));
     raf = requestAnimationFrame(loop);
   }
 
@@ -1392,6 +1413,7 @@ export function init(root, ctx) {
   // ============================================================
   function render() {
     stopRaf();
+    refit = null;
     applyDecay();
     const screens = {
       onboarding: renderOnboarding, erf: renderErf, stal: renderStal, markt: renderMarkt,

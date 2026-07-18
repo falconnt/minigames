@@ -18,3 +18,6 @@ scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
 
 - [online-highscores.md](online-highscores.md) — optionele online accounts en
   ranglijst per game koppelen via een gratis Supabase-project.
+- **Schermvullend spelen** — elke game hoort zonder scrollen speelbaar te zijn
+  (speelveld + bediening samen in beeld); zie de
+  [richtlijn in de hoofd-README](../README.md#richtlijn-schermvullend-spelen).

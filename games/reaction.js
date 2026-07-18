@@ -1,6 +1,8 @@
 // Reactietest — klik zodra het vlak groen wordt. Vijf rondes; het gemiddelde
 // in milliseconden is de score (lager is beter).
 
+import { availableHeight } from '../js/fit.js';
+
 const ROUNDS = 5;
 
 export function init(root, ctx) {
@@ -93,5 +95,19 @@ export function init(root, ctx) {
 
   zone.addEventListener('click', onClick);
 
-  return () => clearTimeout(timeout);
+  // Het klikvlak vult de resterende schermhoogte (schermvullend-richtlijn),
+  // met ruimte voor de resultatenregel eronder.
+  function fitZone() {
+    const below = Math.max(resultsEl.offsetHeight, 28) + 30; // + marge en paneelrand
+    const h = Math.min(520, availableHeight(zone, below, 170));
+    zone.style.minHeight = '0';
+    zone.style.height = h + 'px';
+  }
+  fitZone();
+  window.addEventListener('resize', fitZone);
+
+  return () => {
+    clearTimeout(timeout);
+    window.removeEventListener('resize', fitZone);
+  };
 }

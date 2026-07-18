@@ -5,6 +5,8 @@
 // left/top); samenvoegen geeft een "pop" en nieuwe tegels verschijnen met een
 // kleine schaal-animatie. Voortgang wordt automatisch bewaard.
 
+import { availableHeight } from '../js/fit.js';
+
 const PAD = 10;   // binnenmarge van het bord (px)
 const GAP = 10;   // ruimte tussen tegels (px)
 const ANIM = 130; // duur van de schuifanimatie (ms) — iets langer dan de CSS-transitie
@@ -14,6 +16,7 @@ export function init(root, ctx) {
     <div class="game-toolbar">
       <span class="stat">Score: <b id="g2048-score">0</b></span>
       <button id="g2048-new" class="btn">Nieuw spel</button>
+      <button id="g2048-help-btn" class="btn" aria-label="Uitleg">❔</button>
     </div>
     <div class="game-stage">
       <div id="g2048-grid" class="g2048-grid">
@@ -22,7 +25,19 @@ export function init(root, ctx) {
       </div>
       <div id="g2048-overlay" class="overlay" hidden></div>
     </div>
-    <p class="game-hint">Pijltjes, WASD of vegen om te schuiven.</p>`;
+    <dialog id="g2048-help" class="game-help">
+      <h2>Zo speel je 2048</h2>
+      <ul class="game-help-list">
+        <li>Schuif alle tegels met de <b>pijltjes</b>, <b>WASD</b> of door te <b>vegen</b>.</li>
+        <li>Twee gelijke tegels die botsen, <b>smelten samen</b> tot hun dubbele waarde.</li>
+        <li>Haal de <b>2048-tegel</b> — en speel daarna gerust door voor een hogere score.</li>
+        <li>Zit het bord vol zonder zetten? Dan is het spel voorbij.</li>
+      </ul>
+      <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>
+    </dialog>`;
+
+  const helpDlg = root.querySelector('#g2048-help');
+  root.querySelector('#g2048-help-btn').addEventListener('click', () => helpDlg.showModal());
 
   const grid = root.querySelector('#g2048-grid');
   const bgEl = root.querySelector('#g2048-bg');
@@ -47,8 +62,13 @@ export function init(root, ctx) {
 
   // ---------- geometrie ----------
   function layout() {
-    const size = grid.clientWidth;
+    // Vierkant bord dat zowel in de breedte als in de hoogte past (zie de
+    // schermvullend-richtlijn): niet groter dan de kolom, 22rem, of de
+    // resterende schermhoogte.
+    const parentW = grid.parentElement.clientWidth || root.clientWidth || 320;
+    const size = Math.floor(Math.min(parentW, 352, availableHeight(grid, 14, 200)));
     if (!size) return;
+    grid.style.width = size + 'px';
     cell = Math.max(20, Math.floor((size - 2 * PAD - 3 * GAP) / 4));
     grid.style.height = size + 'px';
     bgCells.forEach((d, i) => {

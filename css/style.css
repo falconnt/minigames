@@ -412,6 +412,29 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 
 .game-hint { margin-top: 1rem; color: var(--text-muted); }
 
+/* ---------- schermvullend spelen (zie richtlijn in README) ---------- */
+
+/* Uitleg-dialoog achter een ❔-knop, zodat er geen vaste teksttegel onder het
+   speelveld ruimte inneemt. */
+.game-help { max-width: 22rem; }
+.game-help h2 { margin: 0 0 0.6rem; font-size: 1.15rem; }
+.game-help-list {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+}
+
+/* Compactere paginarand op telefoons: meer ruimte voor het speelveld. */
+@media (max-width: 46rem) {
+  .view { padding: 0.75rem; }
+  .game-header { margin-bottom: 0.6rem; }
+  .game-root { padding: 0.85rem; }
+  .game-toolbar { margin-bottom: 0.6rem; }
+}
+
 /* ---------- 2048 ---------- */
 
 .g2048-grid {

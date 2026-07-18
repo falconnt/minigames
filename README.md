@@ -11,6 +11,7 @@ Een minigame-framework dat volledig statisch draait op **GitHub Pages** — geen
 - **Versleutelde lokale opslag** — saves en highscores staan versleuteld (AES-GCM) op het apparaat; knoeien maakt de data ongeldig.
 - **Licht & donker thema** — volgt standaard je systeemvoorkeur; de 🌓-knop overschrijft dat en onthoudt je keuze.
 - **Categorieën** — games zijn ingedeeld in categorieën met filterknoppen op het startscherm.
+- **Schermvullend spelen** — elke game past zijn speelveld aan de schermgrootte aan, zodat speelveld, knoppen en score zonder scrollen in beeld staan; uitleg zit achter een ❔-knop. Zie de richtlijn hieronder.
 - **Hash-routing** — `#/game/<id>` werkt zonder serverconfiguratie, dus ook op een GitHub Pages-projectpagina.
 
 ## Meegeleverde games
@@ -104,6 +105,25 @@ games/<id>.js         één module per game
    [`docs/README.md`](docs/README.md). Gebruik een bestaande pagina als sjabloon.
 
 Een nieuwe categorie toevoegen kan in dezelfde file, in de `categories`-lijst.
+
+### Richtlijn: schermvullend spelen
+
+Games horen zonder scrollen speelbaar te zijn: speelveld, knoppen en score
+passen samen in beeld, op elke schermgrootte. Concreet:
+
+- Meet in een `layout()`-functie de resterende hoogte met `availableHeight(el,
+  reserve)` uit [`js/fit.js`](js/fit.js) (en `heightBelow(el)` voor de ruimte
+  die knoppen/tekst eronder nodig hebben) en maak het speelveld zo groot als in
+  breedte **én** hoogte past. Herbereken bij `resize` (of met een
+  `ResizeObserver`).
+- Voor canvas-games met een vaste beeldverhouding: begrens de weergavebreedte
+  (`style.maxWidth = beschikbareHoogte × breedte/hoogte`), dan schaalt de
+  hoogte vanzelf mee.
+- Zet uitleg/instructies achter een **❔-knop** met een `<dialog
+  class="game-help">` in plaats van een vaste teksttegel onder het spel.
+- Test op een smal en laag scherm (bijv. 360×640) dat het spel inclusief
+  bediening boven de vouw blijft. Blokjes (Tetris) en 2048 zijn
+  referentie-implementaties.
 
 ## Deployen op GitHub Pages
 

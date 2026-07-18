@@ -58,8 +58,6 @@ export function init(root, ctx) {
       <span class="stat">Score: <b id="tet-score">0</b></span>
       <span class="stat">Rijen: <b id="tet-lines">0</b></span>
       <span class="stat">Level: <b id="tet-level">1</b></span>
-      <button id="tet-pause" class="btn">Pauze</button>
-      <button id="tet-new" class="btn">Nieuw spel</button>
     </div>
     <div class="tetris-stage">
       <div class="game-stage tetris-boardwrap">
@@ -69,6 +67,8 @@ export function init(root, ctx) {
       <aside class="tetris-side">
         <span class="tetris-side-label">Volgende</span>
         <canvas id="tet-next" class="tetris-next" aria-label="Volgend blok"></canvas>
+        <button id="tet-pause" class="btn tetris-side-btn">Pauze</button>
+        <button id="tet-new" class="btn tetris-side-btn">Nieuw</button>
       </aside>
     </div>
     <div class="tetris-controls" aria-label="Bediening">
@@ -481,12 +481,24 @@ export function init(root, ctx) {
   // ---------- layout ----------
   function layout() {
     const stage = root.querySelector('.tetris-stage');
+    const controls = root.querySelector('.tetris-controls');
+    const hint = root.querySelector('.game-hint');
     const avail = stage.clientWidth || root.clientWidth || 320;
-    const sideW = 108;                      // ruimte voor "volgende"-paneel (naast elkaar)
-    const stacked = avail < 360;            // op smalle schermen paneel eronder
-    const boardW = stacked ? avail : avail - sideW;
-    const maxH = Math.round((window.innerHeight || 700) * 0.62);
-    cell = Math.max(14, Math.floor(Math.min(boardW / COLS, maxH / ROWS)));
+    // Het "volgende"-paneel staat er altijd naast; reserveer die breedte + de
+    // flex-gap zodat het paneel nooit onder het bord wegvalt (dat zou de pagina
+    // hoger maken en de knoppen uit beeld duwen).
+    const gap = 12, sidePanel = 120;
+    const boardW = Math.max(120, avail - sidePanel - gap - 6);
+
+    // Verticale ruimte: van de bovenkant van het speelveld tot onder in het
+    // scherm, min wat de knoppen + hint eronder nodig hebben. Zo passen bord én
+    // bediening samen in beeld en hoef je tijdens het spelen niet te scrollen.
+    const stageTop = stage.getBoundingClientRect().top;
+    const below = (controls ? controls.offsetHeight : 140) + (hint ? hint.offsetHeight : 40) + 24;
+    const vAvail = (window.innerHeight || 700) - stageTop - below;
+    const maxH = Math.max(220, vAvail);
+
+    cell = Math.max(12, Math.floor(Math.min(boardW / COLS, maxH / ROWS)));
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = COLS * cell, h = ROWS * cell;
     boardCanvas.style.width = w + 'px';
@@ -507,6 +519,9 @@ export function init(root, ctx) {
 
   loadOrStart();
   layout();
+  // Mobiele browsers stellen hoogtes soms pas na de eerste render goed in.
+  requestAnimationFrame(layout);
+  setTimeout(layout, 200);
   updateStats();
   drawNext();
   raf = requestAnimationFrame(loop);

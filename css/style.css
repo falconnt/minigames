@@ -483,6 +483,11 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
   border: 2px solid #3a3d46;
   image-rendering: pixelated;
 }
+.tetris-side-btn {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+}
 
 .tetris-controls {
   display: grid;

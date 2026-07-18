@@ -30,6 +30,14 @@ jobs:
           printf "export const RUNTIME_ANON_KEY = '%s';\n" "${SUPABASE_ANON_KEY}" > js/cloud-key.js
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      # Versie stempelen: uniek per deploy, zodat de cache ververst en de app
+      # een zichtbaar versienummer heeft.
+      - name: Stempel versie
+        run: |
+          BUILD="$(date -u +%Y.%m.%d)-r${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
+          echo "export const APP_VERSION = '${BUILD}';" > js/version.js
+          sed -i "s/minigames-__BUILD__/minigames-${BUILD}/" sw.js
+          echo "Gestempelde versie: ${BUILD}"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

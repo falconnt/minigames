@@ -7,6 +7,7 @@ import { games, categories, getGame, getCategory } from './registry.js';
 import { cloudEnabled } from './cloud-config.js';
 import * as cloud from './cloud.js';
 import * as sync from './sync.js';
+import { APP_VERSION } from './version.js';
 
 const view = document.getElementById('view');
 let destroyCurrentGame = null;
@@ -287,21 +288,46 @@ function renderSettings() {
         ${opt('system', 'Systeem')}${opt('light', 'Licht')}${opt('dark', 'Donker')}
       </div>
     </div>
-    <p class="muted-line">Je saves en highscores staan versleuteld op dit apparaat. Log in met een account om ze ook online te bewaren.</p>
+    <div class="settings-row">
+      <span class="settings-label">App-versie</span>
+      <span class="muted-line">${APP_VERSION}</span>
+    </div>
+    <p class="muted-line">Zit je vast op een oude versie? Vernieuw de app om caches te wissen en de nieuwste versie te laden.</p>
     <div class="dialog-actions">
+      <button id="app-refresh" class="btn btn-primary">App vernieuwen</button>
       <button id="reset-btn" class="btn btn-danger">Wis alle gegevens op dit apparaat</button>
     </div>
-    <form method="dialog"><button class="btn btn-primary">Sluiten</button></form>`;
+    <form method="dialog"><button class="btn">Sluiten</button></form>`;
 
   dialog.querySelectorAll('[data-theme]').forEach((b) =>
     b.addEventListener('click', () => { setTheme(b.dataset.theme); renderSettings(); })
   );
+  dialog.querySelector('#app-refresh').addEventListener('click', (e) => forceUpdate(e.currentTarget));
   dialog.querySelector('#reset-btn').addEventListener('click', () => {
     if (confirm('Weet je zeker dat je ALLE saves en highscores op dit apparaat wilt wissen?')) {
       storage.resetAll();
       location.reload();
     }
   });
+}
+
+// Harde vernieuwing: caches wissen, service worker deregistreren en herladen met
+// cache-omzeiling. Voor toestellen die op een oude versie blijven hangen.
+async function forceUpdate(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Vernieuwen…'; }
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if (self.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch { /* toch herladen */ }
+  const url = new URL(location.href);
+  url.searchParams.set('v', Date.now().toString());
+  location.replace(url.toString());
 }
 
 // ---------- account (online in-/uitloggen) ----------
@@ -468,27 +494,39 @@ function initSyncStatus() {
   initSyncStatus();
   sync.initSync();
   document.getElementById('scores-btn').addEventListener('click', () => { location.hash = '#/scores'; });
+  const vEl = document.getElementById('app-version');
+  if (vEl) vEl.textContent = 'v' + APP_VERSION;
   route();
 })();
 
 // Service worker registreren: nodig om de app installeerbaar te maken (PWA)
 // en offline te laten werken. Relatief pad, dus werkt ook onder /minigames/.
 if ('serviceWorker' in navigator) {
+  let reloaded = false;
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then((reg) => {
+    // updateViaCache:'none' -> de browser haalt sw.js altijd vers op (geen HTTP-
+    // cache), zodat een nieuwe versie betrouwbaar wordt gedetecteerd.
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
       reg.update();
-      // Zodra een nieuwe versie klaarstaat én er al een actieve versie was,
-      // de pagina één keer herladen zodat de update meteen toegepast wordt.
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         if (!nw) return;
         nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          // Nieuwe versie klaar én er was al een actieve versie -> één keer herladen.
+          if (nw.state === 'installed' && navigator.serviceWorker.controller && !reloaded) {
+            reloaded = true;
             window.location.reload();
           }
         });
       });
     }).catch(() => { /* registratie mislukt (bijv. geen HTTPS); app werkt door */ });
+
+    // Bij terugkomst in de app opnieuw op updates controleren.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {});
+      }
+    });
   });
 }
 

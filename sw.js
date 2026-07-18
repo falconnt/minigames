@@ -1,7 +1,9 @@
 // Service worker: maakt de app installeerbaar (PWA) en offline bruikbaar.
 // Verhoog CACHE bij elke release zodat oude bestanden worden opgeruimd.
 
-const CACHE = 'minigames-v8';
+// De buildnaam wordt bij het deployen gestempeld (zie deploy.yml), zodat elke
+// release een verse cache krijgt en updates gegarandeerd doorkomen.
+const CACHE = 'minigames-__BUILD__';
 
 // Kern van de app-shell; relatieve paden werken zowel lokaal (/) als op
 // GitHub Pages (/minigames/). Games worden runtime gecachet bij eerste gebruik.
@@ -17,6 +19,7 @@ const APP_SHELL = [
   './js/cloud-config.js',
   './js/cloud-key.js',
   './js/sync.js',
+  './js/version.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

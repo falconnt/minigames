@@ -17,7 +17,7 @@ const CARS = [
   { name: 'Porsche 911',      col: '#1c1d23', accent: '#0c0c0f', stripe: null,      wing: 'big',   shape: 'classic', eng: 'flat6', realistic: true, splitter: true, sideStripe: true, sideStripeCol: '#12b39a', accentLine: '#12b39a', hoodStripes: '#12b39a', roundLights: true, wheelCol: '#24262c', caliper: '#12b39a', dualExhaust: true },
   { name: 'Mustang',          col: '#17171b', accent: '#0c0c0f', stripe: null,      wing: 'small', shape: 'muscle',  eng: 'v8', realistic: true, splitter: true, accentLine: '#8a2be2', underglow: '#8a2be2', headlight: '#5d7bff', lightBar: '#5d7bff', wheelCol: '#e8eaec', quad: true },
   { name: 'Audi R8',          col: '#141418', accent: '#0a0a0d', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v10', realistic: true, carbonHood: true, splitter: true, sideScoops: true, headlight: '#eef4ff', tailBar: '#ff2f2f', wheelCol: '#22242a', dualExhaust: true },
-  { name: 'Pagani',           col: '#c9b06a', accent: '#2a2320', stripe: null,      wing: 'mid',   shape: 'super',   eng: 'v12' },
+  { name: 'Pagani',           col: '#22345e', accent: '#0f1119', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v12', realistic: true, carbonHood: true, splitter: true, centerStripe: ['#f2c40f', '#1f6fe0'], roundLights: 'quad', lightBar: '#f2d21a', wheelCol: '#23252b', caliper: '#f2c40f', centerExhaust: true },
   { name: 'Mazda RX500',      col: '#dfe4ea', accent: '#15151a', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary' },
   { name: 'Koenigsegg Jesko', col: '#ff7a1a', accent: '#15151a', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v8' },
 ];
@@ -801,6 +801,13 @@ export function init(root, ctx) {
       const y0 = py(0.6), y1 = py(-0.82), top = Math.min(y0, y1), hgt = Math.abs(y1 - y0);
       for (let i = 0; i < 3; i++) { gg.fillStyle = cols[i]; gg.fillRect(cx + (i - 1) * gap - sw / 2, top, sw, hgt); }
     }
+    // ---- generieke midden-streep (1+ kleuren, bv. Pagani geel+blauw) ----
+    if (car.centerStripe) {
+      const cols = car.centerStripe, sw = bw * 0.05, gap = sw * 1.15;
+      const y0 = py(0.92), y1 = py(-0.82), top = Math.min(y0, y1), hgt = Math.abs(y1 - y0);
+      const startX = cx - (cols.length - 1) * gap / 2;
+      for (let i = 0; i < cols.length; i++) { gg.fillStyle = cols[i]; gg.fillRect(startX + i * gap - sw / 2, top, sw, hgt); }
+    }
 
     // ---- cockpit ----
     if (car.realistic) {
@@ -840,10 +847,11 @@ export function init(root, ctx) {
     // ---- koplampen (rechthoekig of rond 911-model, met gloed) ----
     const hlc = car.headlight || (car.ledlights ? '#eaf6ff' : null);
     if (car.roundLights) {
-      const r = w * 0.09, ly = py(0.72);
-      for (const sx of [-1, 1]) {
-        const lx = cx + sx * w * 0.32;
-        if (hlc) { gg.save(); gg.shadowColor = hlc; gg.shadowBlur = w * 0.12; }
+      const ly = py(0.72), quad = car.roundLights === 'quad';
+      const r = quad ? w * 0.058 : w * 0.09, offs = quad ? [0.2, 0.36] : [0.32];
+      for (const sx of [-1, 1]) for (const dxo of offs) {
+        const lx = cx + sx * w * dxo;
+        if (hlc) { gg.save(); gg.shadowColor = hlc; gg.shadowBlur = w * 0.1; }
         gg.fillStyle = hlc || '#fff7d0';
         gg.beginPath(); gg.arc(lx, ly, r, 0, Math.PI * 2); gg.fill();
         if (hlc) gg.restore();
@@ -919,7 +927,7 @@ export function init(root, ctx) {
     }
 
     // ---- uitlaten (quad of dubbel, midden) ----
-    const exPos = car.quad ? [-0.27, -0.13, 0.13, 0.27] : car.dualExhaust ? [-0.09, 0.09] : null;
+    const exPos = car.quad ? [-0.27, -0.13, 0.13, 0.27] : car.centerExhaust ? [-0.1, -0.034, 0.034, 0.1] : car.dualExhaust ? [-0.09, 0.09] : null;
     if (exPos) {
       const ey = py(-0.92), er = w * 0.05;
       for (const f of exPos) {

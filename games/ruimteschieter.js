@@ -322,41 +322,52 @@ export function init(root, ctx) {
     noGlow();
   }
 
-  // Speler = een neon-racket: een ovaal kopje met snaren en een steeltje.
+  // Afgeronde rechthoek (pad) — helper voor de cabine.
+  function rrect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  }
+
+  // Speler = een neon-luchtschip: een ovale ballon met een cabine eronder.
   function drawPlayer(cx, cy) {
     const w = S.playerW, h = S.playerH;
-    const headCy = cy - h * 0.12;
-    const rx = w * 0.46, ry = h * 0.44;
+    const bodyCy = cy - h * 0.08;
+    const rx = w * 0.5, ry = h * 0.34;
+    // romp (ballon)
     neon(PLAYER_COL, S.glow * 1.3);
-    g.strokeStyle = PLAYER_COL;
-    g.lineCap = 'round';
-    // steeltje
-    g.lineWidth = Math.max(2, w * 0.12);
+    g.fillStyle = PLAYER_COL;
     g.beginPath();
-    g.moveTo(cx, headCy + ry * 0.75);
-    g.lineTo(cx, cy + h * 0.5);
-    g.stroke();
-    // rand van de kop
-    g.lineWidth = Math.max(2, w * 0.09);
-    g.beginPath();
-    g.ellipse(cx, headCy, rx, ry, 0, 0, Math.PI * 2);
-    g.stroke();
+    g.ellipse(cx, bodyCy, rx, ry, 0, 0, Math.PI * 2);
+    g.fill();
     noGlow();
-    // snaren binnen de kop
-    g.save();
+    // panelen-lijn over de romp
+    g.strokeStyle = 'rgba(5, 6, 15, 0.45)';
+    g.lineWidth = Math.max(1, h * 0.03);
+    g.beginPath(); g.moveTo(cx - rx * 0.9, bodyCy); g.lineTo(cx + rx * 0.9, bodyCy); g.stroke();
+    // lichte glans bovenop
+    g.fillStyle = 'rgba(234, 255, 255, 0.85)';
+    g.beginPath(); g.ellipse(cx, bodyCy - ry * 0.45, rx * 0.5, ry * 0.26, 0, 0, Math.PI * 2); g.fill();
+    // touwtjes naar de cabine
+    const gW = w * 0.36, gH = h * 0.26, gy = cy + h * 0.26;
+    g.strokeStyle = PLAYER_COL;
+    g.lineWidth = Math.max(1, w * 0.02);
     g.beginPath();
-    g.ellipse(cx, headCy, rx * 0.86, ry * 0.86, 0, 0, Math.PI * 2);
-    g.clip();
-    g.strokeStyle = 'rgba(174, 249, 255, 0.55)';
-    g.lineWidth = 1;
-    const n = 4;
-    for (let i = 1; i < n; i++) {
-      const gx = cx - rx + (2 * rx) * (i / n);
-      g.beginPath(); g.moveTo(gx, headCy - ry); g.lineTo(gx, headCy + ry); g.stroke();
-      const gy = headCy - ry + (2 * ry) * (i / n);
-      g.beginPath(); g.moveTo(cx - rx, gy); g.lineTo(cx + rx, gy); g.stroke();
-    }
-    g.restore();
+    g.moveTo(cx - gW * 0.35, bodyCy + ry * 0.75); g.lineTo(cx - gW * 0.35, gy - gH / 2);
+    g.moveTo(cx + gW * 0.35, bodyCy + ry * 0.75); g.lineTo(cx + gW * 0.35, gy - gH / 2);
+    g.stroke();
+    // cabine (gondel)
+    g.fillStyle = '#eaffff';
+    rrect(cx - gW / 2, gy - gH / 2, gW, gH, Math.min(gW, gH) * 0.32); g.fill();
+    // raampjes
+    g.fillStyle = '#0a1030';
+    g.fillRect(cx - gW * 0.30, gy - gH * 0.16, gW * 0.18, gH * 0.4);
+    g.fillRect(cx + gW * 0.12, gy - gH * 0.16, gW * 0.18, gH * 0.4);
   }
 
   function drawEnemy(cx, cy, color) {

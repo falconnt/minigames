@@ -281,21 +281,113 @@ export function init(root, ctx) {
     g.fillStyle = glow; g.beginPath(); g.arc(0, 0, bird.w * 1.1, 0, Math.PI * 2); g.fill();
     g.rotate(bird.rot);
     const w = bird.w, h = bird.h, flap = Math.sin(elapsed * 22) * 0.6;
-    g.fillStyle = '#e8a800';
-    g.beginPath(); g.moveTo(-w * 0.32, h * 0.02); g.lineTo(-w * 0.5, -h * 0.08); g.lineTo(-w * 0.48, h * 0.1); g.closePath(); g.fill();
-    g.save(); g.translate(-w * 0.02, h * 0.02); g.rotate(0.5 + flap * 0.4);
-    g.fillStyle = '#f2c200'; g.beginPath(); g.ellipse(0, 0, w * 0.24, h * 0.13, 0, 0, Math.PI * 2); g.fill(); g.restore();
-    g.fillStyle = '#ffd43c'; g.beginPath(); g.ellipse(0, h * 0.08, w * 0.32, h * 0.3, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#fff8c0'; g.beginPath(); g.ellipse(-w * 0.02, h * 0.18, w * 0.2, h * 0.18, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#ffd43c'; g.beginPath(); g.ellipse(w * 0.2, -h * 0.2, w * 0.24, h * 0.22, 0, 0, Math.PI * 2); g.fill();
-    g.save(); g.translate(w * 0.14, -h * 0.4); g.rotate(-0.3);
-    g.fillStyle = '#e8a800'; g.beginPath(); g.moveTo(0, 0); g.lineTo(w * 0.05, -h * 0.14); g.lineTo(w * 0.09, 0.02); g.closePath(); g.fill(); g.restore();
-    g.fillStyle = '#f2b400'; g.beginPath(); g.moveTo(w * 0.4, -h * 0.18); g.lineTo(w * 0.56, -h * 0.13); g.lineTo(w * 0.4, -h * 0.06); g.closePath(); g.fill();
-    g.fillStyle = '#222'; g.beginPath(); g.arc(w * 0.26, -h * 0.24, w * 0.035, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(w * 0.27, -h * 0.25, w * 0.012, 0, Math.PI * 2); g.fill();
+    const wave = Math.sin(elapsed * 13) * 0.3;                 // sjaaltje wappert
+    const blink = elapsed % 3.2 > 3.05 ? 0.2 : 1;              // af en toe knipperen
+    const beakOpen = 0.06 + Math.max(0, -bird.vy / 900) * 0.5; // snavel open bij fladderen
+
+    // sjaaltje: wapperend uiteinde achter de vogel
+    g.save();
+    g.translate(-w * 0.16, -h * 0.06);
+    g.rotate(0.35 + wave);
+    g.fillStyle = '#e05b4b';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.quadraticCurveTo(-w * 0.3, h * 0.02 + wave * 6, -w * 0.44, h * 0.2);
+    g.lineTo(-w * 0.32, h * 0.3);
+    g.quadraticCurveTo(-w * 0.14, h * 0.14, 0, h * 0.12);
+    g.closePath(); g.fill();
+    g.restore();
+
+    // staart: drie gelaagde veren in oplopende tinten
+    const tailCols = ['#d18f00', '#f2c200', '#ffdf6b'];
+    for (let i = 0; i < 3; i++) {
+      g.save();
+      g.rotate((i - 1) * 0.16 + flap * 0.06);
+      g.fillStyle = tailCols[i];
+      g.beginPath();
+      g.moveTo(-w * 0.28, h * 0.02);
+      g.quadraticCurveTo(-w * 0.5, -h * 0.06 + i * h * 0.05, -w * 0.58, h * 0.02 + i * h * 0.05);
+      g.lineTo(-w * 0.3, h * 0.12);
+      g.closePath(); g.fill();
+      g.restore();
+    }
+
+    // achtervleugel (donkerder, tegenfase)
+    g.save(); g.translate(-w * 0.04, h * 0.02); g.rotate(0.5 - flap * 0.4);
+    g.fillStyle = '#d8a51a';
+    g.beginPath(); g.ellipse(-w * 0.06, 0, w * 0.22, h * 0.12, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+
+    // romp met verloop (licht bovenop, warm eronder)
+    const bodyGrad = g.createLinearGradient(0, -h * 0.35, 0, h * 0.42);
+    bodyGrad.addColorStop(0, '#ffe066');
+    bodyGrad.addColorStop(0.55, '#ffd43c');
+    bodyGrad.addColorStop(1, '#f0ad00');
+    g.fillStyle = bodyGrad;
+    g.beginPath(); g.ellipse(0, h * 0.08, w * 0.32, h * 0.3, 0, 0, Math.PI * 2); g.fill();
+
+    // buik
+    g.fillStyle = '#fff4cc';
+    g.beginPath(); g.ellipse(-w * 0.02, h * 0.18, w * 0.2, h * 0.17, 0, 0, Math.PI * 2); g.fill();
+
+    // sjaaltje: kraag om de hals
+    g.strokeStyle = '#e05b4b'; g.lineWidth = Math.max(3, w * 0.09); g.lineCap = 'round';
+    g.beginPath(); g.arc(w * 0.1, -h * 0.08, w * 0.19, 0.4, 2.4); g.stroke();
+
+    // kop met verloop
+    const headGrad = g.createLinearGradient(0, -h * 0.42, 0, -h * 0.02);
+    headGrad.addColorStop(0, '#ffe884');
+    headGrad.addColorStop(1, '#ffd43c');
+    g.fillStyle = headGrad;
+    g.beginPath(); g.ellipse(w * 0.2, -h * 0.2, w * 0.24, h * 0.22, 0, 0, Math.PI * 2); g.fill();
+
+    // kuifje: drie kleine veertjes
+    for (let i = 0; i < 3; i++) {
+      g.save();
+      g.translate(w * (0.1 + i * 0.05), -h * 0.4);
+      g.rotate(-0.5 + i * 0.3 + flap * 0.08);
+      g.fillStyle = i === 1 ? '#f2c200' : '#e8a800';
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(w * 0.035, -h * 0.15); g.lineTo(w * 0.07, 0); g.closePath(); g.fill();
+      g.restore();
+    }
+
+    // snavel: boven- en onderdeel, opent bij het fladderen
+    g.fillStyle = '#f59f00';
+    g.beginPath(); g.moveTo(w * 0.4, -h * 0.2); g.lineTo(w * 0.58, -h * 0.15); g.lineTo(w * 0.4, -h * 0.11); g.closePath(); g.fill();
+    g.save();
+    g.translate(w * 0.4, -h * 0.1);
+    g.rotate(beakOpen);
+    g.fillStyle = '#e08a00';
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(w * 0.15, 0.02); g.lineTo(0, h * 0.06); g.closePath(); g.fill();
+    g.restore();
+
+    // oog: wit oogwit, pupil met lichtpuntje, en af en toe een knipper
+    g.fillStyle = '#fff';
+    g.beginPath(); g.ellipse(w * 0.25, -h * 0.24, w * 0.055, h * 0.06 * blink, 0, 0, Math.PI * 2); g.fill();
+    if (blink > 0.5) {
+      g.fillStyle = '#26221f';
+      g.beginPath(); g.arc(w * 0.27, -h * 0.235, w * 0.03, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff';
+      g.beginPath(); g.arc(w * 0.283, -h * 0.25, w * 0.011, 0, Math.PI * 2); g.fill();
+    }
+    // blosje
+    g.fillStyle = 'rgba(255,120,90,0.35)';
+    g.beginPath(); g.ellipse(w * 0.33, -h * 0.12, w * 0.045, h * 0.03, 0, 0, Math.PI * 2); g.fill();
+
+    // voorvleugel: drie gespreide veren die meebewegen
     g.save(); g.translate(w * 0.02, 0); g.rotate(0.15 + flap * 0.55);
-    g.fillStyle = '#ffe27a'; g.beginPath(); g.ellipse(0, 0, w * 0.26, h * 0.15, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#f2b400'; g.beginPath(); g.ellipse(w * 0.12, 0, w * 0.1, h * 0.07, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    const wingCols = ['#f2b400', '#ffd43c', '#ffe27a'];
+    for (let i = 0; i < 3; i++) {
+      g.save();
+      g.rotate((i - 1) * 0.22);
+      g.fillStyle = wingCols[i];
+      g.beginPath();
+      g.ellipse(-w * 0.1, 0, w * 0.26 - i * w * 0.03, h * 0.11, 0, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+    g.restore();
+
     g.restore();
   }
 

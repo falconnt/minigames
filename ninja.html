@@ -48,7 +48,6 @@
   </div>
   <div id="area">
     <canvas id="cv"></canvas>
-    <div class="hint">Joystick links = lopen</div>
     <div id="dash" aria-label="Dash">💨</div>
     <div id="atk" aria-label="Aanvallen">🗡️</div>
 
@@ -158,7 +157,8 @@
   function scaleConst() {
     return {
       pR: unit * 0.024,
-      pSpeed: unit * 0.95,
+      pSpeed: unit * 0.60,     // rustiger, goed te sturen (was te hoog)
+      pAccelHalf: 0.07,        // halveringstijd voor soepel versnellen/afremmen
       atkRange: unit * 0.16,
       atkHalf: 1.15,           // ~66°
       atkCd: 0.32,
@@ -172,7 +172,7 @@
 
   function initWorld() {
     K = scaleConst();
-    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, hearts: 3, invuln: 0, atkCd: 0, atkT: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
+    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 3, invuln: 0, atkCd: 0, atkT: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
     enemies = []; particles = []; fireflies = []; trees = []; mists = [];
     tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0;
     // bomen langs de randen (decoratie)
@@ -220,34 +220,39 @@
 
   // ---- input ----
   const keys = {};
-  let joyId = null, joyBase = null, joyKnob = null;
-  const joyR = () => unit * 0.11;
+  // "Floating" joystick: waar je je vinger ook op de linkerhelft neerzet, dáár
+  // komt het midden. Je hoeft maar een klein stukje te slepen om vol te lopen.
+  // Als je niets aanraakt staat er een rust-joystick linksonder als hint.
+  let joyId = null, joyOrigin = null, joyFinger = null;
+  const joyR = () => unit * 0.13;
+  const joyHome = () => ({ x: joyR() + unit * 0.06, y: H - joyR() - unit * 0.06 });
 
   cv.addEventListener('pointerdown', (e) => {
     if (state !== 'playing') return;
     const r = cv.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
     if (x < W * 0.5 && joyId === null) {
-      joyId = e.pointerId; joyBase = { x, y }; joyKnob = { x, y };
+      joyId = e.pointerId; joyOrigin = { x, y }; joyFinger = { x, y };
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     }
   });
   cv.addEventListener('pointermove', (e) => {
     if (e.pointerId !== joyId) return;
     const r = cv.getBoundingClientRect();
-    joyKnob = { x: e.clientX - r.left, y: e.clientY - r.top };
+    joyFinger = { x: e.clientX - r.left, y: e.clientY - r.top };
   });
-  function endJoy(e) { if (e.pointerId === joyId) { joyId = null; joyBase = joyKnob = null; } }
+  function endJoy(e) { if (e.pointerId === joyId) { joyId = null; joyOrigin = null; joyFinger = null; } }
   cv.addEventListener('pointerup', endJoy);
   cv.addEventListener('pointercancel', endJoy);
 
   function joyDir() {
-    if (joyBase && joyKnob) {
-      let dx = joyKnob.x - joyBase.x, dy = joyKnob.y - joyBase.y;
+    if (joyFinger && joyOrigin) {
+      let dx = joyFinger.x - joyOrigin.x, dy = joyFinger.y - joyOrigin.y;
       const len = Math.hypot(dx, dy);
-      if (len < 6) return null;
-      const cl = Math.min(len, joyR());
-      return { x: dx / len, y: dy / len, mag: cl / joyR() };
+      if (len < 3) return null;
+      // analoog: zachtjes duwen = rustig lopen, vol duwen = topsnelheid
+      const mag = Math.min(1, len / joyR());
+      return { x: dx / len, y: dy / len, mag };
     }
     // toetsenbord
     let kx = (keys['ArrowRight'] || keys['d'] ? 1 : 0) - (keys['ArrowLeft'] || keys['a'] ? 1 : 0);
@@ -323,15 +328,24 @@
 
     const dir = joyDir();
     if (dir) { player.dirx = dir.x; player.diry = dir.y; }
+    // doelsnelheid bepalen
+    let tvx = 0, tvy = 0;
     if (player.dashT > 0) {
       player.dashT -= dt;
-      player.x += player.dvx * K.dashSpeed * dt;
-      player.y += player.dvy * K.dashSpeed * dt;
+      tvx = player.dvx * K.dashSpeed; tvy = player.dvy * K.dashSpeed;
       if (Math.random() < 0.6) particles.push(mkPart(player.x, player.y, '#7fbfff', 0.4));
     } else if (dir) {
-      player.x += dir.x * K.pSpeed * dir.mag * dt;
-      player.y += dir.y * K.pSpeed * dir.mag * dt;
+      tvx = dir.x * K.pSpeed * dir.mag; tvy = dir.y * K.pSpeed * dir.mag;
     }
+    // soepel naar de doelsnelheid toe (versnellen/afremmen) i.p.v. direct snappen
+    if (player.dashT > 0) { player.pvx = tvx; player.pvy = tvy; }
+    else {
+      const k = 1 - Math.pow(0.5, dt / K.pAccelHalf);
+      player.pvx += (tvx - player.pvx) * k;
+      player.pvy += (tvy - player.pvy) * k;
+    }
+    player.x += player.pvx * dt;
+    player.y += player.pvy * dt;
     const pad = K.pR;
     player.x = Math.max(pad, Math.min(W - pad, player.x));
     player.y = Math.max(pad, Math.min(H - pad, player.y));
@@ -351,7 +365,8 @@
       // botsing met speler
       if (player.invuln <= 0 && d < en.r + K.pR) {
         player.hearts--; updateHearts(); player.invuln = K.invuln; hurtFlash = 0.4; shake = Math.max(shake, 0.5); sHurt();
-        // terugstoot
+        // terugstoot + momentum stoppen (niet terug in de vijand glijden)
+        player.pvx = 0; player.pvy = 0;
         player.x -= vx * unit * 0.12; player.y -= vy * unit * 0.12;
         player.x = Math.max(pad, Math.min(W - pad, player.x));
         player.y = Math.max(pad, Math.min(H - pad, player.y));
@@ -367,7 +382,7 @@
   }
 
   function gameOver() {
-    state = 'over'; sDie();
+    state = 'over'; sDie(); joyId = null; joyOrigin = null; joyFinger = null;
     document.getElementById('fTime').textContent = tSurv.toFixed(1);
     document.getElementById('fKills').textContent = kills;
     const fBest = document.getElementById('fBest');
@@ -416,15 +431,6 @@
 
     // speler
     drawPlayer();
-
-    // joystick
-    if (joyBase && joyKnob) {
-      g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 2;
-      g.beginPath(); g.arc(joyBase.x, joyBase.y, joyR(), 0, 6.2832); g.stroke();
-      let dx = joyKnob.x - joyBase.x, dy = joyKnob.y - joyBase.y; const l = Math.hypot(dx, dy) || 1;
-      const cl = Math.min(l, joyR()); const kx = joyBase.x + dx / l * cl, ky = joyBase.y + dy / l * cl;
-      g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(kx, ky, joyR() * 0.42, 0, 6.2832); g.fill();
-    }
     g.restore();
 
     // vignette
@@ -433,6 +439,30 @@
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
     // hurt flits
     if (hurtFlash > 0) { g.fillStyle = 'rgba(255,20,60,' + (hurtFlash * 0.5) + ')'; g.fillRect(0, 0, W, H); }
+
+    // joystick: "floating" op je vinger, of een rust-joystick linksonder als hint
+    if (state === 'playing') {
+      const active = !!(joyFinger && joyOrigin), R = joyR();
+      const base = active ? joyOrigin : joyHome();
+      g.globalAlpha = active ? 1 : 0.6;
+      g.fillStyle = 'rgba(255,255,255,0.06)';
+      g.beginPath(); g.arc(base.x, base.y, R, 0, 6.2832); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.28)'; g.lineWidth = 2.5;
+      g.beginPath(); g.arc(base.x, base.y, R, 0, 6.2832); g.stroke();
+      // richting-pijltjes als hint
+      g.fillStyle = 'rgba(255,255,255,0.22)';
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2, ax = base.x + Math.cos(a) * R * 0.78, ay = base.y + Math.sin(a) * R * 0.78;
+        g.save(); g.translate(ax, ay); g.rotate(a); g.beginPath();
+        g.moveTo(R * 0.1, 0); g.lineTo(-R * 0.05, -R * 0.08); g.lineTo(-R * 0.05, R * 0.08); g.closePath(); g.fill(); g.restore();
+      }
+      let kx = base.x, ky = base.y;
+      if (active) { let dx = joyFinger.x - base.x, dy = joyFinger.y - base.y; const l = Math.hypot(dx, dy) || 1; const cl = Math.min(l, R); kx = base.x + dx / l * cl; ky = base.y + dy / l * cl; }
+      g.shadowColor = '#8fd0ff'; g.shadowBlur = 12;
+      g.fillStyle = active ? 'rgba(150,205,255,0.8)' : 'rgba(200,220,240,0.5)';
+      g.beginPath(); g.arc(kx, ky, R * 0.46, 0, 6.2832); g.fill(); g.shadowBlur = 0;
+      g.globalAlpha = 1;
+    }
   }
 
   function drawTree(t) {

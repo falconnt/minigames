@@ -97,6 +97,31 @@ export const games = [
     load: () => import('../games/racen.js'),
   },
   {
+    id: 'schaduwbos',
+    title: 'Schaduwbos',
+    icon: `<svg viewBox="0 0 48 48" width="1.15em" height="1.15em" style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg" aria-label="Schaduwbos">
+      <defs>
+        <linearGradient id="sb-ic-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12281c"/><stop offset="1" stop-color="#070d0b"/></linearGradient>
+        <radialGradient id="sb-ic-moon" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#eef6ee"/><stop offset="1" stop-color="#9fb8a4"/></radialGradient>
+      </defs>
+      <rect x="1" y="1" width="46" height="46" rx="11" fill="url(#sb-ic-bg)"/>
+      <circle cx="37" cy="12" r="6.5" fill="url(#sb-ic-moon)" opacity="0.92"/>
+      <circle cx="34.6" cy="10.6" r="6" fill="#12281c" opacity="0.55"/>
+      <g fill="#0b140e"><circle cx="8" cy="41" r="6"/><circle cx="14" cy="43" r="5"/><circle cx="41" cy="42" r="6"/></g>
+      <g transform="rotate(-38 24 26)"><rect x="22.9" y="7" width="2.2" height="27" rx="1.1" fill="#e6edf5"/><rect x="22.2" y="33" width="3.6" height="2" rx="1" fill="#c9a24a"/><rect x="23.2" y="35" width="1.6" height="6" rx="0.8" fill="#5a3a22"/></g>
+      <circle cx="22" cy="27" r="9" fill="#14181f"/>
+      <circle cx="22" cy="25.6" r="6.6" fill="#1c2230"/>
+      <rect x="14.6" y="22.6" width="14.8" height="3.4" rx="1.2" fill="#d21538"/>
+      <g fill="#ff5170"><rect x="17.6" y="23.2" width="3" height="2" rx="0.6"/><rect x="23.6" y="23.2" width="3" height="2" rx="0.6"/></g>
+      <path d="M15 30 q-4 3 -2.5 7 q3.2 -2 5 -4.2 z" fill="#c81438"/>
+    </svg>`,
+    category: 'arcade',
+    description: 'Donker ninja-overlevingsspel: monsters en geesten komen van alle kanten, je katana vliegt om je heen. Golven, power-ups en 5 hartjes. Schermvullend, met de vinger of het toetsenbord.',
+    scoreMode: 'higher',
+    formatScore: (s) => `${s} punten`,
+    load: () => import('../games/schaduwbos.js'),
+  },
+  {
     id: 'paardensport',
     title: 'Paardensport',
     icon: ICON_PAARD,

@@ -1,97 +1,60 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Schaduwbos 🥷</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; background: #05070a; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #eaeef5; }
-  #wrap { position: fixed; inset: 0; height: 100dvh; display: flex; flex-direction: column; touch-action: none; user-select: none; }
-  #top { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: linear-gradient(#0b1016, #0b101600); z-index: 5; }
-  #hearts { font-size: 20px; letter-spacing: 2px; filter: drop-shadow(0 0 4px #ff2d5588); }
-  .stat { font-size: 14px; color: #aeb8c6; }
-  .stat b { color: #eaeef5; }
-  #top .grow { flex: 1; }
-  .tbtn { background: #182230; border: 1px solid #2a3646; color: #eaeef5; border-radius: 10px; padding: 6px 10px; font-size: 15px; }
-  #area { position: relative; flex: 1; overflow: hidden; }
-  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  /* controls */
-  #atk, #dash { position: absolute; bottom: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: 26px; color: #fff; border: 2px solid #ffffff33; z-index: 6; touch-action: none; }
-  #atk { right: 24px; width: 92px; height: 92px; background: radial-gradient(circle at 35% 30%, #ff5c7a, #c01438); box-shadow: 0 0 22px #ff2d5566; }
-  #dash { right: 128px; width: 64px; height: 64px; bottom: 40px; background: radial-gradient(circle at 35% 30%, #62d0ff, #1c6fd0); box-shadow: 0 0 16px #38b6ff66; font-size: 22px; }
-  #atk:active, #dash:active { filter: brightness(1.3); transform: scale(0.94); }
-  #dash.cd, #atk.cd { opacity: 0.4; }
-  .hint { position: absolute; left: 20px; bottom: 30px; font-size: 12px; color: #7d8798; z-index: 6; pointer-events: none; }
-  /* overlays */
-  .ovl { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 24px; background: radial-gradient(120% 90% at 50% 40%, #0c1420dd, #04060af2); }
-  .ovl h1 { font-size: 34px; letter-spacing: 1px; margin-bottom: 6px; text-shadow: 0 0 18px #7a3cff88; }
-  .ovl p { color: #aeb8c6; font-size: 15px; line-height: 1.5; max-width: 460px; margin-bottom: 8px; }
-  .ovl .big { font-size: 20px; color: #eaeef5; margin: 8px 0; }
-  .play { margin-top: 16px; background: linear-gradient(#7a3cff, #4a1fd0); color: #fff; border: none; border-radius: 999px;
-    padding: 14px 34px; font-size: 20px; font-weight: 700; box-shadow: 0 6px 24px #7a3cff66; }
-  .play:active { transform: scale(0.96); }
-  .muted { opacity: 0.5; }
-  .hidden { display: none !important; }
-</style>
-</head>
-<body>
-<div id="wrap">
-  <div id="top">
-    <span id="hearts">❤️❤️❤️❤️❤️</span>
-    <span class="grow"></span>
-    <span class="stat">Tijd <b id="time">0.0</b>s</span>
-    <span class="stat">Kills <b id="kills">0</b></span>
-    <span class="stat">⚔️<b id="swords">1</b></span>
-    <button id="mute" class="tbtn" aria-label="Geluid aan/uit">🔊</button>
-  </div>
-  <div id="area">
-    <canvas id="cv"></canvas>
-    <div id="dash" aria-label="Dash">💨</div>
-    <div id="atk" aria-label="Snelle draai">🌀</div>
-
-    <div id="start" class="ovl">
-      <h1>🥷 Schaduwbos</h1>
-      <p>Je bent een ninja in een spookbos. Monsters en geesten komen van <b>alle kanten</b>.
-         Je <b>katana vliegt vanzelf om je heen</b> en maait alles weg wat het raakt — jij zorgt dat je
-         de monsters langs je zwaard laat lopen. Overleef zo lang mogelijk!</p>
-      <p>Elke <b>20 seconden</b> verschijnt een <b style="color:#ffd24d">gouden geest</b> met een zwaard — versla 'm en je krijgt er een <b>extra rondvliegend zwaard</b> bij!</p>
-      <p><b>Joystick</b> (links) om te lopen · <b>🌀</b> voor een snelle draai-boost · <b>💨</b> om te dashen.</p>
-      <button class="play" id="startBtn">▶ Spelen</button>
+// Schaduwbos — een donker ninja-overlevingsspel in een spookbos.
+// Van bovenaf: monsters & geesten komen van alle kanten; je katana vliegt
+// automatisch om je heen en maait ze weg. Golven elke 10s, gouden power-geest
+// elke 20s geeft een extra zwaard. Schermvullend, met de vinger of toetsenbord.
+export function init(root, ctx) {
+  root.innerHTML = '';
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  const fs = document.createElement('div');
+  fs.className = 'sb-fs';
+  fs.innerHTML = `<div class="sb-top">
+      <button class="sb-btn sb-back" aria-label="Terug naar menu">← Terug</button>
+      <span id="sb-hearts" class="sb-hearts">❤️❤️❤️❤️❤️</span>
+      <span class="sb-grow"></span>
+      <span class="sb-stat">Tijd <b id="sb-time">0.0</b>s</span>
+      <span class="sb-stat">Kills <b id="sb-kills">0</b></span>
+      <span class="sb-stat">⚔️<b id="sb-swords">1</b></span>
+      <button id="sb-mute" class="sb-btn" aria-label="Geluid aan of uit">🔊</button>
     </div>
+    <div id="sb-area" class="sb-area">
+      <canvas id="sb-cv" class="sb-cv"></canvas>
+      <div id="sb-dash" class="sb-dash" aria-label="Dash">💨</div>
+      <div id="sb-atk" class="sb-atk" aria-label="Snelle draai">🌀</div>
+      <div id="sb-start" class="sb-ovl">
+        <h1>🥷 Schaduwbos</h1>
+        <p>Je bent een ninja in een spookbos. Monsters en geesten komen van <b>alle kanten</b>.
+           Je <b>katana vliegt vanzelf om je heen</b> en maait alles weg wat het raakt — jij zorgt dat je
+           de monsters langs je zwaard laat lopen. Overleef zo lang mogelijk!</p>
+        <p>Elke <b>10 seconden</b> komt er een golf met meer monsters. Elke <b>20 seconden</b> verschijnt een
+           <b style="color:#ffd24d">gouden geest</b> — versla 'm voor een <b>extra rondvliegend zwaard</b>!</p>
+        <p><b>Joystick</b> (links) om te lopen · <b>🌀</b> voor een snelle draai-boost · <b>💨</b> om te dashen.</p>
+        <button class="sb-play" id="sb-startBtn">▶ Spelen</button>
+      </div>
+      <div id="sb-over" class="sb-ovl sb-hidden">
+        <h1>💀 Verslagen</h1>
+        <div class="sb-big">Je overleefde <b id="sb-fTime">0</b> seconden</div>
+        <div class="sb-big">Monsters verslagen: <b id="sb-fKills">0</b></div>
+        <p id="sb-fBest"></p>
+        <button class="sb-play" id="sb-againBtn">↻ Opnieuw</button>
+      </div>
+    </div>`;
+  document.body.appendChild(fs);
 
-    <div id="over" class="ovl hidden">
-      <h1>💀 Verslagen</h1>
-      <div class="big">Je overleefde <b id="fTime">0</b> seconden</div>
-      <div class="big">Monsters verslagen: <b id="fKills">0</b></div>
-      <p id="fBest"></p>
-      <button class="play" id="againBtn">↻ Opnieuw</button>
-    </div>
-  </div>
-</div>
-<script>
-(() => {
-  "use strict";
-  // ---- mock opslag (het echte minigames-framework regelt dit later) ----
-  const store = {
-    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
-    set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
-  };
+  // opslag/highscores worden door het minigames-framework geregeld (ctx)
 
-  const cv = document.getElementById('cv');
+  const cv = document.getElementById('sb-cv');
   const g = cv.getContext('2d');
-  const area = document.getElementById('area');
-  const heartsEl = document.getElementById('hearts');
-  const timeEl = document.getElementById('time');
-  const killsEl = document.getElementById('kills');
-  const swordsEl = document.getElementById('swords');
-  const muteBtn = document.getElementById('mute');
-  const atkBtn = document.getElementById('atk');
-  const dashBtn = document.getElementById('dash');
-  const startOvl = document.getElementById('start');
-  const overOvl = document.getElementById('over');
+  const area = document.getElementById('sb-area');
+  const heartsEl = document.getElementById('sb-hearts');
+  const timeEl = document.getElementById('sb-time');
+  const killsEl = document.getElementById('sb-kills');
+  const swordsEl = document.getElementById('sb-swords');
+  const muteBtn = document.getElementById('sb-mute');
+  const atkBtn = document.getElementById('sb-atk');
+  const dashBtn = document.getElementById('sb-dash');
+  const startOvl = document.getElementById('sb-start');
+  const overOvl = document.getElementById('sb-over');
 
   let W = 0, H = 0, DPR = 1, unit = 400;
   let worldW = 0, worldH = 0, camX = 0, camY = 0;   // grote map + camera
@@ -105,7 +68,7 @@
     // map is groter dan het scherm; de camera volgt de speler
     worldW = W * 2.6; worldH = H * 2.6;
   }
-  new ResizeObserver(resize).observe(area);
+  const ro = new ResizeObserver(resize); ro.observe(area);
   resize();
 
   // ---- audio (procedureel, uit te zetten) ----
@@ -151,7 +114,7 @@
   const sPower = () => { blip(660, 0.14, 'triangle', 0.09, 990); blip(990, 0.18, 'triangle', 0.08, 1480); blip(1320, 0.22, 'sine', 0.07); };
 
   muteBtn.addEventListener('click', () => {
-    muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; muteBtn.classList.toggle('muted', muted);
+    muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; muteBtn.classList.toggle('sb-muted', muted);
     if (drone) drone.gg.gain.value = muted ? 0 : 0.05;
     ensureAudio();
   });
@@ -160,7 +123,7 @@
   let state = 'start'; // start | playing | over
   let player, enemies, particles, fireflies, trees, mists, floaters;
   let tSurv = 0, kills = 0, spawnCd = 0, shake = 0, hurtFlash = 0, lastFrame = 0, powerGhostCd = 20, waveLevel = 0;
-  let best = parseFloat(store.get('schaduwbos.best') || '0') || 0;
+  const hs = () => { try { return ctx.getHighscores() || []; } catch (e) { return []; } };
 
   function scaleConst() {
     return {
@@ -326,14 +289,16 @@
 
   atkBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); doSpin(); });
   dashBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); doDash(); });
-  window.addEventListener('keydown', (e) => {
+  function onKeyDown(e) {
     keys[e.key] = true;
     if (state === 'playing') {
       if (e.key === ' ' || e.key.toLowerCase() === 'j') { e.preventDefault(); doSpin(); }
       if (e.key.toLowerCase() === 'k' || e.key === 'Shift') { e.preventDefault(); doDash(); }
     }
-  });
-  window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+  }
+  function onKeyUp(e) { keys[e.key] = false; }
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
 
   // ---- update ----
   function update(dt) {
@@ -450,12 +415,14 @@
 
   function gameOver() {
     state = 'over'; sDie(); joyId = null; joyOrigin = null; joyFinger = null;
-    document.getElementById('fTime').textContent = tSurv.toFixed(1);
-    document.getElementById('fKills').textContent = kills;
-    const fBest = document.getElementById('fBest');
-    if (tSurv > best) { best = tSurv; store.set('schaduwbos.best', String(best)); fBest.textContent = '🏆 Nieuw record!'; }
-    else fBest.textContent = 'Record: ' + best.toFixed(1) + 's';
-    overOvl.classList.remove('hidden');
+    document.getElementById('sb-fTime').textContent = tSurv.toFixed(1);
+    document.getElementById('sb-fKills').textContent = kills;
+    const score = Math.floor(tSurv * 10 + kills * 5);
+    const res = score > 0 ? ctx.submitScore(score) : null;
+    const fBest = document.getElementById('sb-fBest');
+    fBest.textContent = res && res.isRecord ? '🏆 Nieuw record! — ' + score + ' punten'
+      : (res && res.rank ? score + ' punten — plek ' + res.rank + ' in de top 10' : score + ' punten');
+    overOvl.classList.remove('sb-hidden');
   }
 
   // ---- teken ----
@@ -683,28 +650,46 @@
   }
 
   // ---- loop ----
+  let raf = 0, running = true;
   function loop(ts) {
+    if (!running) return;
     const dt = Math.min(0.05, (ts - lastFrame) / 1000 || 0); lastFrame = ts;
     if (state === 'playing') update(dt);
     draw();
-    requestAnimationFrame(loop);
+    raf = requestAnimationFrame(loop);
   }
 
   function startGame() {
     ensureAudio(); resize(); initWorld();
     state = 'playing';
-    startOvl.classList.add('hidden'); overOvl.classList.add('hidden');
+    startOvl.classList.add('sb-hidden'); overOvl.classList.add('sb-hidden');
   }
-  document.getElementById('startBtn').addEventListener('click', startGame);
-  document.getElementById('againBtn').addEventListener('click', startGame);
+  document.getElementById('sb-startBtn').addEventListener('click', startGame);
+  document.getElementById('sb-againBtn').addEventListener('click', startGame);
 
-  // toon record op startscherm
-  if (best > 0) startOvl.querySelector('p:last-of-type').insertAdjacentHTML('afterend', '<p>🏆 Jouw record: <b>' + best.toFixed(1) + 's</b></p>');
+  // toon huidige highscore op startscherm
+  const top0 = hs()[0];
+  if (top0 && top0.score) startOvl.querySelector('p:last-of-type').insertAdjacentHTML('afterend', '<p>🏆 Highscore: <b>' + top0.score + ' punten</b></p>');
 
   // veilige init zodat draw() niet crasht vóór start
   initWorld(); state = 'start';
-  requestAnimationFrame(loop);
-})();
-</script>
-</body>
-</html>
+  raf = requestAnimationFrame(loop);
+  // ---- terug-knop + opruimen (framework) ----
+  function onBack() {
+    const score = Math.floor(tSurv * 10 + kills * 5);
+    if (state === 'playing' && score > 0) { try { ctx.submitScore(score); } catch (e) {} }
+    location.hash = '#/';
+  }
+  fs.querySelector('.sb-back').addEventListener('click', onBack);
+
+  return () => {
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('keyup', onKeyUp);
+    try { ro.disconnect(); } catch (e) {}
+    if (ac) { try { ac.close(); } catch (e) {} }
+    document.body.style.overflow = prevOverflow;
+    fs.remove();
+  };
+}

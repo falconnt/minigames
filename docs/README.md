@@ -10,6 +10,7 @@ scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
 | 🟩 Blokjes (Tetris) | Puzzel | [tetris.md](tetris.md) |
 | 🚀 Ruimteschieter | Arcade | [ruimteschieter.md](ruimteschieter.md) |
 | 🏎️ Racen | Arcade | [racen.md](racen.md) |
+| 🥷 Schaduwbos | Arcade | [schaduwbos.md](schaduwbos.md) |
 | ⚡ Reactietest | Reflex | [reactietest.md](reactietest.md) |
 | 🏇 Paardensport | Simulatie | [paardensport.md](paardensport.md) |
 

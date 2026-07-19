@@ -157,7 +157,7 @@
   function scaleConst() {
     return {
       pR: unit * 0.024,
-      pSpeed: unit * 0.95,
+      pSpeed: unit * 1.08,
       atkRange: unit * 0.16,
       atkHalf: 1.15,           // ~66°
       atkCd: 0.32,
@@ -219,9 +219,10 @@
 
   // ---- input ----
   const keys = {};
-  // Vaste joystick linksonder: altijd zichtbaar. Je zet je vinger ergens op de
-  // linkerhelft en sleept; de knop volgt (of raak de joystick zelf aan).
-  let joyId = null, joyFinger = null;
+  // "Floating" joystick: waar je je vinger ook op de linkerhelft neerzet, dáár
+  // komt het midden. Je hoeft maar een klein stukje te slepen om vol te lopen.
+  // Als je niets aanraakt staat er een rust-joystick linksonder als hint.
+  let joyId = null, joyOrigin = null, joyFinger = null;
   const joyR = () => unit * 0.13;
   const joyHome = () => ({ x: joyR() + unit * 0.06, y: H - joyR() - unit * 0.06 });
 
@@ -230,7 +231,7 @@
     const r = cv.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
     if (x < W * 0.5 && joyId === null) {
-      joyId = e.pointerId; joyFinger = { x, y };
+      joyId = e.pointerId; joyOrigin = { x, y }; joyFinger = { x, y };
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     }
   });
@@ -239,18 +240,18 @@
     const r = cv.getBoundingClientRect();
     joyFinger = { x: e.clientX - r.left, y: e.clientY - r.top };
   });
-  function endJoy(e) { if (e.pointerId === joyId) { joyId = null; joyFinger = null; } }
+  function endJoy(e) { if (e.pointerId === joyId) { joyId = null; joyOrigin = null; joyFinger = null; } }
   cv.addEventListener('pointerup', endJoy);
   cv.addEventListener('pointercancel', endJoy);
 
   function joyDir() {
-    if (joyFinger) {
-      const home = joyHome();
-      let dx = joyFinger.x - home.x, dy = joyFinger.y - home.y;
+    if (joyFinger && joyOrigin) {
+      let dx = joyFinger.x - joyOrigin.x, dy = joyFinger.y - joyOrigin.y;
       const len = Math.hypot(dx, dy);
-      if (len < 4) return null;
-      const cl = Math.min(len, joyR());
-      return { x: dx / len, y: dy / len, mag: cl / joyR() };
+      if (len < 3) return null;
+      // vol lopen al bij ~55% uitslag → makkelijker
+      const mag = Math.min(1, len / (joyR() * 0.55));
+      return { x: dx / len, y: dy / len, mag };
     }
     // toetsenbord
     let kx = (keys['ArrowRight'] || keys['d'] ? 1 : 0) - (keys['ArrowLeft'] || keys['a'] ? 1 : 0);
@@ -370,7 +371,7 @@
   }
 
   function gameOver() {
-    state = 'over'; sDie(); joyId = null; joyFinger = null;
+    state = 'over'; sDie(); joyId = null; joyOrigin = null; joyFinger = null;
     document.getElementById('fTime').textContent = tSurv.toFixed(1);
     document.getElementById('fKills').textContent = kills;
     const fBest = document.getElementById('fBest');
@@ -428,25 +429,28 @@
     // hurt flits
     if (hurtFlash > 0) { g.fillStyle = 'rgba(255,20,60,' + (hurtFlash * 0.5) + ')'; g.fillRect(0, 0, W, H); }
 
-    // vaste joystick (linksonder, altijd zichtbaar tijdens het spelen)
+    // joystick: "floating" op je vinger, of een rust-joystick linksonder als hint
     if (state === 'playing') {
-      const home = joyHome(), R = joyR();
+      const active = !!(joyFinger && joyOrigin), R = joyR();
+      const base = active ? joyOrigin : joyHome();
+      g.globalAlpha = active ? 1 : 0.6;
       g.fillStyle = 'rgba(255,255,255,0.06)';
-      g.beginPath(); g.arc(home.x, home.y, R, 0, 6.2832); g.fill();
+      g.beginPath(); g.arc(base.x, base.y, R, 0, 6.2832); g.fill();
       g.strokeStyle = 'rgba(255,255,255,0.28)'; g.lineWidth = 2.5;
-      g.beginPath(); g.arc(home.x, home.y, R, 0, 6.2832); g.stroke();
-      // richel-pijltjes als hint
+      g.beginPath(); g.arc(base.x, base.y, R, 0, 6.2832); g.stroke();
+      // richting-pijltjes als hint
       g.fillStyle = 'rgba(255,255,255,0.22)';
       for (let i = 0; i < 4; i++) {
-        const a = i * Math.PI / 2, ax = home.x + Math.cos(a) * R * 0.78, ay = home.y + Math.sin(a) * R * 0.78;
+        const a = i * Math.PI / 2, ax = base.x + Math.cos(a) * R * 0.78, ay = base.y + Math.sin(a) * R * 0.78;
         g.save(); g.translate(ax, ay); g.rotate(a); g.beginPath();
         g.moveTo(R * 0.1, 0); g.lineTo(-R * 0.05, -R * 0.08); g.lineTo(-R * 0.05, R * 0.08); g.closePath(); g.fill(); g.restore();
       }
-      let kx = home.x, ky = home.y;
-      if (joyFinger) { let dx = joyFinger.x - home.x, dy = joyFinger.y - home.y; const l = Math.hypot(dx, dy) || 1; const cl = Math.min(l, R); kx = home.x + dx / l * cl; ky = home.y + dy / l * cl; }
+      let kx = base.x, ky = base.y;
+      if (active) { let dx = joyFinger.x - base.x, dy = joyFinger.y - base.y; const l = Math.hypot(dx, dy) || 1; const cl = Math.min(l, R); kx = base.x + dx / l * cl; ky = base.y + dy / l * cl; }
       g.shadowColor = '#8fd0ff'; g.shadowBlur = 12;
-      g.fillStyle = joyFinger ? 'rgba(150,205,255,0.75)' : 'rgba(200,220,240,0.5)';
+      g.fillStyle = active ? 'rgba(150,205,255,0.8)' : 'rgba(200,220,240,0.5)';
       g.beginPath(); g.arc(kx, ky, R * 0.46, 0, 6.2832); g.fill(); g.shadowBlur = 0;
+      g.globalAlpha = 1;
     }
   }
 

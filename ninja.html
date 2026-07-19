@@ -44,6 +44,7 @@
     <span class="grow"></span>
     <span class="stat">Tijd <b id="time">0.0</b>s</span>
     <span class="stat">Kills <b id="kills">0</b></span>
+    <span class="stat">⚔️<b id="swords">1</b></span>
     <button id="mute" class="tbtn" aria-label="Geluid aan/uit">🔊</button>
   </div>
   <div id="area">
@@ -56,6 +57,7 @@
       <p>Je bent een ninja in een spookbos. Monsters en geesten komen van <b>alle kanten</b>.
          Je <b>katana vliegt vanzelf om je heen</b> en maait alles weg wat het raakt — jij zorgt dat je
          de monsters langs je zwaard laat lopen. Overleef zo lang mogelijk!</p>
+      <p>Elke <b>20 seconden</b> verschijnt een <b style="color:#ffd24d">gouden geest</b> met een zwaard — versla 'm en je krijgt er een <b>extra rondvliegend zwaard</b> bij!</p>
       <p><b>Joystick</b> (links) om te lopen · <b>🌀</b> voor een snelle draai-boost · <b>💨</b> om te dashen.</p>
       <button class="play" id="startBtn">▶ Spelen</button>
     </div>
@@ -84,6 +86,7 @@
   const heartsEl = document.getElementById('hearts');
   const timeEl = document.getElementById('time');
   const killsEl = document.getElementById('kills');
+  const swordsEl = document.getElementById('swords');
   const muteBtn = document.getElementById('mute');
   const atkBtn = document.getElementById('atk');
   const dashBtn = document.getElementById('dash');
@@ -142,6 +145,7 @@
   const sHurt = () => { blip(300, 0.3, 'sawtooth', 0.14, 60); noise(0.3, 0.14, 900, 120); };
   const sDash = () => { noise(0.22, 0.14, 2200, 300); };
   const sDie = () => { blip(220, 0.7, 'sawtooth', 0.16, 40); noise(0.7, 0.14, 700, 90); };
+  const sPower = () => { blip(660, 0.14, 'triangle', 0.09, 990); blip(990, 0.18, 'triangle', 0.08, 1480); blip(1320, 0.22, 'sine', 0.07); };
 
   muteBtn.addEventListener('click', () => {
     muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; muteBtn.classList.toggle('muted', muted);
@@ -151,8 +155,8 @@
 
   // ---- spelstatus ----
   let state = 'start'; // start | playing | over
-  let player, enemies, particles, fireflies, trees, mists;
-  let tSurv = 0, kills = 0, spawnCd = 0, shake = 0, hurtFlash = 0, lastFrame = 0;
+  let player, enemies, particles, fireflies, trees, mists, floaters;
+  let tSurv = 0, kills = 0, spawnCd = 0, shake = 0, hurtFlash = 0, lastFrame = 0, powerGhostCd = 20;
   let best = parseFloat(store.get('schaduwbos.best') || '0') || 0;
 
   function scaleConst() {
@@ -178,9 +182,9 @@
 
   function initWorld() {
     K = scaleConst();
-    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 3, invuln: 0, swordAngle: 0, spinT: 0, spinCd: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
-    enemies = []; particles = []; fireflies = []; trees = []; mists = [];
-    tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0;
+    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 3, invuln: 0, swords: 1, swordAngle: 0, spinT: 0, spinCd: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
+    enemies = []; particles = []; fireflies = []; trees = []; mists = []; floaters = [];
+    tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0; powerGhostCd = 20;
     // bomen langs de randen (decoratie)
     for (let i = 0; i < 14; i++) {
       const edge = Math.random();
@@ -191,7 +195,7 @@
     }
     for (let i = 0; i < 22; i++) fireflies.push({ x: Math.random() * W, y: Math.random() * H, a: Math.random() * 6.28, sp: 6 + Math.random() * 10, ph: Math.random() * 6.28 });
     for (let i = 0; i < 6; i++) mists.push({ x: Math.random() * W, y: Math.random() * H, r: unit * (0.25 + Math.random() * 0.25), vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6 });
-    updateHearts();
+    updateHearts(); swordsEl.textContent = player.swords;
   }
 
   const ENEMY_TYPES = {
@@ -218,6 +222,21 @@
     const speedMul = 1 + tSurv * 0.006;
     enemies.push({ type, x, y, r: def.r(unit), speed: def.speed(unit) * speedMul, hp: def.hp, maxhp: def.hp,
       col: def.col, eye: def.eye, wob: def.wob, ph: Math.random() * 6.28, hit: 0, swCd: 0 });
+  }
+
+  // Speciale gouden "power-geest" (elke 20s): versla 'm voor een extra zwaard.
+  function spawnPowerGhost() {
+    const side = Math.floor(Math.random() * 4), m = unit * 0.08;
+    let x, y;
+    if (side === 0) { x = Math.random() * W; y = -m; }
+    else if (side === 1) { x = W + m; y = Math.random() * H; }
+    else if (side === 2) { x = Math.random() * W; y = H + m; }
+    else { x = -m; y = Math.random() * H; }
+    enemies.push({ type: 'geest', power: true, x, y, r: unit * 0.04, speed: unit * 0.19 * (1 + tSurv * 0.004),
+      hp: 4, maxhp: 4, col: "#ffe89a", eye: "#fff6cf", wob: 1, ph: Math.random() * 6.28, hit: 0, swCd: 0 });
+  }
+  function floatText(text, x, y, col) {
+    floaters.push({ text, x, y, life: 1.1, col: col || '#ffe36b' });
   }
 
   function updateHearts() {
@@ -280,9 +299,18 @@
     for (let i = 0; i < 8; i++) particles.push(mkPart(player.x, player.y, '#cfe8ff', 0.5));
   }
   function killEnemy(en) {
-    en.dead = true; kills++; killsEl.textContent = kills; sHitEnemy();
-    for (let i = 0; i < 12; i++) particles.push(mkPart(en.x, en.y, en.type === 'geest' ? '#bfefff' : '#ff5170'));
-    shake = Math.max(shake, 0.25);
+    en.dead = true; kills++; killsEl.textContent = kills;
+    if (en.power) {
+      // power-up: een extra rondvliegend zwaard (max 6)
+      if (player.swords < 6) player.swords++;
+      swordsEl.textContent = player.swords;
+      sPower(); shake = Math.max(shake, 0.6);
+      floatText('+1 zwaard!', en.x, en.y);
+      for (let i = 0; i < 26; i++) particles.push(mkPart(en.x, en.y, '#ffe36b'));
+    } else {
+      sHitEnemy(); shake = Math.max(shake, 0.25);
+      for (let i = 0; i < 12; i++) particles.push(mkPart(en.x, en.y, en.type === 'geest' ? '#bfefff' : '#ff5170'));
+    }
   }
   function doDash() {
     if (state !== 'playing' || player.dashCd > 0) return;
@@ -355,10 +383,17 @@
     spawnCd -= dt;
     const interval = Math.max(0.36, 1.5 - tSurv * 0.013);
     if (spawnCd <= 0 && enemies.length < 44) { spawnEnemy(); spawnCd = interval * (0.7 + Math.random() * 0.6); }
+    // elke 20s een gouden power-geest (max één tegelijk); versla 'm = extra zwaard
+    powerGhostCd -= dt;
+    if (powerGhostCd <= 0) {
+      if (!enemies.some(e => e.power) && player.swords < 6) { spawnPowerGhost(); powerGhostCd = 20; }
+      else powerGhostCd = 3;
+    }
 
     // vijanden
     for (const en of enemies) {
       en.hit = Math.max(0, en.hit - dt);
+      en.swCd = Math.max(0, en.swCd - dt);
       let dx = player.x - en.x, dy = player.y - en.y; const d = Math.hypot(dx, dy) || 1;
       let vx = dx / d, vy = dy / d;
       if (en.wob) { en.ph += dt * 4; const px = -vy, py = vx; const w = Math.sin(en.ph) * 0.5; vx += px * w; vy += py * w; const l = Math.hypot(vx, vy); vx /= l; vy /= l; }
@@ -375,27 +410,31 @@
         if (player.hearts <= 0) return gameOver();
       }
     }
-    // zwaard dat om je heen vliegt: draait continu; raakt monsters die het passeert
+    // zwaard(en) die om je heen vliegen: draaien continu; raken monsters die ze passeren
     const spinning = player.spinT > 0;
     player.swordAngle += (spinning ? K.spinSpeed : K.orbitSpeed) * dt;
     const sr = K.orbitR * (spinning ? 1.3 : 1);
-    const ca = Math.cos(player.swordAngle), sa = Math.sin(player.swordAngle);
-    const bx0 = player.x + ca * sr, by0 = player.y + sa * sr;
-    const bx1 = player.x + ca * (sr + K.swordLen), by1 = player.y + sa * (sr + K.swordLen);
-    for (const en of enemies) {
-      en.swCd = Math.max(0, en.swCd - dt);
-      if (en.swCd > 0 || en.dead) continue;
-      if (distToSeg(en.x, en.y, bx0, by0, bx1, by1) < en.r + K.swordHitR) {
-        en.hp--; en.hit = 0.12; en.swCd = spinning ? 0.16 : K.swHitCd;
-        for (let i = 0; i < 5; i++) particles.push(mkPart(en.x, en.y, en.type === 'geest' ? '#bfefff' : '#ff5170'));
-        if (en.hp <= 0) killEnemy(en); else sHitEnemy();
+    const N = player.swords;
+    for (let s = 0; s < N; s++) {
+      const ang = player.swordAngle + s * (6.2832 / N), ca = Math.cos(ang), sa = Math.sin(ang);
+      const bx0 = player.x + ca * sr, by0 = player.y + sa * sr;
+      const bx1 = player.x + ca * (sr + K.swordLen), by1 = player.y + sa * (sr + K.swordLen);
+      for (const en of enemies) {
+        if (en.swCd > 0 || en.dead) continue;
+        if (distToSeg(en.x, en.y, bx0, by0, bx1, by1) < en.r + K.swordHitR) {
+          en.hp--; en.hit = 0.12; en.swCd = spinning ? 0.16 : K.swHitCd;
+          for (let i = 0; i < 5; i++) particles.push(mkPart(en.x, en.y, en.power ? '#ffe36b' : (en.type === 'geest' ? '#bfefff' : '#ff5170')));
+          if (en.hp <= 0) killEnemy(en); else sHitEnemy();
+        }
       }
     }
     enemies = enemies.filter(e => !e.dead);
 
-    // deeltjes
+    // deeltjes + zwevende tekst
     for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; p.life -= dt; }
     particles = particles.filter(p => p.life > 0);
+    for (const fl of floaters) { fl.y -= unit * 0.25 * dt; fl.life -= dt; }
+    floaters = floaters.filter(fl => fl.life > 0);
   }
 
   function gameOver() {
@@ -449,6 +488,7 @@
     // speler + rondvliegend zwaard
     drawPlayer();
     drawSword();
+    drawFloaters();
     g.restore();
 
     // vignette
@@ -497,6 +537,13 @@
   function drawEnemy(en) {
     const flash = en.hit > 0;
     g.save();
+    // gouden aura + zwaard-markering voor de power-geest
+    if (en.power) {
+      const pulse = 0.6 + 0.4 * Math.sin(tSurv * 6);
+      g.strokeStyle = 'rgba(255,214,80,' + (0.5 * pulse) + ')'; g.lineWidth = en.r * 0.3;
+      g.shadowColor = '#ffd24d'; g.shadowBlur = en.r * 1.2;
+      g.beginPath(); g.arc(en.x, en.y, en.r * 1.35, 0, 6.2832); g.stroke();
+    }
     // gloed
     g.shadowColor = en.eye; g.shadowBlur = en.r * 0.6;
     if (en.type === 'geest') {
@@ -522,11 +569,17 @@
     const ex = en.r * 0.35, ey = -en.r * 0.1, er = en.r * (en.type === 'grom' ? 0.16 : 0.14);
     g.beginPath(); g.arc(en.x - ex, en.y + ey, er, 0, 6.2832); g.fill();
     g.beginPath(); g.arc(en.x + ex, en.y + ey, er, 0, 6.2832); g.fill();
+    // klein zwaardje op de power-geest (hint: versla mij voor een zwaard)
+    if (en.power) {
+      g.strokeStyle = '#fff4d0'; g.lineWidth = en.r * 0.14; g.lineCap = 'round';
+      g.shadowColor = '#ffe89a'; g.shadowBlur = en.r * 0.5;
+      g.beginPath(); g.moveTo(en.x - en.r * 0.3, en.y + en.r * 0.35); g.lineTo(en.x + en.r * 0.3, en.y - en.r * 0.35); g.stroke();
+    }
     g.restore();
-    // gezondheidsbalkje voor grom
+    // gezondheidsbalkje
     if (en.maxhp > 1 && en.hp < en.maxhp) {
-      g.fillStyle = '#000a'; g.fillRect(en.x - en.r, en.y - en.r * 1.3, en.r * 2, 4);
-      g.fillStyle = '#ff5170'; g.fillRect(en.x - en.r, en.y - en.r * 1.3, en.r * 2 * (en.hp / en.maxhp), 4);
+      g.fillStyle = '#000a'; g.fillRect(en.x - en.r, en.y - en.r * 1.45, en.r * 2, 4);
+      g.fillStyle = en.power ? '#ffd24d' : '#ff5170'; g.fillRect(en.x - en.r, en.y - en.r * 1.45, en.r * 2 * (en.hp / en.maxhp), 4);
     }
   }
 
@@ -549,23 +602,36 @@
     g.restore();
   }
 
-  // Het rondvliegende zwaard: een katana die om de ninja cirkelt, met een spoor.
+  // De rondvliegende katana('s): één of meer bladen die om de ninja cirkelen.
   function drawSword() {
     const spinning = player.spinT > 0;
-    const sr = K.orbitR * (spinning ? 1.3 : 1), a = player.swordAngle;
+    const sr = K.orbitR * (spinning ? 1.3 : 1), N = player.swords;
     g.save(); g.translate(player.x, player.y);
-    // spoor (boog achter het blad aan)
-    g.strokeStyle = spinning ? 'rgba(170,215,255,0.55)' : 'rgba(200,220,245,0.28)';
-    g.lineWidth = K.pR * 0.9; g.lineCap = 'round';
-    g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - (spinning ? 2.4 : 1.2), a); g.stroke();
-    // blad (radiaal naar buiten)
-    g.rotate(a);
-    g.strokeStyle = '#6f4426'; g.lineWidth = K.pR * 0.4; g.lineCap = 'round';   // greep
-    g.beginPath(); g.moveTo(sr - K.pR * 0.5, 0); g.lineTo(sr, 0); g.stroke();
-    g.strokeStyle = '#e6edf5'; g.lineWidth = K.pR * 0.3; g.shadowColor = '#cfe8ff'; g.shadowBlur = 10;
-    g.beginPath(); g.moveTo(sr, 0); g.lineTo(sr + K.swordLen, 0); g.stroke();
-    g.shadowBlur = 0;
+    for (let s = 0; s < N; s++) {
+      const a = player.swordAngle + s * (6.2832 / N);
+      // spoor (boog achter het blad aan)
+      g.strokeStyle = spinning ? 'rgba(170,215,255,0.55)' : 'rgba(200,220,245,0.26)';
+      g.lineWidth = K.pR * 0.9; g.lineCap = 'round';
+      g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - (spinning ? 2.4 : 1.1), a); g.stroke();
+      // blad (radiaal naar buiten)
+      g.save(); g.rotate(a);
+      g.strokeStyle = '#6f4426'; g.lineWidth = K.pR * 0.4; g.lineCap = 'round';   // greep
+      g.beginPath(); g.moveTo(sr - K.pR * 0.5, 0); g.lineTo(sr, 0); g.stroke();
+      g.strokeStyle = '#e6edf5'; g.lineWidth = K.pR * 0.3; g.shadowColor = '#cfe8ff'; g.shadowBlur = 10;
+      g.beginPath(); g.moveTo(sr, 0); g.lineTo(sr + K.swordLen, 0); g.stroke();
+      g.shadowBlur = 0; g.restore();
+    }
     g.restore();
+  }
+
+  function drawFloaters() {
+    g.textAlign = 'center'; g.font = '700 ' + (unit * 0.045) + 'px system-ui, sans-serif';
+    for (const fl of floaters) {
+      g.globalAlpha = Math.min(1, fl.life * 1.4);
+      g.fillStyle = fl.col; g.shadowColor = fl.col; g.shadowBlur = 8;
+      g.fillText(fl.text, fl.x, fl.y);
+    }
+    g.globalAlpha = 1; g.shadowBlur = 0; g.textAlign = 'start';
   }
 
   // ---- loop ----

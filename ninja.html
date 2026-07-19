@@ -157,7 +157,8 @@
   function scaleConst() {
     return {
       pR: unit * 0.024,
-      pSpeed: unit * 1.08,
+      pSpeed: unit * 0.60,     // rustiger, goed te sturen (was te hoog)
+      pAccelHalf: 0.07,        // halveringstijd voor soepel versnellen/afremmen
       atkRange: unit * 0.16,
       atkHalf: 1.15,           // ~66°
       atkCd: 0.32,
@@ -171,7 +172,7 @@
 
   function initWorld() {
     K = scaleConst();
-    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, hearts: 3, invuln: 0, atkCd: 0, atkT: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
+    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 3, invuln: 0, atkCd: 0, atkT: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
     enemies = []; particles = []; fireflies = []; trees = []; mists = [];
     tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0;
     // bomen langs de randen (decoratie)
@@ -249,8 +250,8 @@
       let dx = joyFinger.x - joyOrigin.x, dy = joyFinger.y - joyOrigin.y;
       const len = Math.hypot(dx, dy);
       if (len < 3) return null;
-      // vol lopen al bij ~55% uitslag → makkelijker
-      const mag = Math.min(1, len / (joyR() * 0.55));
+      // analoog: zachtjes duwen = rustig lopen, vol duwen = topsnelheid
+      const mag = Math.min(1, len / joyR());
       return { x: dx / len, y: dy / len, mag };
     }
     // toetsenbord
@@ -327,15 +328,24 @@
 
     const dir = joyDir();
     if (dir) { player.dirx = dir.x; player.diry = dir.y; }
+    // doelsnelheid bepalen
+    let tvx = 0, tvy = 0;
     if (player.dashT > 0) {
       player.dashT -= dt;
-      player.x += player.dvx * K.dashSpeed * dt;
-      player.y += player.dvy * K.dashSpeed * dt;
+      tvx = player.dvx * K.dashSpeed; tvy = player.dvy * K.dashSpeed;
       if (Math.random() < 0.6) particles.push(mkPart(player.x, player.y, '#7fbfff', 0.4));
     } else if (dir) {
-      player.x += dir.x * K.pSpeed * dir.mag * dt;
-      player.y += dir.y * K.pSpeed * dir.mag * dt;
+      tvx = dir.x * K.pSpeed * dir.mag; tvy = dir.y * K.pSpeed * dir.mag;
     }
+    // soepel naar de doelsnelheid toe (versnellen/afremmen) i.p.v. direct snappen
+    if (player.dashT > 0) { player.pvx = tvx; player.pvy = tvy; }
+    else {
+      const k = 1 - Math.pow(0.5, dt / K.pAccelHalf);
+      player.pvx += (tvx - player.pvx) * k;
+      player.pvy += (tvy - player.pvy) * k;
+    }
+    player.x += player.pvx * dt;
+    player.y += player.pvy * dt;
     const pad = K.pR;
     player.x = Math.max(pad, Math.min(W - pad, player.x));
     player.y = Math.max(pad, Math.min(H - pad, player.y));
@@ -355,7 +365,8 @@
       // botsing met speler
       if (player.invuln <= 0 && d < en.r + K.pR) {
         player.hearts--; updateHearts(); player.invuln = K.invuln; hurtFlash = 0.4; shake = Math.max(shake, 0.5); sHurt();
-        // terugstoot
+        // terugstoot + momentum stoppen (niet terug in de vijand glijden)
+        player.pvx = 0; player.pvy = 0;
         player.x -= vx * unit * 0.12; player.y -= vy * unit * 0.12;
         player.x = Math.max(pad, Math.min(W - pad, player.x));
         player.y = Math.max(pad, Math.min(H - pad, player.y));

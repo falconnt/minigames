@@ -1,4 +1,4 @@
-// Vogel Vlucht — een Flappy Bird-variant. Tik/spatie om te fladderen en vlieg
+// Flappy Bird — tik/spatie om te fladderen en vlieg
 // tussen de buizen door. Geïntegreerd in het framework: highscores lopen via
 // het gedeelde save-mechanisme (ctx.submitScore) en de game rendert binnen het
 // spelpaneel in plaats van fullscreen.
@@ -68,7 +68,7 @@ export function init(root, ctx) {
       <div class="vv-score">0</div>
       <div class="vv-overlay">
         <div class="vv-panel">
-          <h1>Vogel Vlucht! ${BIRD_ICON}</h1>
+          <h1>Flappy Bird! ${BIRD_ICON}</h1>
           <p class="vv-intro">Tik of druk op spatie om te fladderen en vlieg tussen de buizen door!</p>
           <div class="vv-scoreline vv-hidden"></div>
           <div class="vv-bestline vv-hidden"></div>

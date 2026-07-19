@@ -13,7 +13,7 @@ export const BADGES = [
   { id: 'ontdekker', icon: '🧭', title: 'Ontdekker', desc: 'Speel elke game minstens één keer.', test: (s, ids) => ids.every((id) => (s['plays_' + id] || 0) > 0) },
   { id: 'recordbreker', icon: '🥇', title: 'Recordbreker', desc: 'Verbeter 3 keer je eigen record.', test: (s) => (s.records || 0) >= 3 },
   { id: 'vlammetje', icon: '🔥', title: 'Vlammetje', desc: 'Speel 3 dagen op rij.', test: (s) => (s.streak || 0) >= 3 },
-  { id: 'vliegaas', icon: '🐦', title: 'Vlieg-aas', desc: 'Haal 10 punten in Vogel Vlucht.', test: (s) => (s.best_vogelvlucht || 0) >= 10 },
+  { id: 'vliegaas', icon: '🐦', title: 'Vlieg-aas', desc: 'Haal 10 punten in Flappy Bird.', test: (s) => (s.best_vogelvlucht || 0) >= 10 },
   { id: 'tegeltovenaar', icon: '🔢', title: 'Tegel-tovenaar', desc: 'Haal 2048 punten in 2048.', test: (s) => (s.best_2048 || 0) >= 2048 },
   { id: 'bliksemreflex', icon: '⚡', title: 'Bliksemreflex', desc: 'Gemiddelde reactietijd van 250 ms of sneller.', test: (s) => (s.best_reactie || 0) > 0 && s.best_reactie <= 250 },
 ];

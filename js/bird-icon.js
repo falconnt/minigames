@@ -1,4 +1,4 @@
-// Het Vogel Vlucht-icoon als inline SVG: de klassieke "Flappy Bird"-look — een
+// Het Flappy Bird-icoon als inline SVG: de klassieke "Flappy Bird"-look — een
 // mollig geel vogeltje met oranje snavel en grote ronde oog, tussen de bekende
 // groene buizen op een turquoise lucht. Schaalt mee met de tekstgrootte.
 export const BIRD_ICON = `<svg viewBox="0 0 64 64" width="1.35em" height="1.35em" style="vertical-align:-0.22em" aria-hidden="true">

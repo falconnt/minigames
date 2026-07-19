@@ -156,7 +156,7 @@
   // ---- spelstatus ----
   let state = 'start'; // start | playing | over
   let player, enemies, particles, fireflies, trees, mists, floaters;
-  let tSurv = 0, kills = 0, spawnCd = 0, shake = 0, hurtFlash = 0, lastFrame = 0, powerGhostCd = 20;
+  let tSurv = 0, kills = 0, spawnCd = 0, shake = 0, hurtFlash = 0, lastFrame = 0, powerGhostCd = 20, waveLevel = 0;
   let best = parseFloat(store.get('schaduwbos.best') || '0') || 0;
 
   function scaleConst() {
@@ -184,7 +184,7 @@
     K = scaleConst();
     player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 5, invuln: 0, swords: 1, swordAngle: 0, spinT: 0, spinCd: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
     enemies = []; particles = []; fireflies = []; trees = []; mists = []; floaters = [];
-    tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0; powerGhostCd = 20;
+    tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0; powerGhostCd = 20; waveLevel = 0;
     // bomen langs de randen (decoratie)
     for (let i = 0; i < 14; i++) {
       const edge = Math.random();
@@ -379,10 +379,19 @@
     player.x = Math.max(pad, Math.min(W - pad, player.x));
     player.y = Math.max(pad, Math.min(H - pad, player.y));
 
-    // spawnen (steeds sneller)
+    // elke 10s een nieuwe golf: een lading extra monsters + geesten tegelijk,
+    // en daarna blijven ze sneller komen.
+    if (Math.floor(tSurv / 10) > waveLevel) {
+      waveLevel++;
+      const burst = 3 + waveLevel;
+      for (let i = 0; i < burst && enemies.length < 60; i++) spawnEnemy();
+      floatText('Golf ' + (waveLevel + 1) + '!', player.x, player.y - unit * 0.12, '#ff9a5c');
+      shake = Math.max(shake, 0.4); sHitEnemy();
+    }
+    // doorlopende spawn; het tempo stapt omhoog per golf
     spawnCd -= dt;
-    const interval = Math.max(0.36, 1.5 - tSurv * 0.013);
-    if (spawnCd <= 0 && enemies.length < 44) { spawnEnemy(); spawnCd = interval * (0.7 + Math.random() * 0.6); }
+    const interval = Math.max(0.3, 1.35 - waveLevel * 0.12);
+    if (spawnCd <= 0 && enemies.length < 60) { spawnEnemy(); spawnCd = interval * (0.7 + Math.random() * 0.6); }
     // elke 20s een gouden power-geest (max één tegelijk); versla 'm = extra zwaard
     powerGhostCd -= dt;
     if (powerGhostCd <= 0) {

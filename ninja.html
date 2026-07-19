@@ -40,7 +40,7 @@
 <body>
 <div id="wrap">
   <div id="top">
-    <span id="hearts">❤️❤️❤️</span>
+    <span id="hearts">❤️❤️❤️❤️❤️</span>
     <span class="grow"></span>
     <span class="stat">Tijd <b id="time">0.0</b>s</span>
     <span class="stat">Kills <b id="kills">0</b></span>
@@ -182,7 +182,7 @@
 
   function initWorld() {
     K = scaleConst();
-    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 3, invuln: 0, swords: 1, swordAngle: 0, spinT: 0, spinCd: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
+    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 5, invuln: 0, swords: 1, swordAngle: 0, spinT: 0, spinCd: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
     enemies = []; particles = []; fireflies = []; trees = []; mists = []; floaters = [];
     tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0; powerGhostCd = 20;
     // bomen langs de randen (decoratie)
@@ -240,7 +240,7 @@
   }
 
   function updateHearts() {
-    heartsEl.textContent = '❤️'.repeat(Math.max(0, player.hearts)) + '🖤'.repeat(Math.max(0, 3 - player.hearts));
+    heartsEl.textContent = '❤️'.repeat(Math.max(0, player.hearts)) + '🖤'.repeat(Math.max(0, 5 - player.hearts));
   }
 
   // ---- input ----

@@ -48,7 +48,6 @@
   </div>
   <div id="area">
     <canvas id="cv"></canvas>
-    <div class="hint">Joystick links = lopen</div>
     <div id="dash" aria-label="Dash">💨</div>
     <div id="atk" aria-label="Aanvallen">🗡️</div>
 
@@ -220,32 +219,36 @@
 
   // ---- input ----
   const keys = {};
-  let joyId = null, joyBase = null, joyKnob = null;
-  const joyR = () => unit * 0.11;
+  // Vaste joystick linksonder: altijd zichtbaar. Je zet je vinger ergens op de
+  // linkerhelft en sleept; de knop volgt (of raak de joystick zelf aan).
+  let joyId = null, joyFinger = null;
+  const joyR = () => unit * 0.13;
+  const joyHome = () => ({ x: joyR() + unit * 0.06, y: H - joyR() - unit * 0.06 });
 
   cv.addEventListener('pointerdown', (e) => {
     if (state !== 'playing') return;
     const r = cv.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
     if (x < W * 0.5 && joyId === null) {
-      joyId = e.pointerId; joyBase = { x, y }; joyKnob = { x, y };
+      joyId = e.pointerId; joyFinger = { x, y };
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     }
   });
   cv.addEventListener('pointermove', (e) => {
     if (e.pointerId !== joyId) return;
     const r = cv.getBoundingClientRect();
-    joyKnob = { x: e.clientX - r.left, y: e.clientY - r.top };
+    joyFinger = { x: e.clientX - r.left, y: e.clientY - r.top };
   });
-  function endJoy(e) { if (e.pointerId === joyId) { joyId = null; joyBase = joyKnob = null; } }
+  function endJoy(e) { if (e.pointerId === joyId) { joyId = null; joyFinger = null; } }
   cv.addEventListener('pointerup', endJoy);
   cv.addEventListener('pointercancel', endJoy);
 
   function joyDir() {
-    if (joyBase && joyKnob) {
-      let dx = joyKnob.x - joyBase.x, dy = joyKnob.y - joyBase.y;
+    if (joyFinger) {
+      const home = joyHome();
+      let dx = joyFinger.x - home.x, dy = joyFinger.y - home.y;
       const len = Math.hypot(dx, dy);
-      if (len < 6) return null;
+      if (len < 4) return null;
       const cl = Math.min(len, joyR());
       return { x: dx / len, y: dy / len, mag: cl / joyR() };
     }
@@ -367,7 +370,7 @@
   }
 
   function gameOver() {
-    state = 'over'; sDie();
+    state = 'over'; sDie(); joyId = null; joyFinger = null;
     document.getElementById('fTime').textContent = tSurv.toFixed(1);
     document.getElementById('fKills').textContent = kills;
     const fBest = document.getElementById('fBest');
@@ -416,15 +419,6 @@
 
     // speler
     drawPlayer();
-
-    // joystick
-    if (joyBase && joyKnob) {
-      g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 2;
-      g.beginPath(); g.arc(joyBase.x, joyBase.y, joyR(), 0, 6.2832); g.stroke();
-      let dx = joyKnob.x - joyBase.x, dy = joyKnob.y - joyBase.y; const l = Math.hypot(dx, dy) || 1;
-      const cl = Math.min(l, joyR()); const kx = joyBase.x + dx / l * cl, ky = joyBase.y + dy / l * cl;
-      g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(kx, ky, joyR() * 0.42, 0, 6.2832); g.fill();
-    }
     g.restore();
 
     // vignette
@@ -433,6 +427,27 @@
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
     // hurt flits
     if (hurtFlash > 0) { g.fillStyle = 'rgba(255,20,60,' + (hurtFlash * 0.5) + ')'; g.fillRect(0, 0, W, H); }
+
+    // vaste joystick (linksonder, altijd zichtbaar tijdens het spelen)
+    if (state === 'playing') {
+      const home = joyHome(), R = joyR();
+      g.fillStyle = 'rgba(255,255,255,0.06)';
+      g.beginPath(); g.arc(home.x, home.y, R, 0, 6.2832); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.28)'; g.lineWidth = 2.5;
+      g.beginPath(); g.arc(home.x, home.y, R, 0, 6.2832); g.stroke();
+      // richel-pijltjes als hint
+      g.fillStyle = 'rgba(255,255,255,0.22)';
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2, ax = home.x + Math.cos(a) * R * 0.78, ay = home.y + Math.sin(a) * R * 0.78;
+        g.save(); g.translate(ax, ay); g.rotate(a); g.beginPath();
+        g.moveTo(R * 0.1, 0); g.lineTo(-R * 0.05, -R * 0.08); g.lineTo(-R * 0.05, R * 0.08); g.closePath(); g.fill(); g.restore();
+      }
+      let kx = home.x, ky = home.y;
+      if (joyFinger) { let dx = joyFinger.x - home.x, dy = joyFinger.y - home.y; const l = Math.hypot(dx, dy) || 1; const cl = Math.min(l, R); kx = home.x + dx / l * cl; ky = home.y + dy / l * cl; }
+      g.shadowColor = '#8fd0ff'; g.shadowBlur = 12;
+      g.fillStyle = joyFinger ? 'rgba(150,205,255,0.75)' : 'rgba(200,220,240,0.5)';
+      g.beginPath(); g.arc(kx, ky, R * 0.46, 0, 6.2832); g.fill(); g.shadowBlur = 0;
+    }
   }
 
   function drawTree(t) {

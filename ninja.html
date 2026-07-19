@@ -49,13 +49,14 @@
   <div id="area">
     <canvas id="cv"></canvas>
     <div id="dash" aria-label="Dash">💨</div>
-    <div id="atk" aria-label="Aanvallen">🗡️</div>
+    <div id="atk" aria-label="Snelle draai">🌀</div>
 
     <div id="start" class="ovl">
       <h1>🥷 Schaduwbos</h1>
       <p>Je bent een ninja in een spookbos. Monsters en geesten komen van <b>alle kanten</b>.
-         Maai ze weg met je <b>katana</b> en overleef zo lang mogelijk!</p>
-      <p><b>Joystick</b> (links) om te lopen · <b>🗡️</b> om te slaan · <b>💨</b> om te dashen (wegduiken).</p>
+         Je <b>katana vliegt vanzelf om je heen</b> en maait alles weg wat het raakt — jij zorgt dat je
+         de monsters langs je zwaard laat lopen. Overleef zo lang mogelijk!</p>
+      <p><b>Joystick</b> (links) om te lopen · <b>🌀</b> voor een snelle draai-boost · <b>💨</b> om te dashen.</p>
       <button class="play" id="startBtn">▶ Spelen</button>
     </div>
 
@@ -159,9 +160,14 @@
       pR: unit * 0.024,
       pSpeed: unit * 0.60,     // rustiger, goed te sturen (was te hoog)
       pAccelHalf: 0.07,        // halveringstijd voor soepel versnellen/afremmen
-      atkRange: unit * 0.16,
-      atkHalf: 1.15,           // ~66°
-      atkCd: 0.32,
+      orbitR: unit * 0.115,    // straal waarop het zwaard om je heen vliegt
+      swordLen: unit * 0.10,   // lengte van het blad
+      swordHitR: unit * 0.05,  // raakcirkel rond het blad
+      orbitSpeed: 4.4,         // draaisnelheid (rad/s) normaal
+      spinSpeed: 15,           // draaisnelheid tijdens de snelle draai-boost
+      spinTime: 0.55,          // duur van de boost
+      spinCd: 0.9,             // afkoeltijd boost
+      swHitCd: 0.35,           // hoe vaak hetzelfde monster geraakt kan worden
       dashSpeed: unit * 2.4,
       dashTime: 0.16,
       dashCd: 1.1,
@@ -172,7 +178,7 @@
 
   function initWorld() {
     K = scaleConst();
-    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 3, invuln: 0, atkCd: 0, atkT: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
+    player = { x: W / 2, y: H / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 3, invuln: 0, swordAngle: 0, spinT: 0, spinCd: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
     enemies = []; particles = []; fireflies = []; trees = []; mists = [];
     tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0;
     // bomen langs de randen (decoratie)
@@ -211,7 +217,7 @@
     else { x = -m; y = Math.random() * H; }
     const speedMul = 1 + tSurv * 0.006;
     enemies.push({ type, x, y, r: def.r(unit), speed: def.speed(unit) * speedMul, hp: def.hp, maxhp: def.hp,
-      col: def.col, eye: def.eye, wob: def.wob, ph: Math.random() * 6.28, hit: 0 });
+      col: def.col, eye: def.eye, wob: def.wob, ph: Math.random() * 6.28, hit: 0, swCd: 0 });
   }
 
   function updateHearts() {
@@ -261,22 +267,17 @@
     return null;
   }
 
-  function doAttack() {
-    if (state !== 'playing' || player.atkCd > 0) return;
-    player.atkCd = K.atkCd; player.atkT = 0.18; sSlash();
-    const fa = Math.atan2(player.diry, player.dirx);
-    for (const en of enemies) {
-      const dx = en.x - player.x, dy = en.y - player.y, d = Math.hypot(dx, dy);
-      if (d > K.atkRange + en.r) continue;
-      let da = Math.atan2(dy, dx) - fa;
-      while (da > Math.PI) da -= 6.283; while (da < -Math.PI) da += 6.283;
-      if (Math.abs(da) <= K.atkHalf) {
-        en.hp--; en.hit = 0.12;
-        for (let i = 0; i < 6; i++) particles.push(mkPart(en.x, en.y, en.type === 'geest' ? '#bfefff' : '#ff5170'));
-        if (en.hp <= 0) { killEnemy(en); }
-        else sHitEnemy();
-      }
-    }
+  // Afstand van een punt tot een lijnstuk (voor de trefzone van het blad).
+  function distToSeg(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+    let t = ((px - ax) * dx + (py - ay) * dy) / l2; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+  // Snelle draai-boost: het zwaard whirlt heel even veel sneller en verder.
+  function doSpin() {
+    if (state !== 'playing' || player.spinCd > 0) return;
+    player.spinCd = K.spinCd; player.spinT = K.spinTime; sSlash();
+    for (let i = 0; i < 8; i++) particles.push(mkPart(player.x, player.y, '#cfe8ff', 0.5));
   }
   function killEnemy(en) {
     en.dead = true; kills++; killsEl.textContent = kills; sHitEnemy();
@@ -296,12 +297,12 @@
     return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: (0.3 + Math.random() * 0.3) * (lifeMul || 1), max: 0.6, col };
   }
 
-  atkBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); doAttack(); });
+  atkBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); doSpin(); });
   dashBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); doDash(); });
   window.addEventListener('keydown', (e) => {
     keys[e.key] = true;
     if (state === 'playing') {
-      if (e.key === ' ' || e.key.toLowerCase() === 'j') { e.preventDefault(); doAttack(); }
+      if (e.key === ' ' || e.key.toLowerCase() === 'j') { e.preventDefault(); doSpin(); }
       if (e.key.toLowerCase() === 'k' || e.key === 'Shift') { e.preventDefault(); doDash(); }
     }
   });
@@ -319,11 +320,11 @@
     for (const m of mists) { m.x += m.vx * dt; m.y += m.vy * dt; if (m.x < -m.r) m.x = W + m.r; if (m.x > W + m.r) m.x = -m.r; if (m.y < -m.r) m.y = H + m.r; if (m.y > H + m.r) m.y = -m.r; }
 
     // speler
-    player.atkCd = Math.max(0, player.atkCd - dt);
     player.dashCd = Math.max(0, player.dashCd - dt);
-    player.atkT = Math.max(0, player.atkT - dt);
+    player.spinCd = Math.max(0, player.spinCd - dt);
+    player.spinT = Math.max(0, player.spinT - dt);
     player.invuln = Math.max(0, player.invuln - dt);
-    atkBtn.classList.toggle('cd', player.atkCd > 0);
+    atkBtn.classList.toggle('cd', player.spinCd > 0);
     dashBtn.classList.toggle('cd', player.dashCd > 0);
 
     const dir = joyDir();
@@ -372,6 +373,22 @@
         player.y = Math.max(pad, Math.min(H - pad, player.y));
         for (let i = 0; i < 10; i++) particles.push(mkPart(player.x, player.y, '#ff2d55'));
         if (player.hearts <= 0) return gameOver();
+      }
+    }
+    // zwaard dat om je heen vliegt: draait continu; raakt monsters die het passeert
+    const spinning = player.spinT > 0;
+    player.swordAngle += (spinning ? K.spinSpeed : K.orbitSpeed) * dt;
+    const sr = K.orbitR * (spinning ? 1.3 : 1);
+    const ca = Math.cos(player.swordAngle), sa = Math.sin(player.swordAngle);
+    const bx0 = player.x + ca * sr, by0 = player.y + sa * sr;
+    const bx1 = player.x + ca * (sr + K.swordLen), by1 = player.y + sa * (sr + K.swordLen);
+    for (const en of enemies) {
+      en.swCd = Math.max(0, en.swCd - dt);
+      if (en.swCd > 0 || en.dead) continue;
+      if (distToSeg(en.x, en.y, bx0, by0, bx1, by1) < en.r + K.swordHitR) {
+        en.hp--; en.hit = 0.12; en.swCd = spinning ? 0.16 : K.swHitCd;
+        for (let i = 0; i < 5; i++) particles.push(mkPart(en.x, en.y, en.type === 'geest' ? '#bfefff' : '#ff5170'));
+        if (en.hp <= 0) killEnemy(en); else sHitEnemy();
       }
     }
     enemies = enemies.filter(e => !e.dead);
@@ -429,8 +446,9 @@
     // vijanden
     for (const en of enemies) drawEnemy(en);
 
-    // speler
+    // speler + rondvliegend zwaard
     drawPlayer();
+    drawSword();
     g.restore();
 
     // vignette
@@ -518,15 +536,6 @@
     const fa = Math.atan2(player.diry, player.dirx);
     g.save(); g.translate(player.x, player.y); g.rotate(fa + Math.PI / 2); // sprite tekent met neus omhoog
     const r = K.pR;
-    // katana-slash
-    if (player.atkT > 0) {
-      const p = 1 - player.atkT / 0.18;
-      g.save(); g.rotate(-K.atkHalf + p * K.atkHalf * 2);
-      g.strokeStyle = 'rgba(220,240,255,' + (0.9 * (1 - p)) + ')'; g.lineWidth = r * 0.5; g.lineCap = 'round';
-      g.shadowColor = '#cfe8ff'; g.shadowBlur = 14;
-      g.beginPath(); g.moveTo(0, -r * 0.6); g.lineTo(0, -K.atkRange); g.stroke();
-      g.restore(); g.shadowBlur = 0;
-    }
     // sjaal (wappert naar achteren)
     g.fillStyle = '#c81438';
     g.beginPath(); g.moveTo(-r * 0.35, r * 0.2); g.quadraticCurveTo(-r * 1.2, r * 0.9, -r * 0.2, r * 1.4);
@@ -537,11 +546,25 @@
     // ogen (band)
     g.fillStyle = '#c81438'; g.fillRect(-r * 0.6, -r * 0.35, r * 1.2, r * 0.28);
     g.fillStyle = '#eaf2ff'; g.fillRect(-r * 0.4, -r * 0.32, r * 0.25, r * 0.16); g.fillRect(r * 0.15, -r * 0.32, r * 0.25, r * 0.16);
-    // katana in de hand (rusthouding als niet aan het slaan)
-    if (player.atkT <= 0) {
-      g.strokeStyle = '#cfd6e0'; g.lineWidth = r * 0.16; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(r * 0.7, r * 0.2); g.lineTo(r * 1.1, -r * 0.7); g.stroke();
-    }
+    g.restore();
+  }
+
+  // Het rondvliegende zwaard: een katana die om de ninja cirkelt, met een spoor.
+  function drawSword() {
+    const spinning = player.spinT > 0;
+    const sr = K.orbitR * (spinning ? 1.3 : 1), a = player.swordAngle;
+    g.save(); g.translate(player.x, player.y);
+    // spoor (boog achter het blad aan)
+    g.strokeStyle = spinning ? 'rgba(170,215,255,0.55)' : 'rgba(200,220,245,0.28)';
+    g.lineWidth = K.pR * 0.9; g.lineCap = 'round';
+    g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - (spinning ? 2.4 : 1.2), a); g.stroke();
+    // blad (radiaal naar buiten)
+    g.rotate(a);
+    g.strokeStyle = '#6f4426'; g.lineWidth = K.pR * 0.4; g.lineCap = 'round';   // greep
+    g.beginPath(); g.moveTo(sr - K.pR * 0.5, 0); g.lineTo(sr, 0); g.stroke();
+    g.strokeStyle = '#e6edf5'; g.lineWidth = K.pR * 0.3; g.shadowColor = '#cfe8ff'; g.shadowBlur = 10;
+    g.beginPath(); g.moveTo(sr, 0); g.lineTo(sr + K.swordLen, 0); g.stroke();
+    g.shadowBlur = 0;
     g.restore();
   }
 

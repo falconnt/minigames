@@ -18,6 +18,18 @@ let activeCategory = 'alles';
 let hsView = 'local'; // 'local' of 'online' — welke highscore-lijst getoond wordt
 let scoresView = null; // idem voor de overzichtspagina (null = nog niet gekozen)
 
+// ---------- testmodus ----------
+// In testmodus wordt er niets opgeslagen: geen highscores, geen badges, geen
+// stats, geen online sync. Zo blijft de ranglijst eerlijk terwijl je games test.
+function isTestMode() {
+  return storage.getSetting('testMode', false) === true;
+}
+
+function updateTestBadge() {
+  const badge = document.getElementById('test-badge');
+  if (badge) badge.hidden = !isTestMode();
+}
+
 // ---------- startscherm ----------
 
 function renderHome() {
@@ -268,7 +280,14 @@ async function renderGame(id) {
     save: (data) => storage.setSave(game.id, data),
     clearSave: () => storage.clearSave(game.id),
     getHighscores: () => storage.getHighscores(game.id),
+    testMode: isTestMode(),
     submitScore(score) {
+      // Testmodus: helemaal niets opslaan (geen highscore, badge, stat of sync).
+      // Wel een korte melding zodat duidelijk is dat de score niet telt.
+      if (isTestMode()) {
+        fx.toast('🧪 Testmodus — score wordt niet opgeslagen');
+        return { rank: null, isRecord: false, testMode: true };
+      }
       const result = storage.submitScore(game.id, score, game.scoreMode);
       renderHighscores(game);
       celebrate(game, result, score);
@@ -333,6 +352,14 @@ function renderSettings() {
       </div>
     </div>
     <div class="settings-row">
+      <span class="settings-label">Testmodus</span>
+      <div class="hs-tabs theme-tabs">
+        <button class="btn ${isTestMode() ? 'btn-primary' : ''}" data-test="on">Aan</button>
+        <button class="btn ${!isTestMode() ? 'btn-primary' : ''}" data-test="off">Uit</button>
+      </div>
+    </div>
+    <p class="muted-line test-note">🧪 In testmodus worden er <b>geen</b> highscores, badges of stats opgeslagen — handig om games (en verborgen testtools zoals de level-skipper) uit te proberen zonder de ranglijst te beïnvloeden.</p>
+    <div class="settings-row">
       <span class="settings-label">App-versie</span>
       <span class="muted-line">${APP_VERSION}</span>
     </div>
@@ -350,6 +377,13 @@ function renderSettings() {
     b.addEventListener('click', () => {
       sound.setSound(b.dataset.sound === 'on');
       if (b.dataset.sound === 'on') sound.play('score'); // hoorbaar voorbeeldje
+      renderSettings();
+    })
+  );
+  dialog.querySelectorAll('[data-test]').forEach((b) =>
+    b.addEventListener('click', () => {
+      storage.setSetting('testMode', b.dataset.test === 'on');
+      updateTestBadge();
       renderSettings();
     })
   );
@@ -567,6 +601,7 @@ function initSyncStatus() {
   document.getElementById('scores-btn').addEventListener('click', () => { location.hash = '#/scores'; });
   const vEl = document.getElementById('app-version');
   if (vEl) vEl.textContent = 'v' + APP_VERSION;
+  updateTestBadge();
   initLogoSpin();
   route();
 

@@ -14,6 +14,7 @@ Een minigame-framework dat volledig statisch draait op **GitHub Pages** — geen
 - **Schermvullend spelen** — elke game past zijn speelveld aan de schermgrootte aan, zodat speelveld, knoppen en score zonder scrollen in beeld staan; uitleg zit achter een ❔-knop. Zie de richtlijn hieronder.
 - **Record-feestje & geluid** — confetti, een melding, trilfeedback (mobiel) en een klein fanfaretje bij elk nieuw record (in elke game, via het framework). Games hebben eigen geluidjes (ping, plop); alles is in code gesynthetiseerd en uit te zetten in Instellingen.
 - **Badges & streak** — verdien badges (eerste potje, alle games gespeeld, records, game-prestaties) met een melding bij het verdienen; te bekijken op de 🏆-pagina. Speel meerdere dagen op rij voor een 🔥-streak op het startscherm.
+- **Testmodus** — aan te zetten in **Instellingen**. In testmodus wordt er **niets** opgeslagen: geen highscores, badges, stats of online sync — zo blijft de ranglijst eerlijk terwijl je games test. Een 🧪-badge in de header maakt duidelijk dat testmodus actief is. Games kunnen bovendien eigen testtools tonen (bijv. de level-skipper naar de eindbaas in Ruimteschieter). Zie de richtlijn hieronder.
 - **Hash-routing** — `#/game/<id>` werkt zonder serverconfiguratie, dus ook op een GitHub Pages-projectpagina.
 
 ## Meegeleverde games
@@ -84,8 +85,9 @@ games/<id>.js         één module per game
    | `ctx.save(data)` | voortgang opslaan (elk JSON-serialiseerbaar object) |
    | `ctx.load()` | opgeslagen voortgang ophalen (`null` als er niets is) |
    | `ctx.clearSave()` | save verwijderen (bijv. na game over) |
-   | `ctx.submitScore(score)` | score indienen; geeft `{ rank, isRecord }` terug |
+   | `ctx.submitScore(score)` | score indienen; geeft `{ rank, isRecord }` terug (slaat niets op in testmodus) |
    | `ctx.getHighscores()` | top 10 van deze game |
+   | `ctx.testMode` | `true` als testmodus aan staat — toon dan optioneel testtools/cheats |
 
 2. **Registreer de game** in `js/registry.js`:
 
@@ -128,6 +130,33 @@ passen samen in beeld, op elke schermgrootte. Concreet:
 - Test op een smal en laag scherm (bijv. 360×640) dat het spel inclusief
   bediening boven de vouw blijft. Blokjes (Tetris) en 2048 zijn
   referentie-implementaties.
+
+### Richtlijn: testmodus en testtools
+
+Testmodus staat in **Instellingen** (`storage.getSetting('testMode')`). Het
+framework regelt het belangrijkste al: in testmodus doet `ctx.submitScore()`
+**niets** — geen highscore, badge, stat of online sync — en geeft het
+`{ rank: null, isRecord: false, testMode: true }` terug. Je hoeft in je game
+dus niets extra's te doen om de ranglijst eerlijk te houden.
+
+Wil je een game testbaar maken met eigen cheats/tools (bijv. een level-skipper),
+lees dan `ctx.testMode` en toon die knoppen alleen als die `true` is:
+
+```js
+export function init(root, ctx) {
+  if (ctx.testMode) {
+    // Alleen zichtbaar in testmodus: sla door naar de eindbaas o.i.d.
+    const btn = document.createElement('button');
+    btn.textContent = '🧪 Eindbaas';
+    btn.addEventListener('click', skipToBoss);
+    toolbar.appendChild(btn);
+  }
+}
+```
+
+Ruimteschieter is de referentie-implementatie: in testmodus verschijnt een
+**🧪 Eindbaas**-knop die direct naar de eerstvolgende baasgolf springt, zodat je
+die functionaliteit kunt testen zonder eerst tien golven te spelen.
 
 ## Deployen op GitHub Pages
 

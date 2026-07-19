@@ -30,6 +30,7 @@ export function init(root, ctx) {
       <span class="rs-stat">Golf <b id="rs-wave">1</b></span>
       <span class="rs-stat">Levens <b id="rs-lives">♥♥♥</b></span>
       <span class="rs-actions">
+        ${ctx.testMode ? '<button id="rs-skipboss" class="rs-btn rs-test" title="Testtool: direct naar de eindbaas" aria-label="Naar de eindbaas">🧪 Eindbaas</button>' : ''}
         <button id="rs-mute" class="rs-btn" aria-label="Geluid aan of uit">🔊</button>
         <button id="rs-pause" class="rs-btn">Pauze</button>
         <button id="rs-help-btn" class="rs-btn" aria-label="Uitleg">❔</button>
@@ -849,6 +850,21 @@ export function init(root, ctx) {
   // ---------- knoppen ----------
   pauseBtn.addEventListener('click', () => setPaused(state !== 'paused'));
   muteBtn.addEventListener('click', () => { muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; ensureAudio(); });
+
+  // Testtool (alleen in testmodus): sla door naar de eerstvolgende eindbaas, zodat
+  // je die functionaliteit kunt testen zonder eerst tien golven te spelen.
+  function skipToBoss() {
+    if (state === 'over') return;
+    ensureAudio();
+    if (state === 'paused') setPaused(false);
+    // Volgende golf die een baas is (elke 10e). nextWave() verhoogt met 1 en
+    // roept spawnWave aan, die bij een tienvoud de baas neerzet.
+    wave = (Math.floor(wave / 10) + 1) * 10 - 1;
+    eBullets = []; pBullets = []; powerups = []; enemies = [];
+    nextWave();
+  }
+  const skipBtn = fs.querySelector('#rs-skipboss');
+  if (skipBtn) skipBtn.addEventListener('click', skipToBoss);
   function onBack() {
     if (score > 0 && state !== 'over') ctx.submitScore(score);
     location.hash = '#/';

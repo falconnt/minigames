@@ -151,6 +151,23 @@ body {
 @keyframes sync-spin { to { transform: rotate(360deg); } }
 @media (max-width: 34rem) { .sync-chip .sync-label { display: none; } }
 
+/* Testmodus-badge in de header: opvallend maar niet schreeuwerig. */
+.test-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #a15c00;
+  background: rgba(255, 196, 0, 0.18);
+  border: 1px solid rgba(255, 170, 0, 0.55);
+  border-radius: 1rem;
+  padding: 0.28rem 0.6rem;
+  white-space: nowrap;
+}
+:root[data-theme="dark"] .test-badge { color: #ffd257; background: rgba(255, 196, 0, 0.14); }
+.test-note { border-left: 3px solid rgba(255, 170, 0, 0.6); padding-left: 0.6rem; }
+
 .sync-err-box {
   background: var(--bg-inset);
   border: 1px solid var(--danger);
@@ -899,6 +916,8 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 .rs-btn.primary { background: #39f6ff; color: #04121a; border-color: #39f6ff; font-weight: 700; }
 .rs-back { white-space: nowrap; }
 .rs-actions { display: flex; gap: 0.4rem; margin-left: auto; }
+.rs-btn.rs-test { background: rgba(255, 196, 0, 0.16); border-color: rgba(255, 170, 0, 0.6); color: #ffd257; white-space: nowrap; }
+.rs-btn.rs-test:hover { border-color: #ffcc33; }
 
 .rs-area { flex: 1 1 auto; min-height: 0; position: relative; }
 .rs-canvas { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; }

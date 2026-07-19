@@ -476,6 +476,12 @@
     g.shadowColor = 'rgba(180,60,60,0.5)'; g.shadowBlur = unit * 0.04;
     g.strokeRect(0, 0, worldW, worldH); g.shadowBlur = 0;
 
+    // zacht maanlicht rond de ninja (geeft diepte en focus)
+    const lightR = Math.max(W, H) * 0.52;
+    const lg = g.createRadialGradient(player.x, player.y, unit * 0.04, player.x, player.y, lightR);
+    lg.addColorStop(0, 'rgba(150,195,180,0.14)'); lg.addColorStop(0.5, 'rgba(120,170,160,0.05)'); lg.addColorStop(1, 'rgba(120,170,160,0)');
+    g.fillStyle = lg; g.fillRect(camX, camY, W, H);
+
     // mist
     for (const m of mists) {
       const mg = g.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r);
@@ -493,12 +499,14 @@
     }
     g.shadowBlur = 0;
 
-    // deeltjes
+    // deeltjes (ronde, gloeiende vonkjes)
+    g.globalCompositeOperation = 'lighter';
     for (const p of particles) {
-      g.globalAlpha = Math.max(0, p.life / p.max); g.fillStyle = p.col;
-      const r = unit * 0.008; g.fillRect(p.x - r / 2, p.y - r / 2, r, r);
+      const a = Math.max(0, p.life / p.max);
+      g.globalAlpha = a; g.fillStyle = p.col;
+      g.beginPath(); g.arc(p.x, p.y, unit * 0.007 * (0.5 + a), 0, 6.2832); g.fill();
     }
-    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
 
     // vijanden
     for (const en of enemies) drawEnemy(en);
@@ -510,8 +518,8 @@
     g.restore();
 
     // vignette
-    const vg = g.createRadialGradient(W / 2, H / 2, unit * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.65)');
+    const vg = g.createRadialGradient(W / 2, H / 2, unit * 0.28, W / 2, H / 2, Math.max(W, H) * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.7, 'rgba(3,6,10,0.35)'); vg.addColorStop(1, 'rgba(2,4,8,0.72)');
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
     // hurt flits
     if (hurtFlash > 0) { g.fillStyle = 'rgba(255,20,60,' + (hurtFlash * 0.5) + ')'; g.fillRect(0, 0, W, H); }
@@ -541,20 +549,31 @@
     }
   }
 
+  // Zachte grondschaduw onder een object (grondt het, geen "zwevend" gevoel).
+  function groundShadow(x, y, r, a) {
+    g.fillStyle = 'rgba(0,0,0,' + (a || 0.24) + ')';
+    g.beginPath(); g.ellipse(x, y + r * 0.28, r * 0.98, r * 0.55, 0, 0, 6.2832); g.fill();
+  }
   function drawTree(t) {
     const r = t.r;
-    g.fillStyle = '#0a0f0c';
-    g.fillRect(t.x - r * 0.08, t.y, r * 0.16, r * 0.5);
-    // kromme kale takken/kroon
-    g.fillStyle = 'rgba(6,12,8,0.95)';
-    g.beginPath(); g.arc(t.x, t.y - r * 0.1, r * 0.7, 0, 6.2832); g.fill();
-    g.beginPath(); g.arc(t.x - r * 0.4, t.y + r * 0.1, r * 0.4, 0, 6.2832); g.fill();
-    g.beginPath(); g.arc(t.x + r * 0.4, t.y - r * 0.2, r * 0.42, 0, 6.2832); g.fill();
+    groundShadow(t.x, t.y + r * 0.3, r * 1.05, 0.3);
+    // stam
+    g.fillStyle = '#0a0d0a'; g.fillRect(t.x - r * 0.09, t.y, r * 0.18, r * 0.5);
+    // kroon (donker silhouet, meerdere blobs)
+    g.fillStyle = '#0c150e';
+    g.beginPath(); g.arc(t.x, t.y - r * 0.1, r * 0.72, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(t.x - r * 0.42, t.y + r * 0.1, r * 0.42, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(t.x + r * 0.42, t.y - r * 0.2, r * 0.44, 0, 6.2832); g.fill();
+    // maanlicht-randje bovenop de kroon
+    g.strokeStyle = 'rgba(150,185,155,0.16)'; g.lineWidth = Math.max(1, r * 0.05);
+    g.beginPath(); g.arc(t.x, t.y - r * 0.1, r * 0.72, Math.PI * 1.15, Math.PI * 1.95); g.stroke();
   }
 
   function drawEnemy(en) {
     const flash = en.hit > 0;
     g.save();
+    // grondschaduw (geesten zweven → lichter)
+    groundShadow(en.x, en.y, en.r, en.type === 'geest' ? 0.13 : 0.26);
     // gouden aura + zwaard-markering voor de power-geest
     if (en.power) {
       const pulse = 0.6 + 0.4 * Math.sin(tSurv * 6);
@@ -580,6 +599,9 @@
         for (let i = 0; i < 8; i++) { const a = i / 8 * 6.2832 + en.ph; g.beginPath(); g.arc(en.x + Math.cos(a) * en.r, en.y + Math.sin(a) * en.r, en.r * 0.22, 0, 6.2832); g.fill(); }
         g.fillStyle = flash ? '#fff' : en.col; g.beginPath(); g.arc(en.x, en.y, en.r * 0.9, 0, 6.2832); g.fill();
       }
+      // subtiele glans linksboven (geeft volume)
+      g.shadowBlur = 0; g.fillStyle = flash ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)';
+      g.beginPath(); g.arc(en.x - en.r * 0.3, en.y - en.r * 0.34, en.r * 0.42, 0, 6.2832); g.fill();
     }
     g.shadowBlur = 0;
     // ogen
@@ -605,6 +627,7 @@
     const blink = player.invuln > 0 && Math.floor(player.invuln * 12) % 2 === 0;
     if (blink) return;
     const fa = Math.atan2(player.diry, player.dirx);
+    groundShadow(player.x, player.y, K.pR, 0.28);
     g.save(); g.translate(player.x, player.y); g.rotate(fa + Math.PI / 2); // sprite tekent met neus omhoog
     const r = K.pR;
     // sjaal (wappert naar achteren)
@@ -614,6 +637,8 @@
     // lichaam
     g.fillStyle = '#12151d'; g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.fill();
     g.fillStyle = '#1c2230'; g.beginPath(); g.arc(0, -r * 0.1, r * 0.7, 0, 6.2832); g.fill();
+    // subtiele glans (volume)
+    g.fillStyle = 'rgba(130,160,200,0.14)'; g.beginPath(); g.arc(-r * 0.22, -r * 0.3, r * 0.4, 0, 6.2832); g.fill();
     // ogen (band)
     g.fillStyle = '#c81438'; g.fillRect(-r * 0.6, -r * 0.35, r * 1.2, r * 0.28);
     g.fillStyle = '#eaf2ff'; g.fillRect(-r * 0.4, -r * 0.32, r * 0.25, r * 0.16); g.fillRect(r * 0.15, -r * 0.32, r * 0.25, r * 0.16);
@@ -627,10 +652,15 @@
     g.save(); g.translate(player.x, player.y);
     for (let s = 0; s < N; s++) {
       const a = player.swordAngle + s * (6.2832 / N);
-      // spoor (boog achter het blad aan)
-      g.strokeStyle = spinning ? 'rgba(170,215,255,0.55)' : 'rgba(200,220,245,0.26)';
-      g.lineWidth = K.pR * 0.9; g.lineCap = 'round';
-      g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - (spinning ? 2.4 : 1.1), a); g.stroke();
+      // spoor: brede zachte veeg + fellere korte kern (vervaagt naar achteren)
+      const trailA = spinning ? 2.4 : 1.15;
+      g.lineCap = 'round';
+      g.strokeStyle = spinning ? 'rgba(170,215,255,0.14)' : 'rgba(200,220,245,0.08)';
+      g.lineWidth = K.pR * 1.3;
+      g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - trailA, a); g.stroke();
+      g.strokeStyle = spinning ? 'rgba(190,225,255,0.5)' : 'rgba(210,228,248,0.3)';
+      g.lineWidth = K.pR * 0.7;
+      g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - trailA * 0.55, a); g.stroke();
       // blad (radiaal naar buiten)
       g.save(); g.rotate(a);
       g.strokeStyle = '#6f4426'; g.lineWidth = K.pR * 0.4; g.lineCap = 'round';   // greep

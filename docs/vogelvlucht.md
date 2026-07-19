@@ -1,4 +1,4 @@
-# 🐦 Vogel Vlucht
+# 🐦 Flappy Bird
 
 | | |
 | --- | --- |
@@ -9,7 +9,7 @@
 
 ## Doel
 
-Een Flappy Bird-variant: houd de vogel in de lucht en vlieg door zo veel
+Een Flappy Bird-spel: houd de vogel in de lucht en vlieg door zo veel
 mogelijk openingen tussen de buizen. Elke buis die je passeert is één punt.
 
 ## Besturing

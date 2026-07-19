@@ -18,7 +18,7 @@ export const categories = [
 export const games = [
   {
     id: 'vogelvlucht',
-    title: 'Vogel Vlucht',
+    title: 'Flappy Bird',
     icon: BIRD_ICON,
     category: 'arcade',
     description: 'Tik of druk op spatie om te fladderen en vlieg zo ver mogelijk tussen de buizen door.',

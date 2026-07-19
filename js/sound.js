@@ -42,7 +42,7 @@ export function play(name) {
       tone(660, 0, 0.09);
       tone(880, 0.07, 0.12);
     } else if (name === 'ping') {
-      // helder belletje, bv. bij het passeren van een buis in Vogel Vlucht
+      // helder belletje, bv. bij het passeren van een buis in Flappy Bird
       tone(1046, 0, 0.09, 'sine', 0.11);
       tone(1568, 0.02, 0.07, 'sine', 0.05);
     } else if (name === 'plop') {

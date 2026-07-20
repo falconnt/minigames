@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Onthul!</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%96%BC%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+  /* Onthul! — Xonix-achtig: teken vlakken en onthul het verborgen plaatje.
+     Losse testversie; wordt later in het minigames-framework geïntegreerd. */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: #0b0e1a;
+    color: #eaf0ff;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    height: 100dvh;
+    touch-action: none;
+  }
+  .top {
+    width: 100%; max-width: 920px;
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.45rem 0.7rem; font-size: 0.95rem;
+  }
+  .top b { font-variant-numeric: tabular-nums; }
+  .stat { background: #141a30; border: 1px solid #26305c; border-radius: 0.5rem; padding: 0.28rem 0.6rem; white-space: nowrap; }
+  .stat.pct b { color: #ffd23d; }
+  @media (max-width: 480px) {
+    .top { font-size: 0.78rem; gap: 0.3rem; padding: 0.4rem 0.45rem; }
+    .stat { padding: 0.22rem 0.4rem; }
+    .stat .doel { display: none; }
+    button.ui { padding: 0.22rem 0.45rem; font-size: 0.78rem; }
+  }
+  .spacer { flex: 1; }
+  button.ui {
+    background: #141a30; color: #eaf0ff; border: 1px solid #26305c;
+    border-radius: 0.5rem; padding: 0.3rem 0.65rem; font-size: 0.9rem;
+    font-family: inherit; cursor: pointer;
+  }
+  button.ui:hover { border-color: #4f74ff; }
+  .veld {
+    position: relative; flex: 1 1 auto; min-height: 0;
+    width: 100%; max-width: 920px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 0.5rem;
+  }
+  canvas {
+    display: block; max-width: 100%; max-height: 100%;
+    border-radius: 0.6rem;
+    box-shadow: 0 6px 40px rgba(0,0,0,0.55);
+    image-rendering: auto;
+  }
+  .overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .paneel {
+    pointer-events: auto;
+    background: rgba(10, 14, 32, 0.92); border: 1px solid #2b3a78;
+    border-radius: 1rem; padding: 1.2rem 1.6rem; text-align: center;
+    max-width: 26rem; margin: 0 1rem;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.6);
+  }
+  .paneel h1 { margin: 0 0 0.4rem; font-size: 1.6rem; }
+  .paneel p { margin: 0.35rem 0; color: #b9c4e8; font-size: 0.95rem; line-height: 1.45; }
+  .paneel .groot { font-size: 1.05rem; color: #eaf0ff; }
+  .paneel button {
+    margin-top: 0.8rem; font-size: 1.05rem; font-weight: 700;
+    background: #ffd23d; color: #201700; border: 0; border-radius: 0.6rem;
+    padding: 0.6rem 1.6rem; cursor: pointer; font-family: inherit;
+  }
+  .paneel button:hover { filter: brightness(1.08); }
+  .pad {
+    flex: 0 0 auto; width: 100%; max-width: 920px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem;
+    padding: 0.5rem 0.7rem 0.75rem;
+  }
+  .pad button {
+    background: #141a30; color: #eaf0ff; border: 1px solid #26305c;
+    border-radius: 0.7rem; font-size: 1.5rem; padding: 0.55rem 0;
+    font-family: inherit; cursor: pointer; touch-action: none; user-select: none;
+  }
+  .pad button:active { background: #26305c; }
+  .pad .b-op { grid-column: 2; }
+  @media (min-width: 700px) and (hover: hover) { .pad { display: none; } }
+  .hint { color: #7f89ad; font-size: 0.8rem; text-align: center; padding: 0 0.75rem 0.5rem; }
+  @media (max-width: 699px), (hover: none) { .hint { display: none; } }
+</style>
+</head>
+<body>
+  <div class="top">
+    <span class="stat">Score <b id="h-score">0</b></span>
+    <span class="stat">Level <b id="h-level">1</b></span>
+    <span class="stat"><span class="doel">Levens </span><b id="h-lives">♥♥♥</b></span>
+    <span class="stat pct"><b id="h-pct">0%</b><span class="doel"> / 75%</span></span>
+    <span class="spacer"></span>
+    <button class="ui" id="b-mute" aria-label="Geluid aan of uit">🔊</button>
+    <button class="ui" id="b-pause" aria-label="Pauze" title="Pauze (P)">⏸</button>
+  </div>
+  <div class="veld" id="veld">
+    <canvas id="c" width="900" height="600" aria-label="Speelveld"></canvas>
+    <div class="overlay" id="overlay"></div>
+  </div>
+  <div class="hint">Pijltjes of WASD om te bewegen · P = pauze · Vanaf de rand het veld in = lijn tekenen</div>
+  <div class="pad" aria-label="Bediening">
+    <button class="b-op" data-d="up">▲</button>
+    <button data-d="left" style="grid-row:2">◀</button>
+    <button data-d="down" style="grid-row:2">▼</button>
+    <button data-d="right" style="grid-row:2">▶</button>
+  </div>
+
+<script>
+'use strict';
+// ================= Onthul! =================
+// Xonix-regels: beweeg over veroverd gebied (waar het plaatje zichtbaar is).
+// Het open veld in bewegen tekent automatisch een lijn. Bereik je weer veilig
+// gebied, dan wordt het deel zonder bal onthuld. Raakt een bal je lijn: leven
+// kwijt. 75% onthuld = level klaar (bonus per % extra + tijdsbonus).
+
+const GW = 90, GH = 60;          // rastergrootte (cellen)
+const CELL = 10;                 // canvas-pixels per cel (900x600)
+const DOEL = 75;                 // percentage om het level te halen
+const OPEN = 0, VAST = 1, LIJN = 2;
+
+const PLAATJES = [
+  { src: 'assets/onthul/01-bergmeer.jpg', titel: 'Bergmeer bij zonsondergang' },
+  { src: 'assets/onthul/02-noorderlicht.jpg', titel: 'Noorderlicht boven het bos' },
+  { src: 'assets/onthul/03-strand.jpg', titel: 'Tropisch strand' },
+  { src: 'assets/onthul/04-vlinder.jpg', titel: 'Vlinder in het bloemenveld' },
+  { src: 'assets/onthul/05-onderwater.jpg', titel: 'Onderwaterwereld' },
+  { src: 'assets/onthul/06-vos.jpg', titel: 'Vos in het herfstbos' },
+];
+
+const canvas = document.getElementById('c');
+const g = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const hScore = document.getElementById('h-score');
+const hLevel = document.getElementById('h-level');
+const hLives = document.getElementById('h-lives');
+const hPct = document.getElementById('h-pct');
+
+// ---------- geluid (WebAudio, geen bestanden) ----------
+let actx = null, muted = false;
+function ensureAudio() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+  if (actx && actx.state === 'suspended') actx.resume();
+}
+function toon(freq, dur, type, vol, slideTo, at) {
+  if (muted || !actx) return;
+  const t = actx.currentTime + (at || 0);
+  const o = actx.createOscillator(), gn = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t + dur);
+  gn.gain.setValueAtTime(vol, t);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(gn).connect(actx.destination); o.start(t); o.stop(t + dur);
+}
+const sPak = () => { toon(420, 0.1, 'triangle', 0.14, 640); toon(640, 0.12, 'triangle', 0.12, 900, 0.07); };
+const sAu = () => { toon(220, 0.25, 'sawtooth', 0.16, 70); };
+const sLevel = () => { toon(520, 0.12, 'square', 0.1, 660); toon(660, 0.12, 'square', 0.1, 880, 0.1); toon(880, 0.2, 'square', 0.1, 1100, 0.2); };
+const sStap = () => { toon(900, 0.03, 'square', 0.02, 700); };
+
+// ---------- spelstatus ----------
+let grid = new Uint8Array(GW * GH);
+let ballen = [];                 // {x, y, vx, vy} in celcoördinaten (floats)
+let speler = { x: 0, y: 0 };     // celpositie
+let richting = null;             // 'up'|'down'|'left'|'right'|null
+let gewenst = null;              // volgende richting (op celgrens toegepast)
+let lijnCellen = [];             // getekende lijn (voor snel wissen)
+let score = 0, level = 1, levens = 3, pct = 0;
+let status = 'start';            // start | spel | tussen | dood | over | pauze
+let levelStart = 0;              // ms, voor de tijdsbonus
+let stapT = 0;                   // accumulator spelerstappen
+let flits = 0, schud = 0;
+let beeld = null;                // huidige afbeelding
+let beeldKlaar = false;
+let raf = 0, vorige = 0;
+let beste = 0;
+try { beste = Number(localStorage.getItem('onthul.best') || 0); } catch (e) { beste = 0; }
+
+const idx = (x, y) => y * GW + x;
+const binnen = (x, y) => x >= 0 && y >= 0 && x < GW && y < GH;
+
+// Interieur = alles behalve de startrand; daarover wordt het percentage berekend.
+const totaalInterieur = (GW - 2) * (GH - 2);
+
+function laadBeeld(n) {
+  beeldKlaar = false;
+  const img = new Image();
+  img.src = PLAATJES[(n - 1) % PLAATJES.length].src;
+  img.onload = () => { beeld = img; beeldKlaar = true; };
+  img.onerror = () => { beeld = null; beeldKlaar = true; }; // valt terug op kleurvlak
+}
+
+function nieuwLevel(n) {
+  grid.fill(OPEN);
+  for (let x = 0; x < GW; x++) { grid[idx(x, 0)] = VAST; grid[idx(x, GH - 1)] = VAST; }
+  for (let y = 0; y < GH; y++) { grid[idx(0, y)] = VAST; grid[idx(GW - 1, y)] = VAST; }
+  lijnCellen = [];
+  speler = { x: Math.floor(GW / 2), y: GH - 1 };
+  richting = null; gewenst = null; stapT = 0;
+  pct = 0;
+
+  // Ballen: level 1 -> 1 bal, elk level een erbij (max 6), en iets sneller.
+  const aantal = Math.min(6, n);
+  const snelheid = 13 + (n - 1) * 1.6;
+  ballen = [];
+  for (let i = 0; i < aantal; i++) {
+    const a = (Math.PI / 4) + (Math.PI / 2) * (i % 4) + (Math.random() - 0.5) * 0.5;
+    ballen.push({
+      x: GW * (0.3 + 0.4 * Math.random()),
+      y: GH * (0.25 + 0.4 * Math.random()),
+      vx: Math.cos(a) * snelheid,
+      vy: Math.sin(a) * snelheid,
+    });
+  }
+  laadBeeld(n);
+  levelStart = performance.now();
+  hud();
+}
+
+function hud() {
+  hScore.textContent = score;
+  hLevel.textContent = level;
+  hLives.textContent = levens > 0 ? '♥'.repeat(levens) : '—';
+  hPct.textContent = Math.floor(pct) + '%';
+}
+
+function paneel(html) { overlay.innerHTML = html ? `<div class="paneel">${html}</div>` : ''; }
+
+function toonStart() {
+  status = 'start';
+  paneel(`<h1>🖼️ Onthul!</h1>
+    <p>Er zit een plaatje verstopt onder het donkere veld. Beweeg vanaf de rand
+       het veld in om een lijn te trekken; kom je weer veilig aan de overkant,
+       dan wordt het stuk <b>zonder bal</b> onthuld.</p>
+    <p>Raakt een bal je lijn terwijl je tekent? Dan ben je een leven kwijt
+       (je hebt er 3). Onthul <b>75%</b> om het level te halen — elke % extra is bonus!</p>
+    ${beste > 0 ? `<p class="groot">🏆 Beste score: <b>${beste}</b></p>` : ''}
+    <button id="b-start">▶ Spelen</button>`);
+  document.getElementById('b-start').addEventListener('click', () => { ensureAudio(); startSpel(); });
+}
+
+function startSpel() {
+  score = 0; level = 1; levens = 3;
+  nieuwLevel(1);
+  status = 'spel';
+  paneel('');
+  hud();
+}
+
+function levelKlaar() {
+  status = 'tussen';
+  const secs = (performance.now() - levelStart) / 1000;
+  const extra = Math.max(0, Math.round(pct - DOEL));
+  const bonusPct = extra * 40;
+  const bonusTijd = Math.max(0, Math.round((240 - secs)) * 2);
+  score += bonusPct + bonusTijd;
+  hud();
+  sLevel();
+  // Het hele plaatje even laten zien als beloning.
+  grid.fill(VAST); lijnCellen = [];
+  const t = PLAATJES[(level - 1) % PLAATJES.length].titel;
+  paneel(`<h1>✨ Level ${level} klaar!</h1>
+    <p class="groot">"${t}" — <b>${Math.floor(pct)}%</b> onthuld</p>
+    <p>Bonus: +${bonusPct} (extra %) &nbsp;·&nbsp; +${bonusTijd} (snelheid)</p>
+    <button id="b-verder">Volgende level ▶</button>`);
+  document.getElementById('b-verder').addEventListener('click', () => {
+    level += 1;
+    nieuwLevel(level);
+    status = 'spel';
+    paneel('');
+  });
+}
+
+function dood() {
+  sAu();
+  flits = 0.35; schud = 0.3;
+  levens -= 1;
+  // Lijn wissen en terug naar de startpositie op de rand.
+  for (const c of lijnCellen) grid[c] = OPEN;
+  lijnCellen = [];
+  speler = { x: Math.floor(GW / 2), y: GH - 1 };
+  richting = null; gewenst = null;
+  hud();
+  if (levens <= 0) { gameOver(); return; }
+  status = 'dood';
+  paneel(`<h1>💥 Au!</h1><p class="groot">De bal raakte je lijn. Nog ${levens} ${levens === 1 ? 'leven' : 'levens'}.</p>
+    <button id="b-door">Verder ▶</button>`);
+  const knop = document.getElementById('b-door');
+  knop.addEventListener('click', () => { status = 'spel'; paneel(''); });
+}
+
+function gameOver() {
+  status = 'over';
+  const record = score > beste;
+  if (record) { beste = score; try { localStorage.setItem('onthul.best', String(beste)); } catch (e) { /* prima */ } }
+  paneel(`<h1>Game over</h1>
+    <p class="groot">Score: <b>${score}</b> · level ${level}${record ? ' — 🥇 nieuw record!' : ` · beste: ${beste}`}</p>
+    <button id="b-again">Nog een keer</button>`);
+  document.getElementById('b-again').addEventListener('click', startSpel);
+}
+
+// ---------- veroveren ----------
+function verover() {
+  // Vloedvulling vanaf elke bal door open cellen; wat geen bal bereikt, wordt vast.
+  const bereikt = new Uint8Array(GW * GH);
+  const stapel = [];
+  for (const b of ballen) {
+    const bx = Math.floor(b.x), by = Math.floor(b.y);
+    if (binnen(bx, by) && grid[idx(bx, by)] === OPEN && !bereikt[idx(bx, by)]) {
+      bereikt[idx(bx, by)] = 1; stapel.push(bx, by);
+    }
+  }
+  while (stapel.length) {
+    const y = stapel.pop(), x = stapel.pop();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (binnen(nx, ny) && grid[idx(nx, ny)] === OPEN && !bereikt[idx(nx, ny)]) {
+        bereikt[idx(nx, ny)] = 1; stapel.push(nx, ny);
+      }
+    }
+  }
+  let gepakt = 0;
+  for (let i = 0; i < grid.length; i++) {
+    if (grid[i] === LIJN || (grid[i] === OPEN && !bereikt[i])) { grid[i] = VAST; gepakt++; }
+  }
+  lijnCellen = [];
+  if (gepakt > 0) {
+    score += gepakt;
+    sPak();
+    let vast = 0;
+    for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) if (grid[idx(x, y)] === VAST) vast++;
+    pct = (vast / totaalInterieur) * 100;
+    hud();
+    if (pct >= DOEL) levelKlaar();
+  }
+}
+
+// ---------- update ----------
+const DXY = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+function stapSpeler() {
+  if (gewenst) { richting = gewenst; }
+  if (!richting) return;
+  const [dx, dy] = DXY[richting];
+  const nx = speler.x + dx, ny = speler.y + dy;
+  if (!binnen(nx, ny)) { richting = null; return; }
+  const cel = grid[idx(nx, ny)];
+  if (cel === LIJN) { dood(); return; }        // eigen lijn raken = af
+  const wasOpen = grid[idx(speler.x, speler.y)] !== VAST;
+  speler.x = nx; speler.y = ny;
+  if (cel === OPEN) {
+    grid[idx(nx, ny)] = LIJN;
+    lijnCellen.push(idx(nx, ny));
+    sStap();
+  } else if (cel === VAST && lijnCellen.length) {
+    verover();                                  // lijn afgemaakt: gebied pakken
+  }
+  if (cel === VAST && !wasOpen && !lijnCellen.length) {
+    // gewoon over veilig gebied lopen — niets extra's
+  }
+}
+
+function update(dt) {
+  if (flits > 0) flits -= dt;
+  if (schud > 0) schud -= dt;
+  if (status !== 'spel') return;
+
+  // speler stapt op vast tempo over het raster
+  const tempo = 24; // cellen per seconde
+  stapT += dt * tempo;
+  while (stapT >= 1) { stapT -= 1; stapSpeler(); if (status !== 'spel') return; }
+
+  // ballen bewegen en stuiteren tegen vaste cellen; lijn raken = dood
+  for (const b of ballen) {
+    let nx = b.x + b.vx * dt;
+    if (grid[idx(Math.floor(nx), Math.floor(b.y))] === VAST) { b.vx = -b.vx; nx = b.x; }
+    let ny = b.y + b.vy * dt;
+    if (grid[idx(Math.floor(nx), Math.floor(ny))] === VAST) { b.vy = -b.vy; ny = b.y; }
+    b.x = nx; b.y = ny;
+    const celV = grid[idx(Math.floor(b.x), Math.floor(b.y))];
+    if (celV === LIJN) { dood(); return; }
+    // bal raakt de speler zelf terwijl die op de lijn/rand van open gebied staat
+    if (Math.floor(b.x) === speler.x && Math.floor(b.y) === speler.y) { dood(); return; }
+  }
+}
+
+// ---------- tekenen ----------
+function draw() {
+  g.save();
+  if (schud > 0) g.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+
+  // Basis: het plaatje (of een kleurverloop als het niet laadde).
+  if (beeld && beeldKlaar) {
+    g.drawImage(beeld, 0, 0, GW * CELL, GH * CELL);
+  } else {
+    const gr = g.createLinearGradient(0, 0, 0, GH * CELL);
+    gr.addColorStop(0, '#2a6fdb'); gr.addColorStop(1, '#7db8e8');
+    g.fillStyle = gr; g.fillRect(0, 0, GW * CELL, GH * CELL);
+  }
+
+  // Bedekking: open cellen donker, lijncellen geel.
+  g.fillStyle = '#10142a';
+  for (let y = 0; y < GH; y++) {
+    for (let x = 0; x < GW; x++) {
+      const s = grid[idx(x, y)];
+      if (s === OPEN) g.fillRect(x * CELL, y * CELL, CELL, CELL);
+    }
+  }
+  // subtiel raster op het bedekte deel
+  g.fillStyle = 'rgba(70,90,160,0.12)';
+  for (let y = 0; y < GH; y += 2) for (let x = (y / 2) % 2; x < GW; x += 2) {
+    if (grid[idx(x, y)] === OPEN) g.fillRect(x * CELL, y * CELL, CELL, CELL);
+  }
+  // lijn
+  g.fillStyle = '#ffd23d';
+  g.shadowColor = '#ffd23d'; g.shadowBlur = 8;
+  for (const c of lijnCellen) {
+    const x = c % GW, y = (c - x) / GW;
+    g.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+  }
+  g.shadowBlur = 0;
+
+  // randje tussen onthuld en bedekt voor leesbaarheid
+  g.strokeStyle = 'rgba(255,255,255,0.25)';
+  g.lineWidth = 1;
+  for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+    if (grid[idx(x, y)] !== OPEN) continue;
+    const px = x * CELL, py = y * CELL;
+    if (binnen(x + 1, y) && grid[idx(x + 1, y)] === VAST) { g.beginPath(); g.moveTo(px + CELL, py); g.lineTo(px + CELL, py + CELL); g.stroke(); }
+    if (x > 0 && grid[idx(x - 1, y)] === VAST) { g.beginPath(); g.moveTo(px, py); g.lineTo(px, py + CELL); g.stroke(); }
+    if (binnen(x, y + 1) && grid[idx(x, y + 1)] === VAST) { g.beginPath(); g.moveTo(px, py + CELL); g.lineTo(px + CELL, py + CELL); g.stroke(); }
+    if (y > 0 && grid[idx(x, y - 1)] === VAST) { g.beginPath(); g.moveTo(px, py); g.lineTo(px + CELL, py); g.stroke(); }
+  }
+
+  // ballen (niet op het level-klaar/game-over-scherm — daar geniet je van het plaatje)
+  for (const b of (status === 'tussen' || status === 'over' ? [] : ballen)) {
+    const bx = b.x * CELL, by = b.y * CELL;
+    g.shadowColor = '#9fd4ff'; g.shadowBlur = 14;
+    g.fillStyle = '#eaf6ff';
+    g.beginPath(); g.arc(bx, by, CELL * 0.62, 0, Math.PI * 2); g.fill();
+    g.shadowBlur = 0;
+    g.fillStyle = '#7fb8e8';
+    g.beginPath(); g.arc(bx + CELL * 0.14, by + CELL * 0.14, CELL * 0.3, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.arc(bx - CELL * 0.18, by - CELL * 0.18, CELL * 0.16, 0, Math.PI * 2); g.fill();
+  }
+
+  // speler
+  if (status !== 'tussen' && status !== 'over') {
+    const px = speler.x * CELL, py = speler.y * CELL;
+    g.shadowColor = '#ff5b8d'; g.shadowBlur = 12;
+    g.fillStyle = '#ff5b8d';
+    g.fillRect(px - 1, py - 1, CELL + 2, CELL + 2);
+    g.shadowBlur = 0;
+    g.fillStyle = '#ffffff';
+    g.fillRect(px + 2, py + 2, CELL - 4, CELL - 4);
+  }
+
+  if (flits > 0) { g.fillStyle = `rgba(255,70,70,${Math.min(0.45, flits * 1.4)})`; g.fillRect(0, 0, GW * CELL, GH * CELL); }
+  g.restore();
+}
+
+function loop(t) {
+  raf = requestAnimationFrame(loop);
+  const dt = vorige ? Math.min((t - vorige) / 1000, 0.05) : 0.016;
+  vorige = t;
+  update(dt);
+  draw();
+}
+
+// ---------- invoer ----------
+const TOETS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
+window.addEventListener('keydown', (e) => {
+  ensureAudio();
+  if (e.key === 'p' || e.key === 'P') { wisselPauze(); return; }
+  const r = TOETS[e.key];
+  if (r) { gewenst = r; e.preventDefault(); }
+});
+document.querySelectorAll('.pad button').forEach((b) => {
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); gewenst = b.dataset.d; });
+});
+// vegen op het veld
+let veegStart = null;
+canvas.addEventListener('pointerdown', (e) => { ensureAudio(); veegStart = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointermove', (e) => {
+  if (!veegStart) return;
+  const dx = e.clientX - veegStart.x, dy = e.clientY - veegStart.y;
+  if (Math.hypot(dx, dy) < 24) return;
+  gewenst = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  veegStart = { x: e.clientX, y: e.clientY };
+});
+window.addEventListener('pointerup', () => { veegStart = null; });
+
+function wisselPauze() {
+  if (status === 'spel') {
+    status = 'pauze';
+    document.getElementById('b-pause').textContent = '▶';
+    paneel(`<h1>⏸️ Pauze</h1><button id="b-hervat">Verder spelen</button>`);
+    document.getElementById('b-hervat').addEventListener('click', wisselPauze);
+  } else if (status === 'pauze') {
+    status = 'spel';
+    document.getElementById('b-pause').textContent = '⏸';
+    paneel('');
+  }
+}
+document.getElementById('b-pause').addEventListener('click', wisselPauze);
+document.getElementById('b-mute').addEventListener('click', () => {
+  muted = !muted;
+  document.getElementById('b-mute').textContent = muted ? '🔇' : '🔊';
+  ensureAudio();
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden && status === 'spel') wisselPauze(); });
+
+// Canvas passend maken binnen het veld (3:2), zonder scrollen.
+function pasAan() {
+  const veld = document.getElementById('veld');
+  const vw = veld.clientWidth - 16, vh = veld.clientHeight - 8;
+  const s = Math.min(vw / 900, vh / 600);
+  canvas.style.width = Math.floor(900 * s) + 'px';
+  canvas.style.height = Math.floor(600 * s) + 'px';
+}
+window.addEventListener('resize', pasAan);
+new ResizeObserver(pasAan).observe(document.getElementById('veld'));
+
+// Testhaakje: hiermee kan een geautomatiseerde test de status uitlezen en
+// deterministische situaties opzetten. Geen cheat — alleen uitlezen/instellen
+// voor tests; wordt bij framework-integratie achter de testmodus gezet.
+window.__onthul = {
+  get status() { return status; },
+  get pct() { return pct; },
+  get score() { return score; },
+  get levens() { return levens; },
+  get level() { return level; },
+  get speler() { return { ...speler }; },
+  get ballen() { return ballen.map((b) => ({ ...b })); },
+  zetBal(i, x, y, vx, vy) { Object.assign(ballen[i], { x, y, vx, vy }); },
+  zetRichting(r) { gewenst = r; },
+};
+
+nieuwLevel(1);
+pasAan();
+toonStart();
+raf = requestAnimationFrame(loop);
+</script>
+</body>
+</html>

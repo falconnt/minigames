@@ -1,0 +1,695 @@
+// Schaduwbos — een donker ninja-overlevingsspel in een spookbos.
+// Van bovenaf: monsters & geesten komen van alle kanten; je katana vliegt
+// automatisch om je heen en maait ze weg. Golven elke 10s, gouden power-geest
+// elke 20s geeft een extra zwaard. Schermvullend, met de vinger of toetsenbord.
+export function init(root, ctx) {
+  root.innerHTML = '';
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  const fs = document.createElement('div');
+  fs.className = 'sb-fs';
+  fs.innerHTML = `<div class="sb-top">
+      <button class="sb-btn sb-back" aria-label="Terug naar menu">← Terug</button>
+      <span id="sb-hearts" class="sb-hearts">❤️❤️❤️❤️❤️</span>
+      <span class="sb-grow"></span>
+      <span class="sb-stat">Tijd <b id="sb-time">0.0</b>s</span>
+      <span class="sb-stat">Kills <b id="sb-kills">0</b></span>
+      <span class="sb-stat">⚔️<b id="sb-swords">1</b></span>
+      <button id="sb-mute" class="sb-btn" aria-label="Geluid aan of uit">🔊</button>
+    </div>
+    <div id="sb-area" class="sb-area">
+      <canvas id="sb-cv" class="sb-cv"></canvas>
+      <div id="sb-dash" class="sb-dash" aria-label="Dash">💨</div>
+      <div id="sb-atk" class="sb-atk" aria-label="Snelle draai">🌀</div>
+      <div id="sb-start" class="sb-ovl">
+        <h1>🥷 Schaduwbos</h1>
+        <p>Je bent een ninja in een spookbos. Monsters en geesten komen van <b>alle kanten</b>.
+           Je <b>katana vliegt vanzelf om je heen</b> en maait alles weg wat het raakt — jij zorgt dat je
+           de monsters langs je zwaard laat lopen. Overleef zo lang mogelijk!</p>
+        <p>Elke <b>10 seconden</b> komt er een golf met meer monsters. Elke <b>20 seconden</b> verschijnt een
+           <b style="color:#ffd24d">gouden geest</b> — versla 'm voor een <b>extra rondvliegend zwaard</b>!</p>
+        <p><b>Joystick</b> (links) om te lopen · <b>🌀</b> voor een snelle draai-boost · <b>💨</b> om te dashen.</p>
+        <button class="sb-play" id="sb-startBtn">▶ Spelen</button>
+      </div>
+      <div id="sb-over" class="sb-ovl sb-hidden">
+        <h1>💀 Verslagen</h1>
+        <div class="sb-big">Je overleefde <b id="sb-fTime">0</b> seconden</div>
+        <div class="sb-big">Monsters verslagen: <b id="sb-fKills">0</b></div>
+        <p id="sb-fBest"></p>
+        <button class="sb-play" id="sb-againBtn">↻ Opnieuw</button>
+      </div>
+    </div>`;
+  document.body.appendChild(fs);
+
+  // opslag/highscores worden door het minigames-framework geregeld (ctx)
+
+  const cv = document.getElementById('sb-cv');
+  const g = cv.getContext('2d');
+  const area = document.getElementById('sb-area');
+  const heartsEl = document.getElementById('sb-hearts');
+  const timeEl = document.getElementById('sb-time');
+  const killsEl = document.getElementById('sb-kills');
+  const swordsEl = document.getElementById('sb-swords');
+  const muteBtn = document.getElementById('sb-mute');
+  const atkBtn = document.getElementById('sb-atk');
+  const dashBtn = document.getElementById('sb-dash');
+  const startOvl = document.getElementById('sb-start');
+  const overOvl = document.getElementById('sb-over');
+
+  let W = 0, H = 0, DPR = 1, unit = 400;
+  let worldW = 0, worldH = 0, camX = 0, camY = 0;   // grote map + camera
+  function resize() {
+    const r = area.getBoundingClientRect();
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    unit = Math.min(W, H);
+    // map is groter dan het scherm; de camera volgt de speler
+    worldW = W * 2.6; worldH = H * 2.6;
+  }
+  const ro = new ResizeObserver(resize); ro.observe(area);
+  resize();
+
+  // ---- audio (procedureel, uit te zetten) ----
+  let ac = null, muted = false, drone = null;
+  function ensureAudio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return; } }
+    if (ac.state === 'suspended') ac.resume();
+    if (!drone && ac) startDrone();
+  }
+  function startDrone() {
+    const o = ac.createOscillator(), o2 = ac.createOscillator(), gg = ac.createGain(), f = ac.createBiquadFilter();
+    o.type = 'sine'; o.frequency.value = 55; o2.type = 'sine'; o2.frequency.value = 82.5;
+    f.type = 'lowpass'; f.frequency.value = 220;
+    gg.gain.value = 0.05; o.connect(gg); o2.connect(gg); gg.connect(f); f.connect(ac.destination);
+    const lfo = ac.createOscillator(), la = ac.createGain(); lfo.frequency.value = 0.15; la.gain.value = 0.02;
+    lfo.connect(la).connect(gg.gain); o.start(); o2.start(); lfo.start();
+    drone = { gg };
+  }
+  function blip(freq, dur, type, vol, slideTo) {
+    if (muted || !ac) return;
+    const t = ac.currentTime, o = ac.createOscillator(), gn = ac.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t + dur);
+    gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(gn).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function noise(dur, vol, lp0, lp1) {
+    if (muted || !ac) return;
+    const t = ac.currentTime, n = Math.floor(ac.sampleRate * dur);
+    const b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = ac.createBufferSource(); s.buffer = b;
+    const f = ac.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(lp0, t); f.frequency.exponentialRampToValueAtTime(lp1, t + dur);
+    const gn = ac.createGain(); gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f).connect(gn).connect(ac.destination); s.start(t); s.stop(t + dur);
+  }
+  const sSlash = () => { noise(0.14, 0.18, 3000, 500); blip(760, 0.12, 'sawtooth', 0.05, 1200); };
+  const sHitEnemy = () => { noise(0.12, 0.16, 1400, 200); blip(180, 0.14, 'square', 0.06, 70); };
+  const sHurt = () => { blip(300, 0.3, 'sawtooth', 0.14, 60); noise(0.3, 0.14, 900, 120); };
+  const sDash = () => { noise(0.22, 0.14, 2200, 300); };
+  const sDie = () => { blip(220, 0.7, 'sawtooth', 0.16, 40); noise(0.7, 0.14, 700, 90); };
+  const sPower = () => { blip(660, 0.14, 'triangle', 0.09, 990); blip(990, 0.18, 'triangle', 0.08, 1480); blip(1320, 0.22, 'sine', 0.07); };
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; muteBtn.classList.toggle('sb-muted', muted);
+    if (drone) drone.gg.gain.value = muted ? 0 : 0.05;
+    ensureAudio();
+  });
+
+  // ---- spelstatus ----
+  let state = 'start'; // start | playing | over
+  let player, enemies, particles, fireflies, trees, mists, floaters;
+  let tSurv = 0, kills = 0, spawnCd = 0, shake = 0, hurtFlash = 0, lastFrame = 0, powerGhostCd = 20, waveLevel = 0;
+  const hs = () => { try { return ctx.getHighscores() || []; } catch (e) { return []; } };
+
+  function scaleConst() {
+    return {
+      pR: unit * 0.024,
+      pSpeed: unit * 0.60,     // rustiger, goed te sturen (was te hoog)
+      pAccelHalf: 0.07,        // halveringstijd voor soepel versnellen/afremmen
+      orbitR: unit * 0.115,    // straal waarop het zwaard om je heen vliegt
+      swordLen: unit * 0.10,   // lengte van het blad
+      swordHitR: unit * 0.05,  // raakcirkel rond het blad
+      orbitSpeed: 4.4,         // draaisnelheid (rad/s) normaal
+      spinSpeed: 15,           // draaisnelheid tijdens de snelle draai-boost
+      spinTime: 0.55,          // duur van de boost
+      spinCd: 0.9,             // afkoeltijd boost
+      swHitCd: 0.35,           // hoe vaak hetzelfde monster geraakt kan worden
+      dashSpeed: unit * 2.4,
+      dashTime: 0.16,
+      dashCd: 1.1,
+      invuln: 1.1,
+    };
+  }
+  let K = scaleConst();
+
+  function initWorld() {
+    K = scaleConst();
+    player = { x: worldW / 2, y: worldH / 2, dirx: 0, diry: 1, pvx: 0, pvy: 0, hearts: 5, invuln: 0, swords: 1, swordAngle: 0, spinT: 0, spinCd: 0, dashCd: 0, dashT: 0, dvx: 0, dvy: 0 };
+    camX = Math.max(0, Math.min(worldW - W, player.x - W / 2));
+    camY = Math.max(0, Math.min(worldH - H, player.y - H / 2));
+    enemies = []; particles = []; fireflies = []; trees = []; mists = []; floaters = [];
+    tSurv = 0; kills = 0; spawnCd = 0.6; shake = 0; hurtFlash = 0; powerGhostCd = 20; waveLevel = 0;
+    // bomen verspreid over de hele map (niet te dicht bij het startpunt)
+    for (let i = 0; i < 30; i++) {
+      let x, y;
+      do { x = Math.random() * worldW; y = Math.random() * worldH; } while (Math.hypot(x - player.x, y - player.y) < unit * 0.5);
+      trees.push({ x, y, r: unit * (0.05 + Math.random() * 0.06), s: Math.random() });
+    }
+    for (let i = 0; i < 46; i++) fireflies.push({ x: Math.random() * worldW, y: Math.random() * worldH, a: Math.random() * 6.28, sp: 6 + Math.random() * 10, ph: Math.random() * 6.28 });
+    for (let i = 0; i < 12; i++) mists.push({ x: Math.random() * worldW, y: Math.random() * worldH, r: unit * (0.25 + Math.random() * 0.25), vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6 });
+    updateHearts(); swordsEl.textContent = player.swords;
+  }
+
+  const ENEMY_TYPES = {
+    schaduw: { r: unit => unit * 0.03, speed: unit => unit * 0.22, hp: 1, col: '#171a24', eye: '#ff3b57', wob: 0 },
+    geest:   { r: unit => unit * 0.028, speed: unit => unit * 0.32, hp: 1, col: '#9fb4d6', eye: '#8fe6ff', wob: 1 },
+    grom:    { r: unit => unit * 0.05, speed: unit => unit * 0.17, hp: 3, col: '#241417', eye: '#ff9a1e', wob: 0 },
+  };
+
+  // Spawnpositie net buiten het zichtbare beeld (rond de camera), in wereld-coords.
+  function spawnPos() {
+    const m = unit * 0.09, side = Math.floor(Math.random() * 4);
+    if (side === 0) return { x: camX + Math.random() * W, y: camY - m };
+    if (side === 1) return { x: camX + W + m, y: camY + Math.random() * H };
+    if (side === 2) return { x: camX + Math.random() * W, y: camY + H + m };
+    return { x: camX - m, y: camY + Math.random() * H };
+  }
+  function spawnEnemy() {
+    // kies type op basis van overleefde tijd
+    let type = 'schaduw';
+    const rnd = Math.random();
+    if (tSurv > 25 && rnd < 0.16) type = 'grom';
+    else if (tSurv > 10 && rnd < 0.45) type = 'geest';
+    const def = ENEMY_TYPES[type];
+    const { x, y } = spawnPos();
+    const speedMul = 1 + tSurv * 0.006;
+    enemies.push({ type, x, y, r: def.r(unit), speed: def.speed(unit) * speedMul, hp: def.hp, maxhp: def.hp,
+      col: def.col, eye: def.eye, wob: def.wob, ph: Math.random() * 6.28, hit: 0, swCd: 0 });
+  }
+
+  // Speciale gouden "power-geest" (elke 20s): versla 'm voor een extra zwaard.
+  function spawnPowerGhost() {
+    const { x, y } = spawnPos();
+    enemies.push({ type: 'geest', power: true, x, y, r: unit * 0.04, speed: unit * 0.19 * (1 + tSurv * 0.004),
+      hp: 4, maxhp: 4, col: "#ffe89a", eye: "#fff6cf", wob: 1, ph: Math.random() * 6.28, hit: 0, swCd: 0 });
+  }
+  function floatText(text, x, y, col) {
+    floaters.push({ text, x, y, life: 1.1, col: col || '#ffe36b' });
+  }
+
+  function updateHearts() {
+    heartsEl.textContent = '❤️'.repeat(Math.max(0, player.hearts)) + '🖤'.repeat(Math.max(0, 5 - player.hearts));
+  }
+
+  // ---- input ----
+  const keys = {};
+  // "Floating" joystick: waar je je vinger ook op de linkerhelft neerzet, dáár
+  // komt het midden. Je hoeft maar een klein stukje te slepen om vol te lopen.
+  // Als je niets aanraakt staat er een rust-joystick linksonder als hint.
+  let joyId = null, joyOrigin = null, joyFinger = null;
+  const joyR = () => unit * 0.13;
+  const joyHome = () => ({ x: joyR() + unit * 0.06, y: H - joyR() - unit * 0.06 });
+
+  cv.addEventListener('pointerdown', (e) => {
+    if (state !== 'playing') return;
+    const r = cv.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (x < W * 0.5 && joyId === null) {
+      joyId = e.pointerId; joyOrigin = { x, y }; joyFinger = { x, y };
+      try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== joyId) return;
+    const r = cv.getBoundingClientRect();
+    joyFinger = { x: e.clientX - r.left, y: e.clientY - r.top };
+  });
+  function endJoy(e) { if (e.pointerId === joyId) { joyId = null; joyOrigin = null; joyFinger = null; } }
+  cv.addEventListener('pointerup', endJoy);
+  cv.addEventListener('pointercancel', endJoy);
+
+  function joyDir() {
+    if (joyFinger && joyOrigin) {
+      let dx = joyFinger.x - joyOrigin.x, dy = joyFinger.y - joyOrigin.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 3) return null;
+      // analoog: zachtjes duwen = rustig lopen, vol duwen = topsnelheid
+      const mag = Math.min(1, len / joyR());
+      return { x: dx / len, y: dy / len, mag };
+    }
+    // toetsenbord
+    let kx = (keys['ArrowRight'] || keys['d'] ? 1 : 0) - (keys['ArrowLeft'] || keys['a'] ? 1 : 0);
+    let ky = (keys['ArrowDown'] || keys['s'] ? 1 : 0) - (keys['ArrowUp'] || keys['w'] ? 1 : 0);
+    if (kx || ky) { const l = Math.hypot(kx, ky); return { x: kx / l, y: ky / l, mag: 1 }; }
+    return null;
+  }
+
+  // Afstand van een punt tot een lijnstuk (voor de trefzone van het blad).
+  function distToSeg(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+    let t = ((px - ax) * dx + (py - ay) * dy) / l2; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+  // Snelle draai-boost: het zwaard whirlt heel even veel sneller en verder.
+  function doSpin() {
+    if (state !== 'playing' || player.spinCd > 0) return;
+    player.spinCd = K.spinCd; player.spinT = K.spinTime; sSlash();
+    for (let i = 0; i < 8; i++) particles.push(mkPart(player.x, player.y, '#cfe8ff', 0.5));
+  }
+  function killEnemy(en) {
+    en.dead = true; kills++; killsEl.textContent = kills;
+    if (en.power) {
+      // power-up: een extra rondvliegend zwaard (max 6)
+      if (player.swords < 6) player.swords++;
+      swordsEl.textContent = player.swords;
+      sPower(); shake = Math.max(shake, 0.6);
+      floatText('+1 zwaard!', en.x, en.y);
+      for (let i = 0; i < 26; i++) particles.push(mkPart(en.x, en.y, '#ffe36b'));
+    } else {
+      sHitEnemy(); shake = Math.max(shake, 0.25);
+      for (let i = 0; i < 12; i++) particles.push(mkPart(en.x, en.y, en.type === 'geest' ? '#bfefff' : '#ff5170'));
+    }
+  }
+  function doDash() {
+    if (state !== 'playing' || player.dashCd > 0) return;
+    const dir = joyDir();
+    const dx = dir ? dir.x : player.dirx, dy = dir ? dir.y : player.diry;
+    player.dashCd = K.dashCd; player.dashT = K.dashTime; player.dvx = dx; player.dvy = dy;
+    player.invuln = Math.max(player.invuln, K.dashTime + 0.08); sDash();
+    for (let i = 0; i < 10; i++) particles.push(mkPart(player.x, player.y, '#8fd6ff', 0.5));
+  }
+  function mkPart(x, y, col, lifeMul) {
+    const a = Math.random() * 6.283, sp = unit * (0.2 + Math.random() * 0.5);
+    return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: (0.3 + Math.random() * 0.3) * (lifeMul || 1), max: 0.6, col };
+  }
+
+  atkBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); doSpin(); });
+  dashBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); doDash(); });
+  function onKeyDown(e) {
+    keys[e.key] = true;
+    if (state === 'playing') {
+      if (e.key === ' ' || e.key.toLowerCase() === 'j') { e.preventDefault(); doSpin(); }
+      if (e.key.toLowerCase() === 'k' || e.key === 'Shift') { e.preventDefault(); doDash(); }
+    }
+  }
+  function onKeyUp(e) { keys[e.key] = false; }
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+
+  // ---- update ----
+  function update(dt) {
+    tSurv += dt;
+    timeEl.textContent = tSurv.toFixed(1);
+    if (shake > 0) shake -= dt; if (hurtFlash > 0) hurtFlash -= dt;
+
+    // vuurvliegjes + mist (over de hele map)
+    for (const f of fireflies) { f.ph += dt * 2; f.a += (Math.random() - 0.5) * 0.6; f.x += Math.cos(f.a) * f.sp * dt; f.y += Math.sin(f.a) * f.sp * dt;
+      if (f.x < 0) f.x = worldW; if (f.x > worldW) f.x = 0; if (f.y < 0) f.y = worldH; if (f.y > worldH) f.y = 0; }
+    for (const m of mists) { m.x += m.vx * dt; m.y += m.vy * dt; if (m.x < -m.r) m.x = worldW + m.r; if (m.x > worldW + m.r) m.x = -m.r; if (m.y < -m.r) m.y = worldH + m.r; if (m.y > worldH + m.r) m.y = -m.r; }
+
+    // speler
+    player.dashCd = Math.max(0, player.dashCd - dt);
+    player.spinCd = Math.max(0, player.spinCd - dt);
+    player.spinT = Math.max(0, player.spinT - dt);
+    player.invuln = Math.max(0, player.invuln - dt);
+    atkBtn.classList.toggle('cd', player.spinCd > 0);
+    dashBtn.classList.toggle('cd', player.dashCd > 0);
+
+    const dir = joyDir();
+    if (dir) { player.dirx = dir.x; player.diry = dir.y; }
+    // doelsnelheid bepalen
+    let tvx = 0, tvy = 0;
+    if (player.dashT > 0) {
+      player.dashT -= dt;
+      tvx = player.dvx * K.dashSpeed; tvy = player.dvy * K.dashSpeed;
+      if (Math.random() < 0.6) particles.push(mkPart(player.x, player.y, '#7fbfff', 0.4));
+    } else if (dir) {
+      tvx = dir.x * K.pSpeed * dir.mag; tvy = dir.y * K.pSpeed * dir.mag;
+    }
+    // soepel naar de doelsnelheid toe (versnellen/afremmen) i.p.v. direct snappen
+    if (player.dashT > 0) { player.pvx = tvx; player.pvy = tvy; }
+    else {
+      const k = 1 - Math.pow(0.5, dt / K.pAccelHalf);
+      player.pvx += (tvx - player.pvx) * k;
+      player.pvy += (tvy - player.pvy) * k;
+    }
+    player.x += player.pvx * dt;
+    player.y += player.pvy * dt;
+    const pad = K.pR;
+    player.x = Math.max(pad, Math.min(worldW - pad, player.x));
+    player.y = Math.max(pad, Math.min(worldH - pad, player.y));
+    // camera volgt de speler (binnen de mapgrenzen)
+    camX = Math.max(0, Math.min(worldW - W, player.x - W / 2));
+    camY = Math.max(0, Math.min(worldH - H, player.y - H / 2));
+
+    // elke 10s een nieuwe golf: een lading extra monsters + geesten tegelijk,
+    // en daarna blijven ze sneller komen.
+    if (Math.floor(tSurv / 10) > waveLevel) {
+      waveLevel++;
+      const burst = 3 + waveLevel;
+      for (let i = 0; i < burst && enemies.length < 60; i++) spawnEnemy();
+      floatText('Golf ' + (waveLevel + 1) + '!', player.x, player.y - unit * 0.12, '#ff9a5c');
+      shake = Math.max(shake, 0.4); sHitEnemy();
+    }
+    // doorlopende spawn; het tempo stapt omhoog per golf
+    spawnCd -= dt;
+    const interval = Math.max(0.3, 1.35 - waveLevel * 0.12);
+    if (spawnCd <= 0 && enemies.length < 60) { spawnEnemy(); spawnCd = interval * (0.7 + Math.random() * 0.6); }
+    // elke 20s een gouden power-geest (max één tegelijk); versla 'm = extra zwaard
+    powerGhostCd -= dt;
+    if (powerGhostCd <= 0) {
+      if (!enemies.some(e => e.power) && player.swords < 6) { spawnPowerGhost(); powerGhostCd = 20; }
+      else powerGhostCd = 3;
+    }
+
+    // vijanden
+    for (const en of enemies) {
+      en.hit = Math.max(0, en.hit - dt);
+      en.swCd = Math.max(0, en.swCd - dt);
+      let dx = player.x - en.x, dy = player.y - en.y; const d = Math.hypot(dx, dy) || 1;
+      let vx = dx / d, vy = dy / d;
+      if (en.wob) { en.ph += dt * 4; const px = -vy, py = vx; const w = Math.sin(en.ph) * 0.5; vx += px * w; vy += py * w; const l = Math.hypot(vx, vy); vx /= l; vy /= l; }
+      en.x += vx * en.speed * dt; en.y += vy * en.speed * dt;
+      // botsing met speler
+      if (player.invuln <= 0 && d < en.r + K.pR) {
+        player.hearts--; updateHearts(); player.invuln = K.invuln; hurtFlash = 0.4; shake = Math.max(shake, 0.5); sHurt();
+        // terugstoot + momentum stoppen (niet terug in de vijand glijden)
+        player.pvx = 0; player.pvy = 0;
+        player.x -= vx * unit * 0.12; player.y -= vy * unit * 0.12;
+        player.x = Math.max(pad, Math.min(worldW - pad, player.x));
+        player.y = Math.max(pad, Math.min(worldH - pad, player.y));
+        for (let i = 0; i < 10; i++) particles.push(mkPart(player.x, player.y, '#ff2d55'));
+        if (player.hearts <= 0) return gameOver();
+      }
+    }
+    // zwaard(en) die om je heen vliegen: draaien continu; raken monsters die ze passeren
+    const spinning = player.spinT > 0;
+    player.swordAngle += (spinning ? K.spinSpeed : K.orbitSpeed) * dt;
+    const sr = K.orbitR * (spinning ? 1.3 : 1);
+    const N = player.swords;
+    for (let s = 0; s < N; s++) {
+      const ang = player.swordAngle + s * (6.2832 / N), ca = Math.cos(ang), sa = Math.sin(ang);
+      const bx0 = player.x + ca * sr, by0 = player.y + sa * sr;
+      const bx1 = player.x + ca * (sr + K.swordLen), by1 = player.y + sa * (sr + K.swordLen);
+      for (const en of enemies) {
+        if (en.swCd > 0 || en.dead) continue;
+        if (distToSeg(en.x, en.y, bx0, by0, bx1, by1) < en.r + K.swordHitR) {
+          en.hp--; en.hit = 0.12; en.swCd = spinning ? 0.16 : K.swHitCd;
+          for (let i = 0; i < 5; i++) particles.push(mkPart(en.x, en.y, en.power ? '#ffe36b' : (en.type === 'geest' ? '#bfefff' : '#ff5170')));
+          if (en.hp <= 0) killEnemy(en); else sHitEnemy();
+        }
+      }
+    }
+    enemies = enemies.filter(e => !e.dead);
+
+    // deeltjes + zwevende tekst
+    for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; p.life -= dt; }
+    particles = particles.filter(p => p.life > 0);
+    for (const fl of floaters) { fl.y -= unit * 0.25 * dt; fl.life -= dt; }
+    floaters = floaters.filter(fl => fl.life > 0);
+  }
+
+  function gameOver() {
+    state = 'over'; sDie(); joyId = null; joyOrigin = null; joyFinger = null;
+    document.getElementById('sb-fTime').textContent = tSurv.toFixed(1);
+    document.getElementById('sb-fKills').textContent = kills;
+    const score = Math.floor(tSurv * 10 + kills * 5);
+    const res = score > 0 ? ctx.submitScore(score) : null;
+    const fBest = document.getElementById('sb-fBest');
+    fBest.textContent = res && res.isRecord ? '🏆 Nieuw record! — ' + score + ' punten'
+      : (res && res.rank ? score + ' punten — plek ' + res.rank + ' in de top 10' : score + ' punten');
+    overOvl.classList.remove('sb-hidden');
+  }
+
+  // ---- teken ----
+  function draw() {
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#05090a'; g.fillRect(0, 0, W, H);
+
+    g.save();
+    if (shake > 0) { const m = shake * unit * 0.05; g.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m); }
+    g.translate(-camX, -camY); // camera: alles hierna in wereld-coördinaten
+
+    // grond over de hele map
+    const gr = g.createRadialGradient(worldW / 2, worldH / 2, 0, worldW / 2, worldH / 2, Math.max(worldW, worldH) * 0.65);
+    gr.addColorStop(0, '#12281c'); gr.addColorStop(0.6, '#0b1712'); gr.addColorStop(1, '#070d0b');
+    g.fillStyle = gr; g.fillRect(0, 0, worldW, worldH);
+    // rand van de map (grens)
+    g.strokeStyle = 'rgba(150,70,70,0.5)'; g.lineWidth = unit * 0.025;
+    g.shadowColor = 'rgba(180,60,60,0.5)'; g.shadowBlur = unit * 0.04;
+    g.strokeRect(0, 0, worldW, worldH); g.shadowBlur = 0;
+
+    // zacht maanlicht rond de ninja (geeft diepte en focus)
+    const lightR = Math.max(W, H) * 0.52;
+    const lg = g.createRadialGradient(player.x, player.y, unit * 0.04, player.x, player.y, lightR);
+    lg.addColorStop(0, 'rgba(150,195,180,0.14)'); lg.addColorStop(0.5, 'rgba(120,170,160,0.05)'); lg.addColorStop(1, 'rgba(120,170,160,0)');
+    g.fillStyle = lg; g.fillRect(camX, camY, W, H);
+
+    // mist
+    for (const m of mists) {
+      const mg = g.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r);
+      mg.addColorStop(0, 'rgba(120,150,140,0.06)'); mg.addColorStop(1, 'rgba(120,150,140,0)');
+      g.fillStyle = mg; g.beginPath(); g.arc(m.x, m.y, m.r, 0, 6.2832); g.fill();
+    }
+    // bomen (silhouetten)
+    for (const t of trees) drawTree(t);
+    // vuurvliegjes
+    for (const f of fireflies) {
+      const gl = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(f.ph));
+      g.fillStyle = 'rgba(180,255,160,' + (gl * 0.8) + ')';
+      g.shadowColor = '#bfff9a'; g.shadowBlur = 8;
+      g.beginPath(); g.arc(f.x, f.y, unit * 0.004, 0, 6.2832); g.fill();
+    }
+    g.shadowBlur = 0;
+
+    // deeltjes (ronde, gloeiende vonkjes)
+    g.globalCompositeOperation = 'lighter';
+    for (const p of particles) {
+      const a = Math.max(0, p.life / p.max);
+      g.globalAlpha = a; g.fillStyle = p.col;
+      g.beginPath(); g.arc(p.x, p.y, unit * 0.007 * (0.5 + a), 0, 6.2832); g.fill();
+    }
+    g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+
+    // vijanden
+    for (const en of enemies) drawEnemy(en);
+
+    // speler + rondvliegend zwaard
+    drawPlayer();
+    drawSword();
+    drawFloaters();
+    g.restore();
+
+    // vignette
+    const vg = g.createRadialGradient(W / 2, H / 2, unit * 0.28, W / 2, H / 2, Math.max(W, H) * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.7, 'rgba(3,6,10,0.35)'); vg.addColorStop(1, 'rgba(2,4,8,0.72)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, H);
+    // hurt flits
+    if (hurtFlash > 0) { g.fillStyle = 'rgba(255,20,60,' + (hurtFlash * 0.5) + ')'; g.fillRect(0, 0, W, H); }
+
+    // joystick: "floating" op je vinger, of een rust-joystick linksonder als hint
+    if (state === 'playing') {
+      const active = !!(joyFinger && joyOrigin), R = joyR();
+      const base = active ? joyOrigin : joyHome();
+      g.globalAlpha = active ? 1 : 0.6;
+      g.fillStyle = 'rgba(255,255,255,0.06)';
+      g.beginPath(); g.arc(base.x, base.y, R, 0, 6.2832); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.28)'; g.lineWidth = 2.5;
+      g.beginPath(); g.arc(base.x, base.y, R, 0, 6.2832); g.stroke();
+      // richting-pijltjes als hint
+      g.fillStyle = 'rgba(255,255,255,0.22)';
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2, ax = base.x + Math.cos(a) * R * 0.78, ay = base.y + Math.sin(a) * R * 0.78;
+        g.save(); g.translate(ax, ay); g.rotate(a); g.beginPath();
+        g.moveTo(R * 0.1, 0); g.lineTo(-R * 0.05, -R * 0.08); g.lineTo(-R * 0.05, R * 0.08); g.closePath(); g.fill(); g.restore();
+      }
+      let kx = base.x, ky = base.y;
+      if (active) { let dx = joyFinger.x - base.x, dy = joyFinger.y - base.y; const l = Math.hypot(dx, dy) || 1; const cl = Math.min(l, R); kx = base.x + dx / l * cl; ky = base.y + dy / l * cl; }
+      g.shadowColor = '#8fd0ff'; g.shadowBlur = 12;
+      g.fillStyle = active ? 'rgba(150,205,255,0.8)' : 'rgba(200,220,240,0.5)';
+      g.beginPath(); g.arc(kx, ky, R * 0.46, 0, 6.2832); g.fill(); g.shadowBlur = 0;
+      g.globalAlpha = 1;
+    }
+  }
+
+  // Zachte grondschaduw onder een object (grondt het, geen "zwevend" gevoel).
+  function groundShadow(x, y, r, a) {
+    g.fillStyle = 'rgba(0,0,0,' + (a || 0.24) + ')';
+    g.beginPath(); g.ellipse(x, y + r * 0.28, r * 0.98, r * 0.55, 0, 0, 6.2832); g.fill();
+  }
+  function drawTree(t) {
+    const r = t.r;
+    groundShadow(t.x, t.y + r * 0.3, r * 1.05, 0.3);
+    // stam
+    g.fillStyle = '#0a0d0a'; g.fillRect(t.x - r * 0.09, t.y, r * 0.18, r * 0.5);
+    // kroon (donker silhouet, meerdere blobs)
+    g.fillStyle = '#0c150e';
+    g.beginPath(); g.arc(t.x, t.y - r * 0.1, r * 0.72, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(t.x - r * 0.42, t.y + r * 0.1, r * 0.42, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(t.x + r * 0.42, t.y - r * 0.2, r * 0.44, 0, 6.2832); g.fill();
+    // maanlicht-randje bovenop de kroon
+    g.strokeStyle = 'rgba(150,185,155,0.16)'; g.lineWidth = Math.max(1, r * 0.05);
+    g.beginPath(); g.arc(t.x, t.y - r * 0.1, r * 0.72, Math.PI * 1.15, Math.PI * 1.95); g.stroke();
+  }
+
+  function drawEnemy(en) {
+    const flash = en.hit > 0;
+    g.save();
+    // grondschaduw (geesten zweven → lichter)
+    groundShadow(en.x, en.y, en.r, en.type === 'geest' ? 0.13 : 0.26);
+    // gouden aura + zwaard-markering voor de power-geest
+    if (en.power) {
+      const pulse = 0.6 + 0.4 * Math.sin(tSurv * 6);
+      g.strokeStyle = 'rgba(255,214,80,' + (0.5 * pulse) + ')'; g.lineWidth = en.r * 0.3;
+      g.shadowColor = '#ffd24d'; g.shadowBlur = en.r * 1.2;
+      g.beginPath(); g.arc(en.x, en.y, en.r * 1.35, 0, 6.2832); g.stroke();
+    }
+    // gloed
+    g.shadowColor = en.eye; g.shadowBlur = en.r * 0.6;
+    if (en.type === 'geest') {
+      g.globalAlpha = 0.85;
+      g.fillStyle = flash ? '#ffffff' : en.col;
+      g.beginPath();
+      g.arc(en.x, en.y - en.r * 0.1, en.r, Math.PI, 0);
+      const n = 4; for (let i = 0; i <= n; i++) { const xx = en.x + en.r - (2 * en.r) * (i / n); const yy = en.y + en.r * 0.7 + (i % 2 ? en.r * 0.3 : 0); g.lineTo(xx, yy); }
+      g.closePath(); g.fill(); g.globalAlpha = 1;
+    } else {
+      g.fillStyle = flash ? '#ffffff' : en.col;
+      g.beginPath(); g.arc(en.x, en.y, en.r, 0, 6.2832); g.fill();
+      // stekelige rand voor grom
+      if (en.type === 'grom') {
+        g.fillStyle = flash ? '#ffffff' : '#3a1e22';
+        for (let i = 0; i < 8; i++) { const a = i / 8 * 6.2832 + en.ph; g.beginPath(); g.arc(en.x + Math.cos(a) * en.r, en.y + Math.sin(a) * en.r, en.r * 0.22, 0, 6.2832); g.fill(); }
+        g.fillStyle = flash ? '#fff' : en.col; g.beginPath(); g.arc(en.x, en.y, en.r * 0.9, 0, 6.2832); g.fill();
+      }
+      // subtiele glans linksboven (geeft volume)
+      g.shadowBlur = 0; g.fillStyle = flash ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)';
+      g.beginPath(); g.arc(en.x - en.r * 0.3, en.y - en.r * 0.34, en.r * 0.42, 0, 6.2832); g.fill();
+    }
+    g.shadowBlur = 0;
+    // ogen
+    g.fillStyle = en.eye; g.shadowColor = en.eye; g.shadowBlur = en.r * 0.5;
+    const ex = en.r * 0.35, ey = -en.r * 0.1, er = en.r * (en.type === 'grom' ? 0.16 : 0.14);
+    g.beginPath(); g.arc(en.x - ex, en.y + ey, er, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(en.x + ex, en.y + ey, er, 0, 6.2832); g.fill();
+    // klein zwaardje op de power-geest (hint: versla mij voor een zwaard)
+    if (en.power) {
+      g.strokeStyle = '#fff4d0'; g.lineWidth = en.r * 0.14; g.lineCap = 'round';
+      g.shadowColor = '#ffe89a'; g.shadowBlur = en.r * 0.5;
+      g.beginPath(); g.moveTo(en.x - en.r * 0.3, en.y + en.r * 0.35); g.lineTo(en.x + en.r * 0.3, en.y - en.r * 0.35); g.stroke();
+    }
+    g.restore();
+    // gezondheidsbalkje
+    if (en.maxhp > 1 && en.hp < en.maxhp) {
+      g.fillStyle = '#000a'; g.fillRect(en.x - en.r, en.y - en.r * 1.45, en.r * 2, 4);
+      g.fillStyle = en.power ? '#ffd24d' : '#ff5170'; g.fillRect(en.x - en.r, en.y - en.r * 1.45, en.r * 2 * (en.hp / en.maxhp), 4);
+    }
+  }
+
+  function drawPlayer() {
+    const blink = player.invuln > 0 && Math.floor(player.invuln * 12) % 2 === 0;
+    if (blink) return;
+    const fa = Math.atan2(player.diry, player.dirx);
+    groundShadow(player.x, player.y, K.pR, 0.28);
+    g.save(); g.translate(player.x, player.y); g.rotate(fa + Math.PI / 2); // sprite tekent met neus omhoog
+    const r = K.pR;
+    // sjaal (wappert naar achteren)
+    g.fillStyle = '#c81438';
+    g.beginPath(); g.moveTo(-r * 0.35, r * 0.2); g.quadraticCurveTo(-r * 1.2, r * 0.9, -r * 0.2, r * 1.4);
+    g.quadraticCurveTo(r * 0.1, r * 0.7, r * 0.2, r * 0.2); g.closePath(); g.fill();
+    // lichaam
+    g.fillStyle = '#12151d'; g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.fill();
+    g.fillStyle = '#1c2230'; g.beginPath(); g.arc(0, -r * 0.1, r * 0.7, 0, 6.2832); g.fill();
+    // subtiele glans (volume)
+    g.fillStyle = 'rgba(130,160,200,0.14)'; g.beginPath(); g.arc(-r * 0.22, -r * 0.3, r * 0.4, 0, 6.2832); g.fill();
+    // ogen (band)
+    g.fillStyle = '#c81438'; g.fillRect(-r * 0.6, -r * 0.35, r * 1.2, r * 0.28);
+    g.fillStyle = '#eaf2ff'; g.fillRect(-r * 0.4, -r * 0.32, r * 0.25, r * 0.16); g.fillRect(r * 0.15, -r * 0.32, r * 0.25, r * 0.16);
+    g.restore();
+  }
+
+  // De rondvliegende katana('s): één of meer bladen die om de ninja cirkelen.
+  function drawSword() {
+    const spinning = player.spinT > 0;
+    const sr = K.orbitR * (spinning ? 1.3 : 1), N = player.swords;
+    g.save(); g.translate(player.x, player.y);
+    for (let s = 0; s < N; s++) {
+      const a = player.swordAngle + s * (6.2832 / N);
+      // spoor: brede zachte veeg + fellere korte kern (vervaagt naar achteren)
+      const trailA = spinning ? 2.4 : 1.15;
+      g.lineCap = 'round';
+      g.strokeStyle = spinning ? 'rgba(170,215,255,0.14)' : 'rgba(200,220,245,0.08)';
+      g.lineWidth = K.pR * 1.3;
+      g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - trailA, a); g.stroke();
+      g.strokeStyle = spinning ? 'rgba(190,225,255,0.5)' : 'rgba(210,228,248,0.3)';
+      g.lineWidth = K.pR * 0.7;
+      g.beginPath(); g.arc(0, 0, sr + K.swordLen * 0.45, a - trailA * 0.55, a); g.stroke();
+      // blad (radiaal naar buiten)
+      g.save(); g.rotate(a);
+      g.strokeStyle = '#6f4426'; g.lineWidth = K.pR * 0.4; g.lineCap = 'round';   // greep
+      g.beginPath(); g.moveTo(sr - K.pR * 0.5, 0); g.lineTo(sr, 0); g.stroke();
+      g.strokeStyle = '#e6edf5'; g.lineWidth = K.pR * 0.3; g.shadowColor = '#cfe8ff'; g.shadowBlur = 10;
+      g.beginPath(); g.moveTo(sr, 0); g.lineTo(sr + K.swordLen, 0); g.stroke();
+      g.shadowBlur = 0; g.restore();
+    }
+    g.restore();
+  }
+
+  function drawFloaters() {
+    g.textAlign = 'center'; g.font = '700 ' + (unit * 0.045) + 'px system-ui, sans-serif';
+    for (const fl of floaters) {
+      g.globalAlpha = Math.min(1, fl.life * 1.4);
+      g.fillStyle = fl.col; g.shadowColor = fl.col; g.shadowBlur = 8;
+      g.fillText(fl.text, fl.x, fl.y);
+    }
+    g.globalAlpha = 1; g.shadowBlur = 0; g.textAlign = 'start';
+  }
+
+  // ---- loop ----
+  let raf = 0, running = true;
+  function loop(ts) {
+    if (!running) return;
+    const dt = Math.min(0.05, (ts - lastFrame) / 1000 || 0); lastFrame = ts;
+    if (state === 'playing') update(dt);
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function startGame() {
+    ensureAudio(); resize(); initWorld();
+    state = 'playing';
+    startOvl.classList.add('sb-hidden'); overOvl.classList.add('sb-hidden');
+  }
+  document.getElementById('sb-startBtn').addEventListener('click', startGame);
+  document.getElementById('sb-againBtn').addEventListener('click', startGame);
+
+  // toon huidige highscore op startscherm
+  const top0 = hs()[0];
+  if (top0 && top0.score) startOvl.querySelector('p:last-of-type').insertAdjacentHTML('afterend', '<p>🏆 Highscore: <b>' + top0.score + ' punten</b></p>');
+
+  // veilige init zodat draw() niet crasht vóór start
+  initWorld(); state = 'start';
+  raf = requestAnimationFrame(loop);
+  // ---- terug-knop + opruimen (framework) ----
+  function onBack() {
+    const score = Math.floor(tSurv * 10 + kills * 5);
+    if (state === 'playing' && score > 0) { try { ctx.submitScore(score); } catch (e) {} }
+    location.hash = '#/';
+  }
+  fs.querySelector('.sb-back').addEventListener('click', onBack);
+
+  return () => {
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('keyup', onKeyUp);
+    try { ro.disconnect(); } catch (e) {}
+    if (ac) { try { ac.close(); } catch (e) {} }
+    document.body.style.overflow = prevOverflow;
+    fs.remove();
+  };
+}

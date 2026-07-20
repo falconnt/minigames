@@ -71,6 +71,19 @@ function careFactor(h) {
   return 0.55 + 0.45 * c; // vies/moe paard presteert tot 45% minder
 }
 
+// Wedstrijdvorm ×0.50..×1.50: het gemiddelde van de voor die discipline
+// relevante (getrainde) vaardigheden bepaalt de punten-vermenigvuldiger van
+// een wedstrijd. Zo betaalt élke training zich uit in wedstrijdpunten:
+//   wedstrijdpunten = basispunten (je prestatie in de rit) × vorm (training).
+function vormFactor(...skills) {
+  const gem = skills.reduce((a, b) => a + b, 0) / skills.length;
+  return 0.5 + gem / 100;
+}
+// Relevante vaardigheden per discipline (springen/dressuur/race).
+const vormSpringen = (h) => vormFactor(h.jumping);
+const vormDressuur = (h) => vormFactor(h.dressage);
+const vormRace = (h) => vormFactor(h.speed, h.stamina);
+
 // ============================================================
 //  Stijl (eenmalig injecteren zodat de game overal zelfstandig werkt)
 // ============================================================
@@ -962,7 +975,8 @@ export function init(root, ctx) {
           ${bar('Energie', h.energy, '#e0a63b')}
         </div>
         <h3 style="margin-top:1rem">Trainen</h3>
-        <div class="ps-hint">Training kost energie en maakt je paard wat vies, maar verhoogt een vaardigheid.</div>
+        <div class="ps-hint">Training kost energie en maakt je paard wat vies, maar verhoogt een vaardigheid
+          — en daarmee je <b>wedstrijdvorm</b>: elke wedstrijd telt zijn punten × de vorm van die discipline.</div>
         <div class="ps-row" style="margin-top:.5rem">
           <button class="btn" data-train="speed">Snelheid +</button>
           <button class="btn" data-train="jumping">Springen +</button>
@@ -973,6 +987,10 @@ export function init(root, ctx) {
       </div>
       <div class="ps-panel">
         <h3>Wedstrijden</h3>
+        <div class="ps-hint" id="ps-vorm">Wedstrijdvorm (×0.50 t/m ×1.50 op je punten):
+          springen <b>×${vormSpringen(h).toFixed(2)}</b> ·
+          dressuur <b>×${vormDressuur(h).toFixed(2)}</b> ·
+          race <b>×${vormRace(h).toFixed(2)}</b></div>
         <div class="ps-disc">
           <button class="btn btn-primary" data-go="springen">Springen (parcours)</button>
           <button class="btn btn-primary" data-go="dressuur">Dressuur</button>
@@ -1148,7 +1166,9 @@ export function init(root, ctx) {
   }
 
   function finishSpringen(clears, faults, maxCleared, h) {
-    const pts = Math.max(0, clears * 20 + maxCleared - faults * 15);
+    const basis = Math.max(0, clears * 20 + maxCleared - faults * 15);
+    const vorm = vormSpringen(h);
+    const pts = Math.round(basis * vorm);
     const prize = clears * 40 + (faults === 0 ? 100 : 0);
     save.money += prize;
     h.energy = clamp(h.energy - 20);
@@ -1158,7 +1178,8 @@ export function init(root, ctx) {
     appendResult(`
       <h3>Uitslag springen</h3>
       <p>Gesprongen: <b>${clears}</b> · Fouten: <b>${faults}</b> · Hoogste: <b>${maxCleared} cm</b></p>
-      <p>Wedstrijdpunten: <b>+${pts}</b> · Prijzengeld: <b>${euro(prize)}</b></p>
+      <p>Wedstrijdpunten: ${basis} basis × <b>vorm ×${vorm.toFixed(2)}</b> = <b>+${pts}</b> · Prijzengeld: <b>${euro(prize)}</b></p>
+      <p class="ps-hint">Train <b>Springen</b> in de buitenbak om je vorm (en dus je punten) te verhogen.</p>
       <div class="ps-row">
         <button class="btn btn-primary" data-go="springen">Opnieuw bouwen</button>
         <button class="btn" data-go="buitenbak">Naar buitenbak</button>
@@ -1206,14 +1227,17 @@ export function init(root, ctx) {
       finished = true; stopRaf();
       const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
       const cijfer = (4 + avg * 6).toFixed(1); // 4.0 - 10.0
-      const pts = Math.round(avg * 100);
+      const basis = Math.round(avg * 100);
+      const vorm = vormDressuur(h);
+      const pts = Math.round(basis * vorm);
       const prize = Math.round(avg * 180);
       save.money += prize; h.energy = clamp(h.energy - 15); h.cleanliness = clamp(h.cleanliness - 6);
       if (pts > 0) addPoints(pts);
       persist();
       appendResult(`
         <h3>Jurycijfer: ${cijfer}</h3>
-        <p>Wedstrijdpunten: <b>+${pts}</b> · Prijzengeld: <b>${euro(prize)}</b></p>
+        <p>Wedstrijdpunten: ${basis} basis × <b>vorm ×${vorm.toFixed(2)}</b> = <b>+${pts}</b> · Prijzengeld: <b>${euro(prize)}</b></p>
+        <p class="ps-hint">Train <b>Dressuur</b> in de buitenbak om je vorm (en dus je punten) te verhogen.</p>
         <div class="ps-row">
           <button class="btn btn-primary" data-go="dressuur">Opnieuw</button>
           <button class="btn" data-go="buitenbak">Naar buitenbak</button>
@@ -1343,14 +1367,17 @@ export function init(root, ctx) {
     const prizeTable = { 1: 250, 2: 120, 3: 50 };
     const ptsTable = { 1: 100, 2: 60, 3: 30 };
     const prize = prizeTable[place] || 0;
-    const pts = ptsTable[place] || 10;
+    const basis = ptsTable[place] || 10;
+    const vorm = vormRace(h);
+    const pts = Math.round(basis * vorm);
     save.money += prize; h.energy = clamp(h.energy - 25); h.cleanliness = clamp(h.cleanliness - 18);
     addPoints(pts);
     persist();
     const ord = ['', '1e', '2e', '3e', '4e'];
     appendResult(`
       <h3>Je werd ${ord[place] || place + 'e'}!</h3>
-      <p>Wedstrijdpunten: <b>+${pts}</b> · Prijzengeld: <b>${euro(prize)}</b></p>
+      <p>Wedstrijdpunten: ${basis} basis × <b>vorm ×${vorm.toFixed(2)}</b> = <b>+${pts}</b> · Prijzengeld: <b>${euro(prize)}</b></p>
+      <p class="ps-hint">Train <b>Snelheid</b> en <b>Uithouding</b> in de buitenbak om je vorm (en dus je punten) te verhogen.</p>
       <div class="ps-row">
         <button class="btn btn-primary" data-go="race">Opnieuw racen</button>
         <button class="btn" data-go="buitenbak">Naar buitenbak</button>

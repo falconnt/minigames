@@ -120,7 +120,7 @@ verzorgingsfactor + tuigbonus**.
 2. Rijd het parcours: druk **spatie/tik** vlak voor elke hindernis. Timing én je
    springkracht bepalen of je hem haalt; een hogere hindernis is moeilijker.
 
-- **Punten** = `gesprongen × 20 + hoogste gesprongen hindernis − fouten × 15`.
+- **Basispunten** = `gesprongen × 20 + hoogste gesprongen hindernis − fouten × 15` (× je springvorm, zie hieronder).
 - **Prijzengeld** = `gesprongen × 40` (+ € 100 bonus bij een foutloze ronde).
 - Kost 20 energie en 15 netheid.
 
@@ -130,7 +130,7 @@ Voer **8 oefeningen** uit: druk **spatie/tik** als de wijzer in het groene vlak
 staat. Een betere dressuurvaardigheid maakt het groene vlak groter.
 
 - **Jurycijfer** = `4,0 + gemiddelde nauwkeurigheid × 6` (dus 4,0 – 10,0).
-- **Punten** = `nauwkeurigheid × 100`.
+- **Basispunten** = `nauwkeurigheid × 100` (× je dressuurvorm, zie hieronder).
 - **Prijzengeld** = `nauwkeurigheid × 180`.
 - Kost 15 energie en 6 netheid.
 
@@ -141,7 +141,7 @@ versnellen; loslaten laat je **uithouding** herstellen. Raak je uitgeput, dan
 val je stil. Je topsnelheid hangt af van snelheid + tuig, je volhouden van
 uithouding.
 
-| Plaats | Punten | Prijzengeld |
+| Plaats | Basispunten | Prijzengeld |
 | --- | ---: | ---: |
 | 1e | 100 | € 250 |
 | 2e | 60 | € 120 |
@@ -149,6 +149,29 @@ uithouding.
 | 4e | 10 | € 0 |
 
 Kost 25 energie en 18 netheid.
+
+## Wedstrijdvorm: trainen loont altijd
+
+Elke wedstrijd berekent zijn punten als:
+
+> **wedstrijdpunten = basispunten (je prestatie in de rit) × wedstrijdvorm**
+
+De **wedstrijdvorm** (×0.50 t/m ×1.50) komt uit de getrainde vaardigheden die
+voor die discipline relevant zijn:
+
+| Discipline | Vorm op basis van |
+| --- | --- |
+| Springen | springen |
+| Dressuur | dressuur |
+| Race | gemiddelde van snelheid en uithouding |
+
+De formule is `×(0.5 + vaardigheid / 100)`: een ongetraind paard krijgt de
+helft van de basispunten, een maximaal getraind paard anderhalf keer zoveel.
+Eerst trainen en daarna een wedstrijd rijden levert dus **altijd aantoonbaar
+meer punten** op — de buitenbak toont je huidige vorm per discipline en elk
+uitslagscherm laat de berekening zien (`basis × vorm = punten`). Daarnaast
+blijven vaardigheden ook de rit zelf beïnvloeden (hogere sprongkans, grotere
+trefzone, hogere topsnelheid).
 
 ## Score & highscore
 

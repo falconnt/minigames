@@ -103,7 +103,7 @@
     <canvas id="c" width="900" height="600" aria-label="Speelveld"></canvas>
     <div class="overlay" id="overlay"></div>
   </div>
-  <div class="hint">Pijltjes of WASD om te bewegen · P = pauze · Vanaf de rand het veld in = lijn tekenen</div>
+  <div class="hint">Houd pijltjes of WASD ingedrukt om te bewegen (loslaten = stoppen) · P = pauze · Vanaf de rand het veld in = lijn tekenen</div>
   <div class="pad" aria-label="Bediening">
     <button class="b-op" data-d="up">▲</button>
     <button data-d="left" style="grid-row:2">◀</button>
@@ -343,7 +343,7 @@ function verover() {
 const DXY = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 function stapSpeler() {
-  if (gewenst) { richting = gewenst; }
+  richting = gewenst;                // loslaten = stoppen (gewenst is dan null)
   if (!richting) return;
   const [dx, dy] = DXY[richting];
   const nx = speler.x + dx, ny = speler.y + dy;
@@ -473,27 +473,59 @@ function loop(t) {
 }
 
 // ---------- invoer ----------
+// Houd ingedrukt om te bewegen; loslaten = stoppen. Meerdere toetsen tegelijk:
+// de laatst ingedrukte wint, bij loslaten val je terug op wat nog vast zit.
+const ingedrukt = [];
+function drukt(r) {
+  const i = ingedrukt.indexOf(r);
+  if (i >= 0) ingedrukt.splice(i, 1);
+  ingedrukt.push(r);
+  gewenst = r;
+}
+function laat(r) {
+  const i = ingedrukt.indexOf(r);
+  if (i >= 0) ingedrukt.splice(i, 1);
+  gewenst = ingedrukt.length ? ingedrukt[ingedrukt.length - 1] : null;
+}
+
 const TOETS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 window.addEventListener('keydown', (e) => {
   ensureAudio();
   if (e.key === 'p' || e.key === 'P') { wisselPauze(); return; }
   const r = TOETS[e.key];
-  if (r) { gewenst = r; e.preventDefault(); }
+  if (r) { if (!e.repeat) drukt(r); e.preventDefault(); }
 });
+window.addEventListener('keyup', (e) => {
+  const r = TOETS[e.key];
+  if (r) laat(r);
+});
+window.addEventListener('blur', () => { ingedrukt.length = 0; gewenst = null; });
 document.querySelectorAll('.pad button').forEach((b) => {
-  b.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); gewenst = b.dataset.d; });
+  const stop = () => laat(b.dataset.d);
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); drukt(b.dataset.d); });
+  b.addEventListener('pointerup', stop);
+  b.addEventListener('pointerleave', stop);
+  b.addEventListener('pointercancel', stop);
 });
-// vegen op het veld
-let veegStart = null;
+// slepen op het veld: vinger/muis vasthouden en richting op geven; loslaten = stoppen
+let veegStart = null, veegRichting = null;
 canvas.addEventListener('pointerdown', (e) => { ensureAudio(); veegStart = { x: e.clientX, y: e.clientY }; });
 canvas.addEventListener('pointermove', (e) => {
   if (!veegStart) return;
   const dx = e.clientX - veegStart.x, dy = e.clientY - veegStart.y;
   if (Math.hypot(dx, dy) < 24) return;
-  gewenst = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  const r = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  if (r !== veegRichting) {
+    if (veegRichting) laat(veegRichting);
+    veegRichting = r;
+    drukt(r);
+  }
   veegStart = { x: e.clientX, y: e.clientY };
 });
-window.addEventListener('pointerup', () => { veegStart = null; });
+window.addEventListener('pointerup', () => {
+  veegStart = null;
+  if (veegRichting) { laat(veegRichting); veegRichting = null; }
+});
 
 function wisselPauze() {
   if (status === 'spel') {
@@ -538,7 +570,8 @@ window.__onthul = {
   get speler() { return { ...speler }; },
   get ballen() { return ballen.map((b) => ({ ...b })); },
   zetBal(i, x, y, vx, vy) { Object.assign(ballen[i], { x, y, vx, vy }); },
-  zetRichting(r) { gewenst = r; },
+  zetRichting(r) { drukt(r); },      // gedraagt zich als een vastgehouden toets
+  losRichting(r) { laat(r); },
 };
 
 nieuwLevel(1);

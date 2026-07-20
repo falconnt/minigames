@@ -7,7 +7,7 @@ Een minigame-framework dat volledig statisch draait op **GitHub Pages** — geen
 - **Gedeeld save-mechanisme** — elke game kan voortgang opslaan via een simpele API; alles staat in één localStorage-sleutel (`minigames.v1`).
 - **Highscores** — top 10 per game, met datum. Ondersteunt zowel "hoger is beter" (punten) als "lager is beter" (reactietijd).
 - **Online highscores (optioneel)** — koppel een gratis Supabase-project voor accounts en een online ranglijst per game, met een schakelaar "Dit apparaat / Online". Zie [docs/online-highscores.md](docs/online-highscores.md). Zonder configuratie blijft alles lokaal werken.
-- **Highscore-overzicht** — via 🏆 in de header een aparte pagina met per game de kampioen (👑) en de top, met een schakelaar "Dit apparaat / Online".
+- **Highscore-overzicht** — via 🏆 in de header een aparte pagina met per game de kampioen (👑) en de top, met een schakelaar "Dit apparaat / Online". Bovenaan de online weergave staat een **podium** (goud/zilver/brons) met het overall-klassement over alle games: elke game geeft F1-punten (25-18-15-…-1) aan zijn online top 10, en de som bepaalt de beste allround-spelers.
 - **Versleutelde lokale opslag** — saves en highscores staan versleuteld (AES-GCM) op het apparaat; knoeien maakt de data ongeldig.
 - **Licht & donker thema** — volgt standaard je systeemvoorkeur; de 🌓-knop overschrijft dat en onthoudt je keuze.
 - **Categorieën** — games zijn ingedeeld in categorieën met filterknoppen op het startscherm.

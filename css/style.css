@@ -367,6 +367,74 @@ body {
 .scores-tabs { max-width: 20rem; }
 .scores-sub { color: var(--text-muted); margin: 0 0 1.1rem; }
 
+/* ---------- overall-podium (goud/zilver/brons over alle games) ---------- */
+
+.podium-wrap { margin: 0 0 1.4rem; }
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.6rem;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+.pod {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: center;
+}
+.pod-leeg { visibility: hidden; }
+.pod-medaille { font-size: 1.9rem; line-height: 1.1; }
+.pod-goud .pod-medaille { font-size: 2.5rem; animation: pod-zweef 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pod-goud .pod-medaille { animation: none; } }
+@keyframes pod-zweef { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.pod-naam {
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 0.2rem;
+}
+.pod-punten { font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pod-detail { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.35rem; }
+.pod-blok {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: rgba(30, 22, 0, 0.72);
+  border-radius: 0.6rem 0.6rem 0 0;
+  box-shadow: var(--shadow), inset 0 2px 0 rgba(255, 255, 255, 0.45);
+}
+.pod-goud .pod-blok {
+  height: 4.4rem;
+  background: linear-gradient(180deg, #ffe27a, #f2c40f 45%, #cf9d12);
+}
+.pod-zilver .pod-blok {
+  height: 3.3rem;
+  background: linear-gradient(180deg, #f0f2f6, #c9cfda 45%, #9aa3b5);
+  color: rgba(25, 30, 45, 0.65);
+}
+.pod-brons .pod-blok {
+  height: 2.6rem;
+  background: linear-gradient(180deg, #e8b184, #c9834e 45%, #9c5f33);
+  color: rgba(50, 25, 5, 0.7);
+}
+.podium-sub {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  max-width: 34rem;
+  margin: 0.6rem auto 0;
+}
+
 .scores-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));

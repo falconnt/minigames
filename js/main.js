@@ -124,6 +124,7 @@ function renderScores() {
     </div>
     ${tabs}
     <p class="scores-sub">${online ? 'Wereldwijde ranglijst — wie staat er nummer 1?' : 'Je beste scores op dit apparaat.'}</p>
+    ${online ? '<div id="podium" class="podium-wrap"><p class="empty">Podium laden…</p></div>' : ''}
     <div class="scores-grid">
       ${games
         .map((g) => {
@@ -159,19 +160,74 @@ function renderScores() {
   );
 
   if (online) {
-    for (const g of games) {
+    // Per game de online top 10 ophalen: de kaart toont de top 5, en samen
+    // voeden ze het overall-podium bovenaan.
+    const opgehaald = games.map((g) =>
       cloud
-        .getLeaderboard(g.id, g.scoreMode, 5)
+        .getLeaderboard(g.id, g.scoreMode, 10)
         .then((rows) => {
           const el = view.querySelector(`[data-body="${g.id}"]`);
-          if (el) el.innerHTML = scoreCardBody(g, rows.map((r) => ({ name: r.username, score: r.score })), true);
+          if (el) el.innerHTML = scoreCardBody(g, rows.slice(0, 5).map((r) => ({ name: r.username, score: r.score })), true);
+          return rows;
         })
         .catch((e) => {
           const el = view.querySelector(`[data-body="${g.id}"]`);
           if (el) el.innerHTML = `<p class="empty">Online ranglijst niet beschikbaar.<br><span class="sc-err">${escapeHtml(e.message || 'onbekende fout')}</span></p>`;
-        });
-    }
+          return null;
+        })
+    );
+    Promise.all(opgehaald).then((lijsten) => renderPodium(lijsten.filter(Boolean)));
   }
+}
+
+// ---------- overall-podium (goud/zilver/brons over alle games) ----------
+
+// Eerlijke ranking over games met totaal verschillende score-schalen (punten,
+// milliseconden, meters): tel geen scores op maar posities. Elke game geeft
+// F1-punten aan zijn online top 10 (25-18-15-12-10-8-6-4-2-1); de som daarvan
+// bepaalt het podium. Gelijkspel: meeste 1e plekken, dan meeste games in de top.
+const F1_PUNTEN = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+
+function renderPodium(lijsten) {
+  const box = document.getElementById('podium');
+  if (!box) return; // pagina inmiddels verlaten
+
+  const spelers = new Map();
+  for (const rows of lijsten) {
+    rows.slice(0, 10).forEach((r, i) => {
+      const s = spelers.get(r.username) || { naam: r.username, punten: 0, eerste: 0, games: 0 };
+      s.punten += F1_PUNTEN[i];
+      if (i === 0) s.eerste += 1;
+      s.games += 1;
+      spelers.set(r.username, s);
+    });
+  }
+  const top = [...spelers.values()]
+    .sort((a, b) => b.punten - a.punten || b.eerste - a.eerste || b.games - a.games || a.naam.localeCompare(b.naam))
+    .slice(0, 3);
+
+  if (!top.length) {
+    box.innerHTML = '<p class="empty">Nog geen online scores — het podium wacht op de eerste kampioen!</p>';
+    return;
+  }
+
+  const plek = (s, i) => {
+    if (!s) return '<div class="pod pod-leeg"></div>';
+    const medailles = ['🥇', '🥈', '🥉'];
+    const kls = ['pod-goud', 'pod-zilver', 'pod-brons'][i];
+    return `<div class="pod ${kls}">
+      <div class="pod-medaille">${medailles[i]}</div>
+      <div class="pod-naam" title="${escapeHtml(s.naam)}">${escapeHtml(s.naam)}</div>
+      <div class="pod-punten">${s.punten} pt</div>
+      <div class="pod-detail">${s.eerste ? `${s.eerste}× 🥇 · ` : ''}${s.games} game${s.games === 1 ? '' : 's'}</div>
+      <div class="pod-blok">${i + 1}</div>
+    </div>`;
+  };
+
+  // klassieke opstelling: zilver links, goud in het midden, brons rechts
+  box.innerHTML = `
+    <div class="podium">${plek(top[1], 1)}${plek(top[0], 0)}${plek(top[2], 2)}</div>
+    <p class="podium-sub">Overall-klassement: F1-punten (25-18-15-…-1) voor de online top 10 van elke game, opgeteld over alle games.</p>`;
 }
 
 // ---------- record-feestje ----------

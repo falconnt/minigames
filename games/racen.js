@@ -20,6 +20,7 @@ const CARS = [
   { name: 'Pagani',           col: '#22345e', accent: '#0f1119', stripe: null,      wing: 'big',   shape: 'super',   eng: 'v12', realistic: true, carbonHood: true, splitter: true, centerStripe: ['#f2c40f', '#1f6fe0'], roundLights: 'quad', lightBar: '#f2d21a', wheelCol: '#23252b', caliper: '#f2c40f', centerExhaust: true },
   { name: 'Mazda RX500',      col: '#c6cad0', accent: '#1a1b20', stripe: null,      wing: 'none',  shape: 'wedge',   eng: 'rotary', realistic: true, roundLights: true, hoodLouvers: true, rearLouvers: true, wheelCol: '#aeb4bd', dualExhaust: true },
   { name: 'Koenigsegg Jesko', col: '#e6c357', accent: '#0e0e12', stripe: null,      wing: 'big',   shape: 'hyper',   eng: 'v8', realistic: true, carbonHood: true, splitter: true, sideScoops: true, wheelCol: '#24262c', dualExhaust: true },
+  { name: 'Tesla Model 3',    col: '#1e3f9e', accent: '#0d0e14', stripe: null,      wing: 'none',  shape: 'sedan',   eng: 'ev', realistic: true, glassRoof: true, headlight: '#eaf6ff', wheelCol: '#c9ccd2', teslaBadge: true },
 ];
 const SHAPES = {
   super:   { wF: 1.0,  lF: 0.98, r: 0.26, cabF: 0.34 },
@@ -28,6 +29,7 @@ const SHAPES = {
   muscle:  { wF: 0.98, lF: 1.0,  r: 0.16, cabF: 0.44 },
   classic: { wF: 0.9,  lF: 0.92, r: 0.46, cabF: 0.42 },
   wedge:   { wF: 0.94, lF: 1.0,  r: 0.12, cabF: 0.32 },
+  sedan:   { wF: 0.92, lF: 1.0,  r: 0.4,  cabF: 0.5 },
 };
 // Motorprofielen: base/rev = ontstekingsfrequentie (Hz) van stationair tot rood;
 // rumble = sub-octaaf (V8-lope), bright = felheid/formant, vol = volume.
@@ -39,8 +41,11 @@ const ENGINES = {
   w12:    { base: 90,  rev: 760,  rumble: 0.18, bright: 1.1,  vol: 0.07 },
   flat6:  { base: 95,  rev: 720,  rumble: 0.22, bright: 1.12, vol: 0.075 },
   rotary: { base: 120, rev: 1000, rumble: 0.05, bright: 1.5,  vol: 0.06 },
+  // Elektrisch: geen ontsteking maar een gladde, hoge motor-whine — bijna geen
+  // sub-octaaf, veel felheid, zacht volume. Backfires bestaan hier niet.
+  ev:     { base: 240, rev: 640,  rumble: 0,    bright: 1.6,  vol: 0.035 },
 };
-const ENG_LABEL = { v8: 'V8', i6: '6-in-lijn', v10: 'V10', v12: 'V12', w12: 'W12', flat6: 'Flat-6', rotary: 'Rotary' };
+const ENG_LABEL = { v8: 'V8', i6: '6-in-lijn', v10: 'V10', v12: 'V12', w12: 'W12', flat6: 'Flat-6', rotary: 'Rotary', ev: 'Elektrisch' };
 const ROAD = '#2c2f36', GRASS = '#1f3d24', CURB1 = '#e8433f', CURB2 = '#f5f5f5';
 
 export function init(root, ctx) {
@@ -235,6 +240,7 @@ export function init(root, ctx) {
 
   // Backfire: ponk + een vuurflits uit de twee uitlaten achter de auto.
   function spawnBackfire(power) {
+    if (carEngine === 'ev') return;  // elektrisch: geen uitlaat, geen ponk
     power = power || 1;
     sBackfire(power);
     const ry = 0.82 + (S.carH * 0.5) / H + 0.004;   // achterkant van de auto
@@ -571,8 +577,8 @@ export function init(root, ctx) {
     const bw = w * S2.wF, bh = h * S2.lF;
     const px = (lx) => cx + lx * (bw / 2);
     const py = (ly) => cy + front * ly * (bh / 2);
-    const noseW = { super: 0.58, hyper: 0.50, wedge: 0.46, coupe: 0.80, muscle: 0.86, classic: 0.78 }[car.shape] ?? 0.7;
-    const tailW = { super: 0.92, hyper: 0.96, wedge: 1.0, coupe: 0.92, muscle: 0.98, classic: 0.86 }[car.shape] ?? 0.9;
+    const noseW = { super: 0.58, hyper: 0.50, wedge: 0.46, coupe: 0.80, muscle: 0.86, classic: 0.78, sedan: 0.74 }[car.shape] ?? 0.7;
+    const tailW = { super: 0.92, hyper: 0.96, wedge: 1.0, coupe: 0.92, muscle: 0.98, classic: 0.86, sedan: 0.84 }[car.shape] ?? 0.9;
 
     // ---- neon-underglow (helemaal onderop) ----
     if (car.underglow) {
@@ -834,17 +840,29 @@ export function init(root, ctx) {
         gg.fillStyle = color; rrPath(gg, cx - zw / 2, yTop, zw, hgt, zw * (r ?? 0.26)); gg.fill();
       };
       zone(0.56, -0.54, 0.54, 'rgba(8,10,14,0.96)', 0.32); // frame
-      zone(0.5, 0.18, 0.44, '#14273a');                    // voorruit (blauwig glas)
-      zone(0.16, -0.16, 0.48, '#25272c', 0.22);            // carbon dak
-      zone(-0.18, -0.5, 0.42, '#101b26');                  // achterruit
-      // reflectie op de voorruit
-      gg.fillStyle = 'rgba(150,195,235,0.22)';
-      rrPath(gg, cx - bw * 0.17, py(0.48), bw * 0.34, py(0.24) - py(0.48), bw * 0.08); gg.fill();
-      // carbon-dak: fijne weave-hint
-      gg.strokeStyle = 'rgba(255,255,255,0.05)'; gg.lineWidth = Math.max(0.5, w * 0.008);
-      gg.beginPath();
-      for (let i = -2; i <= 2; i++) { const yy = cy + i * bh * 0.03; gg.moveTo(cx - bw * 0.22, yy); gg.lineTo(cx + bw * 0.22, yy); }
-      gg.stroke();
+      if (car.glassRoof) {
+        // Doorlopend panoramisch glazen dak (Tesla): één donkere glaspartij
+        // van voorruit tot achterruit, met één dwarsbalkje en blauwe glans.
+        zone(0.52, -0.52, 0.47, '#0f1d33', 0.3);
+        gg.fillStyle = 'rgba(150,195,235,0.2)';
+        rrPath(gg, cx - bw * 0.17, py(0.48), bw * 0.34, py(0.22) - py(0.48), bw * 0.08); gg.fill();
+        gg.fillStyle = 'rgba(255,255,255,0.06)';
+        rrPath(gg, cx - bw * 0.1, py(0.02), bw * 0.2, py(-0.4) - py(0.02), bw * 0.06); gg.fill();
+        gg.fillStyle = 'rgba(8,10,14,0.9)';
+        gg.fillRect(cx - bw * 0.235, py(0.14) - h * 0.006, bw * 0.47, h * 0.012);
+      } else {
+        zone(0.5, 0.18, 0.44, '#14273a');                    // voorruit (blauwig glas)
+        zone(0.16, -0.16, 0.48, '#25272c', 0.22);            // carbon dak
+        zone(-0.18, -0.5, 0.42, '#101b26');                  // achterruit
+        // reflectie op de voorruit
+        gg.fillStyle = 'rgba(150,195,235,0.22)';
+        rrPath(gg, cx - bw * 0.17, py(0.48), bw * 0.34, py(0.24) - py(0.48), bw * 0.08); gg.fill();
+        // carbon-dak: fijne weave-hint
+        gg.strokeStyle = 'rgba(255,255,255,0.05)'; gg.lineWidth = Math.max(0.5, w * 0.008);
+        gg.beginPath();
+        for (let i = -2; i <= 2; i++) { const yy = cy + i * bh * 0.03; gg.moveTo(cx - bw * 0.22, yy); gg.lineTo(cx + bw * 0.22, yy); }
+        gg.stroke();
+      }
     } else {
       const cpW = bw * 0.5, cpH = bh * S2.cabF * 1.15;
       const cpCy = cy + front * 0.04 * (bh / 2);
@@ -939,6 +957,21 @@ export function init(root, ctx) {
       gg.fillStyle = car.lightBar;
       gg.fillRect(cx - bw * 0.32, py(0.8) - h * 0.008, bw * 0.64, h * 0.016);
       gg.restore();
+    }
+
+    // ---- Tesla-badge: klein gestileerd T-embleem op de neus ----
+    if (car.teslaBadge) {
+      gg.fillStyle = '#dfe3ea';
+      const tb = w * 0.085, ty = py(0.9);
+      // bovenbalk met puntjes omlaag (richting cabine) + steel
+      gg.beginPath();
+      gg.moveTo(cx - tb / 2, ty);
+      gg.quadraticCurveTo(cx, ty - front * tb * 0.28, cx + tb / 2, ty);
+      gg.lineTo(cx + tb * 0.32, ty - front * tb * 0.26);
+      gg.quadraticCurveTo(cx, ty - front * tb * 0.06, cx - tb * 0.32, ty - front * tb * 0.26);
+      gg.closePath(); gg.fill();
+      const sy0 = ty - front * tb * 0.2, sy1 = ty - front * tb * 0.85;
+      gg.fillRect(cx - tb * 0.07, Math.min(sy0, sy1), tb * 0.14, Math.abs(sy1 - sy0));
     }
 
     // ---- achterlichten (rode balk) ----

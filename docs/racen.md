@@ -97,6 +97,12 @@ De **Koenigsegg Jesko** is nagetekend als een **MANSORY Koenigsegg** in
 splitter/side-skirts en **zij-inlaten**, **zwarte velgen**, de enorme
 **Koenigsegg-achtervleugel**, dubbele uitlaten en een **V8**.
 
+De **Tesla Model 3** is nagetekend als een **Long Range in Deep Blue Metallic**:
+een gladde sedan met een doorlopend **panoramisch glazen dak**, een strakke neus
+**zonder grille** met dunne witte koplampen en het **T-embleem** op de neus,
+**zilveren velgen** — en uiteraard géén uitlaten, achtervleugel of backfires:
+de motor is **elektrisch** en klinkt als een zachte, gladde whine.
+
 Bij het **schakelen** (de motor loopt in toeren op en schakelt terug bij hogere
 snelheid) en wanneer je de **turbo loslaat** (overrun) geeft de auto een
 **"ponk"** met een **vuurflits uit de twee uitlaten** achter de auto — net als
@@ -109,10 +115,10 @@ spel** vind je in het pauzemenu (of de ❔-knop voor uitleg).
 
 ## Startscherm: kies je auto
 
-Voor de race verschijnt een **keuzescherm** met **10 auto's**, elk met een eigen
+Voor de race verschijnt een **keuzescherm** met **11 auto's**, elk met een eigen
 naam, kleur, motortype én uiterlijk dat is nagetekend naar de echte (getunede)
 auto: **BMW M4, Mercedes GT 63, Ferrari, Lamborghini SVJ, Porsche 911, Mustang,
-Audi R8, Pagani, Mazda RX500** en **Koenigsegg Jesko**. Tik op een auto om hem te
+Audi R8, Pagani, Mazda RX500, Koenigsegg Jesko** en **Tesla Model 3**. Tik op een auto om hem te
 kiezen en druk op **🏁 Start!**. Je gekozen auto zie je terug op de weg. Via
 **Andere auto** (in het pauzemenu of na game over) kun je opnieuw kiezen.
 

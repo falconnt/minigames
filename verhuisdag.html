@@ -142,7 +142,8 @@ const HUIZEN = [
   { naam: 'Grijsstee',     kleur: '#9aa4b5', dak: '#3a4150', deur: '#2e3542', spul: [
     { type: 'boekenkast', x: 190 }, { type: 'tv', x: 330 }, { type: 'spiegel', x: 460 }, { type: 'stoel', x: 570 }, { type: 'plant', x: 700 }] },
 ];
-const HUIS_W = 190, HUIS_GAP = 70, STRAAT_PAD = 300; // extra ruimte links voor de bus
+const HUIS_W = 190, HUIS_GAP = 70, STRAAT_PAD = 400; // extra ruimte links voor de bus
+const BUS_OFFSET = 340, BUS_BREED = 310;             // plek + breedte van de bus op straat
 HUIZEN.forEach((h, i) => { h.x = STRAAT_PAD + i * (HUIS_W + HUIS_GAP); });
 const WERELD_W = STRAAT_PAD * 2 + HUIZEN.length * (HUIS_W + HUIS_GAP) - HUIS_GAP;
 const KAMER_W = 860;                    // binnenruimte (voor elk huis gelijk)
@@ -225,7 +226,7 @@ function checkQuest() {
 }
 
 // ---------- spelstatus ----------
-let plek = 'straat';                    // 'straat' of huis-index (binnen)
+let plek = 'straat';                    // 'straat', 'bus' of huis-index (binnen)
 let spelerX = save.spelerX;             // in straat- of kamercoördinaten
 let kijk = 1, loopFase = 0;
 let bewegen = 0;                        // -1/0/1 (gewenst, uit invoer)
@@ -273,8 +274,20 @@ function huisBijDeur() {
   }
   return null;
 }
+// positie van spul i in de laadruimte + binnenbreedte van de bus
+const busSpulX = (i) => 170 + i * 92;
+const busBinnenBreed = () => Math.max(760, busSpulX(save.bus.length) + 110);
+function busSpulInBuurt() {
+  let best = null, afstand = 60;
+  save.bus.forEach((type, i) => {
+    const d = Math.abs(spelerX - busSpulX(i));
+    if (d < afstand) { best = i; afstand = d; }
+  });
+  return best;
+}
+
 function spulInBuurt() {
-  if (plek === 'straat') return null;
+  if (plek === 'straat' || plek === 'bus') return null;
   const h = HUIZEN[plek];
   const lijst = plek === 0
     ? save.geplaatst.map((p, i) => ({ ...p, eigenIndex: i }))
@@ -289,11 +302,26 @@ function spulInBuurt() {
 function actie() {
   ensureAudio();
   if (plek === 'straat') {
+    // sta je bij de bus? Dan klim je de laadruimte in.
+    const busL = HUIZEN[0].x - BUS_OFFSET, busR = busL + BUS_BREED;
+    if (spelerX > busL && spelerX < busR) {
+      plek = 'bus'; spelerX = DEUR_BINNEN + 40; sDeur(); bouwBusbar();
+      zegt(save.bus.length ? 'Je laadruimte — al je verzamelde spullen!' : 'Nog leeg — haal spullen uit de huizen!');
+      return;
+    }
     const i = huisBijDeur();
     if (i != null) {
       plek = i; spelerX = DEUR_BINNEN + 30; sDeur(); bouwBusbar();
       zegt(HUIZEN[i].eigen ? 'Welkom thuis! Kies iets uit de bus (onderin) en zet het neer.' : HUIZEN[i].naam + ' — pak wat je kunt gebruiken!');
     }
+    return;
+  }
+  if (plek === 'bus') {
+    if (spelerX < DEUR_BINNEN + 55) {
+      plek = 'straat'; spelerX = HUIZEN[0].x - BUS_OFFSET + BUS_BREED / 2; sDeur(); bouwBusbar();
+      return;
+    }
+    if (busSpulInBuurt() != null) zegt('Breng dit naar jouw huis (het gele) om het neer te zetten!');
     return;
   }
   // binnen: bij de deur = naar buiten
@@ -352,7 +380,7 @@ function update(dt) {
     spelerX += bewegen * snelheid * dt;
     loopFase += dt * 11;
   }
-  const maxX = plek === 'straat' ? WERELD_W - 20 : KAMER_W - 20;
+  const maxX = plek === 'straat' ? WERELD_W - 20 : plek === 'bus' ? busBinnenBreed() - 20 : KAMER_W - 20;
   spelerX = Math.max(20, Math.min(maxX, spelerX));
   if (plek === 'straat') { save.spelerX = spelerX; }
 }
@@ -527,34 +555,51 @@ function tekenStraat(camera) {
     g.textAlign = 'start';
   });
 
-  // de verhuisbus voor jouw huis — een flinke bakwagen
-  const busX = HUIZEN[0].x - camera - 250;
-  if (busX > -300 && busX < W + 40) {
+  // de verhuisbus voor jouw huis — een joekel van een bakwagen, en je kunt erin!
+  const busX = HUIZEN[0].x - camera - BUS_OFFSET;
+  if (busX > -BUS_BREED - 40 && busX < W + 40) {
     // laadbak
-    g.fillStyle = '#e8e2d8'; rr(busX, GROND - 34, 152, 76, 8);
-    g.fillStyle = '#d8d0c2'; g.fillRect(busX, GROND - 34, 152, 8);        // dakrand
-    g.fillStyle = '#e07030'; g.fillRect(busX, GROND + 16, 152, 12);       // oranje streep
+    g.fillStyle = '#e8e2d8'; rr(busX, GROND - 74, 220, 116, 10);
+    g.fillStyle = '#d8d0c2'; g.fillRect(busX, GROND - 74, 220, 10);       // dakrand
+    g.fillStyle = 'rgba(0,0,0,0.08)';                                     // paneelnaden
+    g.fillRect(busX + 72, GROND - 64, 3, 96); g.fillRect(busX + 146, GROND - 64, 3, 96);
+    g.fillStyle = '#e07030'; g.fillRect(busX, GROND + 12, 220, 14);       // oranje streep
+    // achterdeuren-hint (klein kiertje licht)
+    g.fillStyle = '#c8c0b0'; g.fillRect(busX + 2, GROND - 60, 6, 88);
     // cabine met ruit, grille en koplamp
-    g.fillStyle = '#e07030'; rr(busX + 150, GROND - 14, 62, 56, 8);
-    g.fillStyle = '#bfe0f0'; rr(busX + 162, GROND - 8, 38, 24, 4);
-    g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(busX + 166, GROND - 6, 9, 20);
-    g.fillStyle = '#c85a20'; g.fillRect(busX + 150, GROND + 24, 62, 6);
-    g.fillStyle = '#ffd98a'; rr(busX + 205, GROND + 12, 7, 12, 3);
+    g.fillStyle = '#e07030'; rr(busX + 216, GROND - 42, 88, 84, 10);
+    g.fillStyle = '#bfe0f0'; rr(busX + 232, GROND - 34, 56, 36, 5);
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(busX + 238, GROND - 31, 13, 30);
+    g.fillStyle = '#c85a20'; g.fillRect(busX + 216, GROND + 16, 88, 8);
+    g.fillStyle = '#ffd98a'; rr(busX + 294, GROND + 6, 9, 15, 3);
+    // spiegel + deurgreep
+    g.fillStyle = '#1a2138'; g.fillRect(busX + 224, GROND - 38, 5, 12);
+    g.fillStyle = '#c85a20'; rr(busX + 262, GROND - 2, 16, 4, 2);
     // bumper
-    g.fillStyle = '#8a93a5'; rr(busX + 146, GROND + 36, 70, 8, 4);
+    g.fillStyle = '#8a93a5'; rr(busX + 210, GROND + 34, 98, 11, 5);
     // wielen met velg
     g.fillStyle = '#1a2138';
-    g.beginPath(); g.arc(busX + 38, GROND + 42, 16, 0, Math.PI * 2); g.arc(busX + 178, GROND + 42, 16, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(busX + 54, GROND + 42, 22, 0, Math.PI * 2); g.arc(busX + 258, GROND + 42, 22, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#8a93a5';
-    g.beginPath(); g.arc(busX + 38, GROND + 42, 7, 0, Math.PI * 2); g.arc(busX + 178, GROND + 42, 7, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(busX + 54, GROND + 42, 10, 0, Math.PI * 2); g.arc(busX + 258, GROND + 42, 10, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#1a2138';
+    g.beginPath(); g.arc(busX + 54, GROND + 42, 4, 0, Math.PI * 2); g.arc(busX + 258, GROND + 42, 4, 0, Math.PI * 2); g.fill();
     // opdruk + teller erboven
-    g.fillStyle = '#e07030'; g.font = '800 15px system-ui'; g.fillText('VERHUISBUS', busX + 16, GROND + 4);
-    g.fillStyle = '#1a3a6a'; g.font = '700 13px system-ui'; g.fillText('🚚 ' + save.bus.length + ' spullen', busX + 16, GROND - 44);
+    g.fillStyle = '#e07030'; g.font = '800 22px system-ui'; g.fillText('VERHUISBUS', busX + 26, GROND - 12);
+    g.fillStyle = '#1a3a6a'; g.font = '700 14px system-ui'; g.fillText('🚚 ' + save.bus.length + ' spullen', busX + 26, GROND - 84);
   }
 
   tekenSpeler(spelerX - camera, GROND + 24);
 
-  // deur-hint
+  // hints: bus-instap of huisdeur
+  const busL = HUIZEN[0].x - BUS_OFFSET, busR = busL + BUS_BREED;
+  if (spelerX > busL && spelerX < busR) {
+    const hx = busL + BUS_BREED / 2 - camera;
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(hx - 74, GROND - 140, 148, 26, 8);
+    g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
+    g.fillText('E / tik: in de bus', hx, GROND - 122);
+    g.textAlign = 'start';
+  }
   const bij = huisBijDeur();
   if (bij != null) {
     const hx = HUIZEN[bij].x + HUIS_W / 2 - camera;
@@ -563,6 +608,52 @@ function tekenStraat(camera) {
     g.fillText('E / tik: naar binnen', hx, GROND - 244);
     g.textAlign = 'start';
   }
+}
+
+// ---------- tekenen: in de laadruimte van de bus ----------
+function tekenBus() {
+  const bw = busBinnenBreed();
+  const camera = Math.max(0, Math.min(Math.max(0, bw - W), spelerX - W / 2));
+  // wanden met ribbels
+  g.fillStyle = '#ded6c8'; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(0,0,0,0.07)';
+  for (let x = -((camera) % 64); x < W; x += 64) g.fillRect(x, 40, 8, VLOER - 60);
+  // plafondlampen
+  for (let x = 240 - (camera % 480); x < W; x += 480) {
+    g.fillStyle = '#8a93a5'; g.fillRect(x - 3, 30, 6, 14);
+    g.fillStyle = '#fff6cf'; g.beginPath(); g.arc(x, 52, 10, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,246,207,0.15)'; g.beginPath(); g.arc(x, 60, 60, 0, Math.PI * 2); g.fill();
+  }
+  // vloer (laadvloer met planken)
+  g.fillStyle = '#a8927a'; g.fillRect(0, VLOER, W, H - VLOER);
+  g.fillStyle = 'rgba(0,0,0,0.15)';
+  for (let x = -(camera % 54); x < W; x += 54) g.fillRect(x, VLOER, 3, H - VLOER);
+  g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, VLOER - 8, W, 8);
+  // sjorbanden-rail
+  g.fillStyle = '#8a93a5'; g.fillRect(0, 120, W, 6);
+  // open achterdeuren links (uitgang)
+  const dx = DEUR_BINNEN - 40 - camera;
+  g.fillStyle = '#c8c0b0'; rr(dx, 90, 62, VLOER - 90, 6);
+  g.fillStyle = '#8fd3ff'; rr(dx + 8, 104, 46, VLOER - 130, 4);          // doorkijkje naar buiten
+  g.fillStyle = '#7ab86a'; g.fillRect(dx + 8, VLOER - 52, 46, 26);
+  g.fillStyle = 'rgba(20,26,48,0.7)'; g.font = '600 12px system-ui'; g.textAlign = 'center';
+  g.fillText('⬅ straat', dx + 31, 82); g.textAlign = 'start';
+  // spullen in de laadruimte
+  save.bus.forEach((type, i) => tekenSpul(type, busSpulX(i) - camera, VLOER));
+  if (!save.bus.length) {
+    g.fillStyle = 'rgba(20,26,48,0.5)'; g.font = '700 18px system-ui'; g.textAlign = 'center';
+    g.fillText('De laadruimte is nog leeg…', Math.min(bw, W) / 2 + 60, H * 0.45);
+    g.textAlign = 'start';
+  }
+  // naamlabel bij het dichtstbijzijnde spul
+  const bijIdx = busSpulInBuurt();
+  if (bijIdx != null) {
+    const x = busSpulX(bijIdx) - camera;
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(x - 70, 140, 140, 26, 8);
+    g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
+    g.fillText(SPUL[save.bus[bijIdx]].naam, x, 158); g.textAlign = 'start';
+  }
+  tekenSpeler(spelerX - camera, VLOER);
 }
 
 function tekenBinnen() {
@@ -631,6 +722,8 @@ function draw() {
   if (plek === 'straat') {
     const camera = Math.max(0, Math.min(WERELD_W - W, spelerX - W / 2));
     tekenStraat(camera);
+  } else if (plek === 'bus') {
+    tekenBus();
   } else {
     tekenBinnen();
   }
@@ -742,6 +835,7 @@ document.getElementById('b-help').addEventListener('click', () => {
       <li>Loop door de straat met <b>← →</b> (of sleep als joystick — loslaten is stoppen).</li>
       <li>Sta je voor een deur? <b>E</b>, <b>↑</b> of een <b>korte tik</b> = naar binnen.</li>
       <li>In andermans huizen: loop naar spullen en <b>pak ze</b> — ze gaan in je verhuisbus.</li>
+      <li>Je kunt <b>de bus in</b>: stap bij de laadklep naar binnen en bewonder alles wat je verzameld hebt.</li>
       <li>In <b>jouw huis</b> (het gele, met de bus ervoor): kies onderin iets uit de bus, loop naar een mooie plek en <b>zet het neer</b>. Muurspullen hangen vanzelf op.</li>
       <li>Fout neergezet? Pak het gewoon weer terug in de bus.</li>
       <li>📋-opdrachten leveren <b>sterren</b> op. Een einde is er niet — richt je huis zo mooi in als jij wilt!</li>

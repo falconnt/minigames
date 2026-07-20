@@ -11,6 +11,7 @@ scoren/opslaan. Houd deze bij als je een game aanpast of toevoegt.
 | 🚀 Ruimteschieter | Arcade | [ruimteschieter.md](ruimteschieter.md) |
 | 🏎️ Racen | Arcade | [racen.md](racen.md) |
 | 🥷 Schaduwbos | Arcade | [schaduwbos.md](schaduwbos.md) |
+| 🖼️ Onthul! | Arcade | [onthul.md](onthul.md) |
 | ⚡ Reactietest | Reflex | [reactietest.md](reactietest.md) |
 | 🏇 Paardensport | Simulatie | [paardensport.md](paardensport.md) |
 

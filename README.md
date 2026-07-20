@@ -30,6 +30,7 @@ de besturing, de mechanics en de manier van scoren.
 | 🚀 Ruimteschieter | Arcade | punten (hoger is beter) | [docs/ruimteschieter.md](docs/ruimteschieter.md) |
 | 🏎️ Racen | Arcade | afstand in meters (hoger is beter) | [docs/racen.md](docs/racen.md) |
 | 🥷 Schaduwbos | Arcade | punten (hoger is beter) — ninja-overlevingsspel | [docs/schaduwbos.md](docs/schaduwbos.md) |
+| 🖼️ Onthul! | Arcade | punten (hoger is beter) — Xonix-achtig onthul-spel | [docs/onthul.md](docs/onthul.md) |
 | ⚡ Reactietest | Reflex | milliseconden (lager is beter) | [docs/reactietest.md](docs/reactietest.md) |
 | 🏇 Paardensport | Simulatie | wedstrijdpunten (hoger is beter) — voortgang wordt bewaard | [docs/paardensport.md](docs/paardensport.md) |
 

@@ -16,6 +16,7 @@ export const BADGES = [
   { id: 'vliegaas', icon: '🐦', title: 'Vlieg-aas', desc: 'Haal 10 punten in Flappy Bird.', test: (s) => (s.best_vogelvlucht || 0) >= 10 },
   { id: 'tegeltovenaar', icon: '🔢', title: 'Tegel-tovenaar', desc: 'Haal 2048 punten in 2048.', test: (s) => (s.best_2048 || 0) >= 2048 },
   { id: 'bliksemreflex', icon: '⚡', title: 'Bliksemreflex', desc: 'Gemiddelde reactietijd van 250 ms of sneller.', test: (s) => (s.best_reactie || 0) > 0 && s.best_reactie <= 250 },
+  { id: 'plaatjesmeester', icon: '🖼️', title: 'Plaatjesmeester', desc: 'Haal 5000 punten in Onthul!.', test: (s) => (s.best_onthul || 0) >= 5000 },
 ];
 
 const todayKey = () => new Date().toISOString().slice(0, 10);

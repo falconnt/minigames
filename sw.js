@@ -26,6 +26,7 @@ const APP_SHELL = [
   './js/icon-tetris.js',
   './js/icon-ruimteschieter.js',
   './js/icon-paard.js',
+  './js/icon-onthul.js',
   './js/effects.js',
   './js/sound.js',
   './js/achievements.js',

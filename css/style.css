@@ -986,6 +986,141 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
   line-height: 1.35;
 }
 
+/* ---------- Onthul! (schermvullend, met thumbstick-overal) ---------- */
+
+.ot-fs {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  z-index: 60;
+  background: #0b0e1a;
+  color: #eaf0ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overscroll-behavior: none;
+  touch-action: none;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.ot-top {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 60rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: calc(0.5rem + env(safe-area-inset-top)) 0.7rem 0.5rem;
+}
+.ot-stat {
+  background: #141a30;
+  border: 1px solid #26305c;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.ot-stat b { font-variant-numeric: tabular-nums; }
+.ot-stat.ot-pct b { color: #ffd23d; }
+.ot-btn {
+  background: #141a30;
+  color: #eaf0ff;
+  border: 1px solid #26305c;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ot-btn:hover { border-color: #4f74ff; }
+.ot-btn.primary { background: #ffd23d; color: #201700; border-color: #ffd23d; font-weight: 700; }
+.ot-actions { display: flex; gap: 0.4rem; margin-left: auto; }
+.ot-btn.ot-test { background: rgba(255, 196, 0, 0.16); border-color: rgba(255, 170, 0, 0.6); color: #ffd257; white-space: nowrap; }
+.ot-btn.ot-test:hover { border-color: #ffcc33; }
+@media (max-width: 480px) {
+  .ot-top { gap: 0.3rem; padding-left: 0.45rem; padding-right: 0.45rem; }
+  .ot-stat { padding: 0.22rem 0.4rem; font-size: 0.75rem; }
+  .ot-btn { padding: 0.24rem 0.5rem; font-size: 0.78rem; }
+  .ot-doel { display: none; }
+}
+.ot-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 60rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.25rem calc(0.25rem + env(safe-area-inset-bottom));
+}
+.ot-area canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 0.6rem;
+  box-shadow: 0 6px 40px rgba(0, 0, 0, 0.55);
+}
+.ot-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.ot-paneel {
+  pointer-events: auto;
+  background: rgba(10, 14, 32, 0.92);
+  border: 1px solid #2b3a78;
+  border-radius: 1rem;
+  padding: 1.2rem 1.6rem;
+  text-align: center;
+  max-width: 26rem;
+  margin: 0 1rem;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6);
+}
+.ot-paneel h1 { margin: 0 0 0.4rem; font-size: 1.5rem; }
+.ot-paneel p { margin: 0.35rem 0; color: #b9c4e8; font-size: 0.95rem; line-height: 1.45; }
+.ot-paneel .groot { font-size: 1.05rem; color: #eaf0ff; }
+.ot-paneel .ot-btn { margin-top: 0.7rem; font-size: 1rem; padding: 0.55rem 1.3rem; }
+/* virtuele thumbstick: verschijnt waar je duim neerkomt, boven alles */
+.ot-stick-basis, .ot-stick-knop {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 70;
+}
+.ot-stick-basis {
+  width: 84px; height: 84px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+}
+.ot-stick-knop {
+  width: 42px; height: 42px; z-index: 71;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.ot-help {
+  max-width: 22rem;
+  background: #141a30;
+  color: #eaf0ff;
+  border: 1px solid #26305c;
+  border-radius: 0.8rem;
+}
+.ot-help::backdrop { background: rgba(4, 6, 16, 0.7); }
+.ot-help h2 { margin: 0 0 0.6rem; font-size: 1.15rem; color: #ffd23d; }
+.ot-help-list {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
 .t2 { background: #eee4da; color: #776e65; }
 .t4 { background: #ede0c8; color: #776e65; }
 .t8 { background: #f2b179; color: #fff; }

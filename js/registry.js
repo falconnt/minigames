@@ -7,6 +7,7 @@ import { ICON_REACTIE } from './icon-reactie.js';
 import { ICON_TETRIS } from './icon-tetris.js';
 import { ICON_RUIMTE } from './icon-ruimteschieter.js';
 import { ICON_PAARD } from './icon-paard.js';
+import { ICON_ONTHUL } from './icon-onthul.js';
 
 export const categories = [
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
@@ -120,6 +121,16 @@ export const games = [
     scoreMode: 'higher',
     formatScore: (s) => `${s} punten`,
     load: () => import('../games/schaduwbos.js'),
+  },
+  {
+    id: 'onthul',
+    title: 'Onthul!',
+    icon: ICON_ONTHUL,
+    category: 'arcade',
+    description: 'Xonix-klassieker: trek lijnen om het verborgen plaatje vrij te spelen, maar laat de stuiterende bal je lijn niet raken. 75% = level klaar!',
+    scoreMode: 'higher',
+    formatScore: (s) => `${s} punten`,
+    load: () => import('../games/onthul.js'),
   },
   {
     id: 'paardensport',

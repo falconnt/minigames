@@ -82,6 +82,7 @@
     <span class="stat">⭐ <b id="h-ster">0</b></span>
     <span class="stat">🚚 Bus: <b id="h-bus">0</b></span>
     <span class="stat">🏠 <b id="h-huis">0</b> geplaatst</span>
+    <span class="stat" id="hand-stat" hidden>🙌 <b id="h-hand"></b></span>
     <span class="spacer"></span>
     <button class="ui" id="b-quest">📋 Opdracht</button>
     <button class="ui" id="b-help">❔</button>
@@ -90,7 +91,7 @@
   <div class="quest" id="questregel"></div>
   <div class="veld" id="veld"><canvas id="c" width="960" height="540" aria-label="Speelveld"></canvas></div>
   <div class="busbar" id="busbar"></div>
-  <div class="hint">← → lopen · E of ↑ = pakken / deur / plaatsen · of sleep (joystick) en tik om te pakken</div>
+  <div class="hint">← → lopen · E of ↑ = oppakken / deur / neerzetten · of sleep (joystick) en tik · je draagt spullen in je handen naar je bus of huis</div>
   <div class="stick-basis" id="stick-basis" hidden></div>
   <div class="stick-knop" id="stick-knop" hidden></div>
   <div class="paneel-wrap" id="paneel-wrap"><div class="paneel" id="paneel"></div></div>
@@ -157,8 +158,9 @@ let save = null;
 const leeg = () => ({
   versie: 1,
   gepakt: {},          // "huis:index" -> true (weggehaald uit dat huis)
-  bus: [],             // typen in de bus
+  bus: [],             // typen in de bus (laadruimte)
   geplaatst: [],       // {type, x} in jouw huis
+  dragen: null,        // wat je nu in je handen draagt (type of null)
   sterren: 0,
   questNr: 0,
   spelerX: HUIZEN[0].x + HUIS_W / 2,
@@ -230,7 +232,6 @@ let plek = 'straat';                    // 'straat', 'bus' of huis-index (binnen
 let spelerX = save.spelerX;             // in straat- of kamercoördinaten
 let kijk = 1, loopFase = 0;
 let bewegen = 0;                        // -1/0/1 (gewenst, uit invoer)
-let ghost = null;                       // type dat je aan het plaatsen bent
 let confettiT = 0, deeltjes = [];
 let melding = '', meldingT = 0;
 let raf = 0, vorige = 0;
@@ -242,27 +243,16 @@ function hud() {
   document.getElementById('h-bus').textContent = save.bus.length;
   document.getElementById('h-huis').textContent = save.geplaatst.length;
   document.getElementById('questregel').textContent = '📋 ' + actieveQuest().tekst;
+  const hs = document.getElementById('hand-stat');
+  if (save.dragen) { hs.hidden = false; document.getElementById('h-hand').textContent = SPUL[save.dragen].naam; }
+  else hs.hidden = true;
   bouwBusbar();
 }
 
-// ---------- bus-balk (alleen zichtbaar in je eigen huis) ----------
+// De keuzebalk uit de bus is vervangen: je draagt spullen nu in je handen.
 function bouwBusbar() {
   const bar = document.getElementById('busbar');
-  const binnen = plek === 0;
-  bar.classList.toggle('aan', binnen && save.bus.length > 0);
-  if (!binnen) { if (ghost) ghost = null; return; }
-  bar.innerHTML = '';
-  save.bus.forEach((type, i) => {
-    const b = document.createElement('button');
-    b.textContent = SPUL[type].naam;
-    if (ghost && ghost.busIndex === i) b.classList.add('sel');
-    b.addEventListener('click', () => {
-      ensureAudio();
-      ghost = (ghost && ghost.busIndex === i) ? null : { type, busIndex: i };
-      bouwBusbar();
-    });
-    bar.appendChild(b);
-  });
+  if (bar) bar.classList.remove('aan');
 }
 
 // ---------- acties ----------
@@ -302,63 +292,86 @@ function spulInBuurt() {
 function actie() {
   ensureAudio();
   if (plek === 'straat') {
-    // sta je bij de bus? Dan klim je de laadruimte in.
     const busL = HUIZEN[0].x - BUS_OFFSET, busR = busL + BUS_BREED;
-    if (spelerX > busL && spelerX < busR) {
-      plek = 'bus'; spelerX = DEUR_BINNEN + 40; sDeur(); bouwBusbar();
-      zegt(save.bus.length ? 'Je laadruimte — al je verzamelde spullen!' : 'Nog leeg — haal spullen uit de huizen!');
+    const bijBus = spelerX > busL && spelerX < busR;
+    const i = huisBijDeur();
+    if (save.dragen) {
+      // met iets in je handen: bij de bus laad je het in, bij een deur ga je naar binnen
+      if (bijBus) {
+        save.bus.push(save.dragen); save.dragen = null;
+        sZet(); zegt('In de bus geladen!'); bewaar(); hud();
+      } else if (i != null) {
+        binnengaan(i);
+      } else {
+        zegt('Je draagt iets — breng het naar je bus (links) of naar je huis.');
+      }
       return;
     }
-    const i = huisBijDeur();
-    if (i != null) {
-      plek = i; spelerX = DEUR_BINNEN + 30; sDeur(); bouwBusbar();
-      zegt(HUIZEN[i].eigen ? 'Welkom thuis! Kies iets uit de bus (onderin) en zet het neer.' : HUIZEN[i].naam + ' — pak wat je kunt gebruiken!');
+    if (bijBus) {
+      plek = 'bus'; spelerX = DEUR_BINNEN + 40; sDeur(); hud();
+      zegt(save.bus.length ? 'Je laadruimte — loop naar een spul en pak het op.' : 'Nog leeg — haal spullen uit de huizen!');
+      return;
     }
+    if (i != null) binnengaan(i);
     return;
   }
   if (plek === 'bus') {
     if (spelerX < DEUR_BINNEN + 55) {
-      plek = 'straat'; spelerX = HUIZEN[0].x - BUS_OFFSET + BUS_BREED / 2; sDeur(); bouwBusbar();
+      plek = 'straat'; spelerX = HUIZEN[0].x - BUS_OFFSET + BUS_BREED / 2; sDeur(); hud();
       return;
     }
-    if (busSpulInBuurt() != null) zegt('Breng dit naar jouw huis (het gele) om het neer te zetten!');
+    if (save.dragen) {                        // in de bus neerzetten
+      save.bus.push(save.dragen); save.dragen = null;
+      sZet(); zegt('Neergezet in de bus.'); bewaar(); hud();
+      return;
+    }
+    const bi = busSpulInBuurt();              // uit de bus in je handen nemen
+    if (bi != null) {
+      save.dragen = save.bus[bi]; save.bus.splice(bi, 1);
+      sPak(); zegt('In je handen: ' + SPUL[save.dragen].naam); bewaar(); hud();
+    }
     return;
   }
-  // binnen: bij de deur = naar buiten
+  // binnen een huis: bij de deur = naar buiten
   if (spelerX < DEUR_BINNEN + 45) {
     const terug = HUIZEN[plek].x + HUIS_W / 2;
-    plek = 'straat'; spelerX = terug; sDeur(); bouwBusbar();
+    plek = 'straat'; spelerX = terug; sDeur(); hud();
     return;
   }
   if (plek === 0) {
-    // eigen huis: ghost plaatsen of een geplaatst ding terugpakken
-    if (ghost) {
-      const def = SPUL[ghost.type];
+    // eigen huis: draag je iets, dan zet je het hier neer; anders pak je iets weer op
+    if (save.dragen) {
       const x = Math.max(DEUR_BINNEN + 70, Math.min(KAMER_W - 40, spelerX));
-      save.geplaatst.push({ type: ghost.type, x });
-      save.bus.splice(ghost.busIndex, 1);
-      ghost = null;
-      sZet();
-      bewaar(); hud(); checkQuest(); bewaar();
+      save.geplaatst.push({ type: save.dragen, x });
+      save.dragen = null;
+      sZet(); bewaar(); hud(); checkQuest(); bewaar();
       return;
     }
     const s = spulInBuurt();
     if (s && s.eigenIndex != null) {
       save.geplaatst.splice(s.eigenIndex, 1);
-      save.bus.push(s.type);
-      sPak(); zegt('Terug in de bus: ' + SPUL[s.type].naam);
+      save.dragen = s.type;
+      sPak(); zegt('Weer in je handen: ' + SPUL[s.type].naam);
       bewaar(); hud();
     }
     return;
   }
-  // andermans huis: spul pakken -> in de bus
+  // andermans huis: spul in je handen pakken (één tegelijk)
+  if (save.dragen) { zegt('Je handen zijn vol — breng dit eerst weg.'); return; }
   const s = spulInBuurt();
   if (s && s.huisIndex != null) {
     save.gepakt[plek + ':' + s.huisIndex] = true;
-    save.bus.push(s.type);
-    sPak(); zegt(SPUL[s.type].naam + ' → in de bus!');
+    save.dragen = s.type;
+    sPak(); zegt('Opgepakt: ' + SPUL[s.type].naam + ' 🙌');
     bewaar(); hud();
   }
+}
+
+function binnengaan(i) {
+  plek = i; spelerX = DEUR_BINNEN + 30; sDeur(); hud();
+  zegt(HUIZEN[i].eigen
+    ? (save.dragen ? 'Loop naar een plek en zet het neer.' : 'Welkom thuis! Haal iets uit je bus of van elders om neer te zetten.')
+    : HUIZEN[i].naam + ' — pak wat je mooi vindt!');
 }
 
 // ---------- update ----------
@@ -386,12 +399,13 @@ function update(dt) {
 }
 
 // ---------- tekenen: spullen ----------
-function tekenSpul(type, x, grondY, alpha) {
+function tekenSpul(type, x, grondY, alpha, alsVloer) {
   const d = SPUL[type];
   g.save();
   if (alpha != null) g.globalAlpha = alpha;
-  const y = d.muur ? MUUR_Y : grondY;   // muurspullen hangen, rest staat
-  const l = x - d.w / 2, t = d.muur ? y - d.h / 2 : y - d.h;
+  const hangt = d.muur && !alsVloer;    // in de handen tekenen we alles als los object
+  const y = hangt ? MUUR_Y : grondY;    // muurspullen hangen, rest staat
+  const l = x - d.w / 2, t = hangt ? y - d.h / 2 : y - d.h;
   switch (type) {
     case 'bank':
       g.fillStyle = '#c05a5a'; rr(l, t + 14, d.w, d.h - 14, 10);
@@ -506,6 +520,21 @@ function tekenSpeler(x, grondY) {
   g.restore();
 }
 
+// Wat je in je handen draagt, voor de speler getekend (kleiner, op armhoogte).
+function tekenInHanden(px, grondY) {
+  if (!save.dragen) return;
+  const d = SPUL[save.dragen];
+  const sc = Math.min(0.62, 66 / Math.max(d.w, d.h)); // grote spullen iets kleiner
+  g.save();
+  g.translate(px + kijk * 12, grondY - 40);
+  g.scale(sc, sc);
+  // handjes onder het voorwerp
+  g.fillStyle = '#f2c894';
+  g.beginPath(); g.arc(-d.w * 0.32, 6, 6, 0, Math.PI * 2); g.arc(d.w * 0.32, 6, 6, 0, Math.PI * 2); g.fill();
+  tekenSpul(save.dragen, 0, d.h / 2, 1, true);
+  g.restore();
+}
+
 // ---------- tekenen: straat & interieur ----------
 function tekenStraat(camera) {
   // lucht
@@ -590,14 +619,15 @@ function tekenStraat(camera) {
   }
 
   tekenSpeler(spelerX - camera, GROND + 24);
+  tekenInHanden(spelerX - camera, GROND + 24);
 
   // hints: bus-instap of huisdeur
   const busL = HUIZEN[0].x - BUS_OFFSET, busR = busL + BUS_BREED;
   if (spelerX > busL && spelerX < busR) {
     const hx = busL + BUS_BREED / 2 - camera;
-    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(hx - 74, GROND - 140, 148, 26, 8);
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(hx - 84, GROND - 140, 168, 26, 8);
     g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
-    g.fillText('E / tik: in de bus', hx, GROND - 122);
+    g.fillText(save.dragen ? 'E / tik: in de bus laden' : 'E / tik: in de bus', hx, GROND - 122);
     g.textAlign = 'start';
   }
   const bij = huisBijDeur();
@@ -645,15 +675,21 @@ function tekenBus() {
     g.fillText('De laadruimte is nog leeg…', Math.min(bw, W) / 2 + 60, H * 0.45);
     g.textAlign = 'start';
   }
-  // naamlabel bij het dichtstbijzijnde spul
+  // hint: iets neerzetten of oppakken
   const bijIdx = busSpulInBuurt();
-  if (bijIdx != null) {
-    const x = busSpulX(bijIdx) - camera;
-    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(x - 70, 140, 140, 26, 8);
+  if (save.dragen) {
+    const x = spelerX - camera;
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(x - 84, 140, 168, 26, 8);
     g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
-    g.fillText(SPUL[save.bus[bijIdx]].naam, x, 158); g.textAlign = 'start';
+    g.fillText('E / tik: hier neerzetten', x, 158); g.textAlign = 'start';
+  } else if (bijIdx != null) {
+    const x = busSpulX(bijIdx) - camera;
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(x - 84, 140, 168, 26, 8);
+    g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
+    g.fillText('E / tik: pak ' + SPUL[save.bus[bijIdx]].naam, x, 158); g.textAlign = 'start';
   }
   tekenSpeler(spelerX - camera, VLOER);
+  tekenInHanden(spelerX - camera, VLOER);
 }
 
 function tekenBinnen() {
@@ -690,21 +726,22 @@ function tekenBinnen() {
     h.spul.forEach((s, i) => { if (!save.gepakt[plek + ':' + i]) tekenSpul(s.type, s.x - camera, VLOER); });
   }
 
-  // ghost (te plaatsen spul volgt je)
-  if (plek === 0 && ghost) {
-    const gx = Math.max(DEUR_BINNEN + 70, Math.min(KAMER_W - 40, spelerX));
-    tekenSpul(ghost.type, gx - camera, VLOER, 0.55);
-    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(gx - camera - 80, 60, 160, 26, 8);
+  // schaduw van waar je iets neerzet (eigen huis, met iets in je handen)
+  if (plek === 0 && save.dragen) {
+    const gx = Math.max(DEUR_BINNEN + 70, Math.min(KAMER_W - 40, spelerX)) - camera;
+    g.fillStyle = 'rgba(0,0,0,0.14)'; g.beginPath(); g.ellipse(gx, VLOER + 4, SPUL[save.dragen].w * 0.5, 7, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(gx - 84, 70, 168, 26, 8);
     g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
-    g.fillText('E / tik: hier neerzetten', gx - camera, 78); g.textAlign = 'start';
+    g.fillText('E / tik: hier neerzetten', gx, 88); g.textAlign = 'start';
   }
 
   tekenSpeler(spelerX - camera, VLOER);
+  tekenInHanden(spelerX - camera, VLOER);
 
-  // pak-hint
-  const s = spulInBuurt();
-  if (s && !ghost) {
-    const label = plek === 0 ? 'E / tik: terug in de bus' : 'E / tik: pak ' + SPUL[s.type].naam;
+  // pak-hint (alleen als je handen vrij zijn)
+  const s = save.dragen ? null : spulInBuurt();
+  if (s) {
+    const label = plek === 0 ? 'E / tik: weer oppakken' : 'E / tik: pak ' + SPUL[s.type].naam;
     g.fillStyle = 'rgba(20,26,48,0.85)'; rr(s.x - camera - 85, 100, 170, 26, 8);
     g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
     g.fillText(label, s.x - camera, 118); g.textAlign = 'start';
@@ -827,17 +864,17 @@ document.getElementById('b-quest').addEventListener('click', () => {
   const q = actieveQuest();
   openPaneel(`<h2>📋 Opdracht</h2><p><b>${q.tekst}</b></p>
     <p>Klaar? Dan verdien je een ⭐ en krijg je een nieuwe opdracht. Je hebt er al <b>${save.sterren}</b>.</p>
-    <p>In je bus: ${save.bus.length ? save.bus.map((t) => SPUL[t].naam).join(', ') : 'nog niets — ga huizen leeghalen!'}</p>`);
+    <p>${save.dragen ? `In je handen: <b>${SPUL[save.dragen].naam}</b>. ` : ''}In je bus: ${save.bus.length ? save.bus.map((t) => SPUL[t].naam).join(', ') : 'nog niets — ga huizen leeghalen!'}</p>`);
 });
 document.getElementById('b-help').addEventListener('click', () => {
   openPaneel(`<h2>🚚 Zo speel je Verhuisdag</h2>
     <ul style="padding-left:1.1rem;margin:0">
       <li>Loop door de straat met <b>← →</b> (of sleep als joystick — loslaten is stoppen).</li>
       <li>Sta je voor een deur? <b>E</b>, <b>↑</b> of een <b>korte tik</b> = naar binnen.</li>
-      <li>In andermans huizen: loop naar spullen en <b>pak ze</b> — ze gaan in je verhuisbus.</li>
-      <li>Je kunt <b>de bus in</b>: stap bij de laadklep naar binnen en bewonder alles wat je verzameld hebt.</li>
-      <li>In <b>jouw huis</b> (het gele, met de bus ervoor): kies onderin iets uit de bus, loop naar een mooie plek en <b>zet het neer</b>. Muurspullen hangen vanzelf op.</li>
-      <li>Fout neergezet? Pak het gewoon weer terug in de bus.</li>
+      <li>In andermans huizen: loop naar een spul en <b>pak het op</b> — je draagt het dan <b>in je handen</b> (één tegelijk).</li>
+      <li>Loop met je handen vol naar je <b>verhuisbus</b> en laad het in (of ga <b>de bus in</b> om spullen neer te zetten en later weer op te pakken).</li>
+      <li>In <b>jouw huis</b> (het gele, met de bus ervoor): draag iets naar een mooie plek en <b>zet het neer</b>. Muurspullen hangen vanzelf op.</li>
+      <li>Fout neergezet? Loop ernaartoe en pak het gewoon weer op.</li>
       <li>📋-opdrachten leveren <b>sterren</b> op. Een einde is er niet — richt je huis zo mooi in als jij wilt!</li>
     </ul>`);
 });
@@ -863,12 +900,12 @@ window.__verhuis = {
   get spelerX() { return spelerX; },
   get bus() { return [...save.bus]; },
   get geplaatst() { return save.geplaatst.map((p) => ({ ...p })); },
+  get dragen() { return save.dragen; },
   get sterren() { return save.sterren; },
   get quest() { return actieveQuest().tekst; },
   actie,
   zetRichting(r) { drukt(r); },
   losRichting(r) { laat(r); },
-  kiesUitBus(i) { if (plek === 0 && save.bus[i]) { ghost = { type: save.bus[i], busIndex: i }; bouwBusbar(); } },
 };
 
 hud();

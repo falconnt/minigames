@@ -103,7 +103,7 @@
     <canvas id="c" width="900" height="600" aria-label="Speelveld"></canvas>
     <div class="overlay" id="overlay"></div>
   </div>
-  <div class="hint">Houd pijltjes of WASD ingedrukt om te bewegen (loslaten = stoppen) · P = pauze · Vanaf de rand het veld in = lijn tekenen</div>
+  <div class="hint">Houd pijltjes/WASD ingedrukt of sleep op het veld (joystick) · loslaten = stoppen · P = pauze</div>
   <div class="pad" aria-label="Bediening">
     <button class="b-op" data-d="up">▲</button>
     <button data-d="left" style="grid-row:2">◀</button>
@@ -238,6 +238,8 @@ function toonStart() {
        dan wordt het stuk <b>zonder bal</b> onthuld.</p>
     <p>Raakt een bal je lijn terwijl je tekent? Dan ben je een leven kwijt
        (je hebt er 3). Onthul <b>75%</b> om het level te halen — elke % extra is bonus!</p>
+    <p>Besturing: houd <b>pijltjes/WASD</b> ingedrukt, gebruik de <b>knoppen</b>,
+       of <b>sleep op het veld</b> als joystick — loslaten = stoppen.</p>
     ${beste > 0 ? `<p class="groot">🏆 Beste score: <b>${beste}</b></p>` : ''}
     <button id="b-start">▶ Spelen</button>`);
   document.getElementById('b-start').addEventListener('click', () => { ensureAudio(); startSpel(); });
@@ -462,6 +464,22 @@ function draw() {
 
   if (flits > 0) { g.fillStyle = `rgba(255,70,70,${Math.min(0.45, flits * 1.4)})`; g.fillRect(0, 0, GW * CELL, GH * CELL); }
   g.restore();
+
+  // virtuele thumbstick tekenen (schermcoördinaten -> canvascoördinaten)
+  if (stick) {
+    const rect = canvas.getBoundingClientRect();
+    const sch = (GW * CELL) / rect.width;
+    const bx = (stick.cx - rect.left) * sch, by = (stick.cy - rect.top) * sch;
+    let dx = (stick.x - stick.cx), dy = (stick.y - stick.cy);
+    const len = Math.hypot(dx, dy);
+    if (len > STICK_MAX) { dx = (dx / len) * STICK_MAX; dy = (dy / len) * STICK_MAX; }
+    const basisR = 40 * sch, knopR = 19 * sch;
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2 * sch;
+    g.fillStyle = 'rgba(255,255,255,0.08)';
+    g.beginPath(); g.arc(bx, by, basisR, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.45)';
+    g.beginPath(); g.arc(bx + dx * sch, by + dy * sch, knopR, 0, Math.PI * 2); g.fill();
+  }
 }
 
 function loop(t) {
@@ -507,25 +525,36 @@ document.querySelectorAll('.pad button').forEach((b) => {
   b.addEventListener('pointerleave', stop);
   b.addEventListener('pointercancel', stop);
 });
-// slepen op het veld: vinger/muis vasthouden en richting op geven; loslaten = stoppen
-let veegStart = null, veegRichting = null;
-canvas.addEventListener('pointerdown', (e) => { ensureAudio(); veegStart = { x: e.clientX, y: e.clientY }; });
+// virtuele thumbstick op het veld: neerzetten = middelpunt, slepen = richting
+// (dode zone in het midden = stilstaan), loslaten = stoppen.
+const STICK_DODE = 14;   // px vanaf het middelpunt voordat er richting is
+const STICK_MAX = 48;    // px waarop de knop visueel wordt begrensd
+let stick = null;        // {id, cx, cy, x, y, richting}
+canvas.addEventListener('pointerdown', (e) => {
+  ensureAudio();
+  if (stick) return;     // één vinger tegelijk bestuurt de stick
+  canvas.setPointerCapture(e.pointerId);
+  stick = { id: e.pointerId, cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY, richting: null };
+});
 canvas.addEventListener('pointermove', (e) => {
-  if (!veegStart) return;
-  const dx = e.clientX - veegStart.x, dy = e.clientY - veegStart.y;
-  if (Math.hypot(dx, dy) < 24) return;
-  const r = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-  if (r !== veegRichting) {
-    if (veegRichting) laat(veegRichting);
-    veegRichting = r;
-    drukt(r);
+  if (!stick || e.pointerId !== stick.id) return;
+  stick.x = e.clientX; stick.y = e.clientY;
+  const dx = stick.x - stick.cx, dy = stick.y - stick.cy;
+  const r = Math.hypot(dx, dy) < STICK_DODE ? null
+    : Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  if (r !== stick.richting) {
+    if (stick.richting) laat(stick.richting);
+    if (r) drukt(r);
+    stick.richting = r;
   }
-  veegStart = { x: e.clientX, y: e.clientY };
 });
-window.addEventListener('pointerup', () => {
-  veegStart = null;
-  if (veegRichting) { laat(veegRichting); veegRichting = null; }
-});
+function stickLos(e) {
+  if (!stick || (e && e.pointerId !== stick.id)) return;
+  if (stick.richting) laat(stick.richting);
+  stick = null;
+}
+canvas.addEventListener('pointerup', stickLos);
+canvas.addEventListener('pointercancel', stickLos);
 
 function wisselPauze() {
   if (status === 'spel') {

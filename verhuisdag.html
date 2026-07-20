@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Verhuisdag</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%9A%9A%3C/text%3E%3C/svg%3E">
+<style>
+  /* Verhuisdag — zijaanzicht-verzamelspel: haal spullen uit de huizen in de
+     straat, laad ze in je bus en richt je eigen lege huis in. Geen einde,
+     wel kleine opdrachten. Losse testversie; framework-integratie komt later. */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: #101423;
+    color: #eaf0ff;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    height: 100dvh;
+    touch-action: none;
+  }
+  .top {
+    width: 100%; max-width: 980px;
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.45rem 0.6rem; font-size: 0.9rem; flex-wrap: wrap;
+  }
+  .stat { background: #1a2138; border: 1px solid #2c3760; border-radius: 0.5rem; padding: 0.28rem 0.55rem; white-space: nowrap; }
+  .stat b { font-variant-numeric: tabular-nums; }
+  .spacer { flex: 1; }
+  button.ui {
+    background: #1a2138; color: #eaf0ff; border: 1px solid #2c3760;
+    border-radius: 0.5rem; padding: 0.28rem 0.6rem; font-size: 0.9rem;
+    font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  button.ui:hover { border-color: #5b79e0; }
+  .quest {
+    width: 100%; max-width: 980px;
+    padding: 0 0.6rem 0.3rem; font-size: 0.85rem; color: #ffd98a;
+  }
+  .veld {
+    position: relative; flex: 1 1 auto; min-height: 0;
+    width: 100%; max-width: 980px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 0.25rem 0.25rem;
+  }
+  canvas { display: block; max-width: 100%; max-height: 100%; border-radius: 0.6rem; box-shadow: 0 6px 40px rgba(0,0,0,0.55); }
+  .hint { color: #7f89ad; font-size: 0.78rem; text-align: center; padding: 0 0.75rem 0.4rem; }
+  @media (hover: none) { .hint { display: none; } }
+  /* bus-balk: verschijnt in je eigen huis om spullen te plaatsen */
+  .busbar {
+    width: 100%; max-width: 980px;
+    display: none; gap: 0.4rem; overflow-x: auto;
+    padding: 0.35rem 0.6rem 0.55rem;
+  }
+  .busbar.aan { display: flex; }
+  .busbar button {
+    background: #1a2138; color: #eaf0ff; border: 1px solid #2c3760;
+    border-radius: 0.6rem; padding: 0.3rem 0.7rem; font-size: 0.85rem;
+    font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .busbar button.sel { border-color: #ffd23d; color: #ffd23d; }
+  /* paneel (opdrachten / bus / uitleg) */
+  .paneel-wrap { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(5,8,20,0.6); z-index: 80; }
+  .paneel-wrap.open { display: flex; }
+  .paneel {
+    background: #141a30; border: 1px solid #2c3760; border-radius: 1rem;
+    padding: 1.1rem 1.4rem; max-width: 24rem; margin: 1rem; max-height: 80dvh; overflow-y: auto;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.6);
+  }
+  .paneel h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+  .paneel p, .paneel li { color: #b9c4e8; font-size: 0.92rem; line-height: 1.45; }
+  .paneel .dicht { margin-top: 0.7rem; font-weight: 700; background: #ffd23d; color: #201700; border: 0; border-radius: 0.6rem; padding: 0.5rem 1.3rem; cursor: pointer; font-family: inherit; }
+  /* thumbstick */
+  .stick-basis, .stick-knop { position: fixed; border-radius: 50%; pointer-events: none; transform: translate(-50%,-50%); z-index: 70; }
+  .stick-basis { width: 84px; height: 84px; border: 2px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.08); }
+  .stick-knop { width: 42px; height: 42px; z-index: 71; background: rgba(255,255,255,0.5); box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+</style>
+</head>
+<body>
+  <div class="top">
+    <span class="stat">⭐ <b id="h-ster">0</b></span>
+    <span class="stat">🚚 Bus: <b id="h-bus">0</b></span>
+    <span class="stat">🏠 <b id="h-huis">0</b> geplaatst</span>
+    <span class="spacer"></span>
+    <button class="ui" id="b-quest">📋 Opdracht</button>
+    <button class="ui" id="b-help">❔</button>
+    <button class="ui" id="b-mute" aria-label="Geluid aan of uit">🔊</button>
+  </div>
+  <div class="quest" id="questregel"></div>
+  <div class="veld" id="veld"><canvas id="c" width="960" height="540" aria-label="Speelveld"></canvas></div>
+  <div class="busbar" id="busbar"></div>
+  <div class="hint">← → lopen · E of ↑ = pakken / deur / plaatsen · of sleep (joystick) en tik om te pakken</div>
+  <div class="stick-basis" id="stick-basis" hidden></div>
+  <div class="stick-knop" id="stick-knop" hidden></div>
+  <div class="paneel-wrap" id="paneel-wrap"><div class="paneel" id="paneel"></div></div>
+
+<script>
+'use strict';
+// ================= Verhuisdag =================
+// Loop door de straat, ga huizen binnen (E/↑ of tik bij de deur), pak spullen
+// (die gaan in je bus) en richt je eigen lege huis in. Kleine opdrachten geven
+// richting; een einde is er niet. Alles wordt lokaal bewaard.
+
+const W = 960, H = 540;
+const canvas = document.getElementById('c');
+const g = canvas.getContext('2d');
+
+// ---------- catalogus van spullen ----------
+// muur: hangt aan de muur (vaste hoogte); anders staat het op de vloer.
+const SPUL = {
+  bank:       { naam: 'bank',        w: 120, h: 52,  muur: false },
+  stoel:      { naam: 'stoel',       w: 44,  h: 62,  muur: false },
+  tafel:      { naam: 'tafel',       w: 92,  h: 48,  muur: false },
+  lamp:       { naam: 'staande lamp',w: 34,  h: 92,  muur: false },
+  plant:      { naam: 'plant',       w: 42,  h: 66,  muur: false },
+  bed:        { naam: 'bed',         w: 128, h: 48,  muur: false },
+  tv:         { naam: 'tv',          w: 78,  h: 62,  muur: false },
+  boekenkast: { naam: 'boekenkast',  w: 70,  h: 108, muur: false },
+  wasmachine: { naam: 'wasmachine',  w: 54,  h: 58,  muur: false },
+  vloerkleed: { naam: 'vloerkleed',  w: 110, h: 10,  muur: false },
+  theepot:    { naam: 'theepot',     w: 28,  h: 24,  muur: false },
+  klok:       { naam: 'klok',        w: 34,  h: 34,  muur: true },
+  schilderij: { naam: 'schilderij',  w: 62,  h: 46,  muur: true },
+  spiegel:    { naam: 'spiegel',     w: 36,  h: 62,  muur: true },
+};
+
+// ---------- de straat (vast ontwerp, dus saves blijven kloppen) ----------
+// Huis 0 is jouw eigen (lege) huis, met de verhuisbus ervoor.
+const HUIZEN = [
+  { naam: 'Jouw huis',     kleur: '#e8b84b', dak: '#8a5a2a', deur: '#7a4a22', eigen: true,  spul: [] },
+  { naam: 'Rozenhuisje',   kleur: '#e07070', dak: '#5a3040', deur: '#4a2030', spul: [
+    { type: 'bank', x: 190 }, { type: 'schilderij', x: 330 }, { type: 'plant', x: 430 }, { type: 'tafel', x: 560 }, { type: 'theepot', x: 700 }] },
+  { naam: 'Blauwvilla',    kleur: '#6a92d8', dak: '#2a3a6a', deur: '#22305a', spul: [
+    { type: 'bed', x: 200 }, { type: 'klok', x: 360 }, { type: 'stoel', x: 470 }, { type: 'boekenkast', x: 620 }, { type: 'vloerkleed', x: 760 }] },
+  { naam: 'Groenhof',      kleur: '#7ab86a', dak: '#3a5a2a', deur: '#2e4a22', spul: [
+    { type: 'plant', x: 180 }, { type: 'plant', x: 260 }, { type: 'tv', x: 420 }, { type: 'spiegel', x: 570 }, { type: 'lamp', x: 690 }] },
+  { naam: 'Paarspand',     kleur: '#a67ad8', dak: '#4a2a6a', deur: '#3a2258', spul: [
+    { type: 'wasmachine', x: 200 }, { type: 'tafel', x: 330 }, { type: 'stoel', x: 450 }, { type: 'schilderij', x: 580 }, { type: 'theepot', x: 700 }] },
+  { naam: 'Zonnehuis',     kleur: '#e8d05a', dak: '#8a6a1a', deur: '#6a5216', spul: [
+    { type: 'bank', x: 210 }, { type: 'lamp', x: 340 }, { type: 'klok', x: 450 }, { type: 'bed', x: 620 }, { type: 'vloerkleed', x: 770 }] },
+  { naam: 'Grijsstee',     kleur: '#9aa4b5', dak: '#3a4150', deur: '#2e3542', spul: [
+    { type: 'boekenkast', x: 190 }, { type: 'tv', x: 330 }, { type: 'spiegel', x: 460 }, { type: 'stoel', x: 570 }, { type: 'plant', x: 700 }] },
+];
+const HUIS_W = 190, HUIS_GAP = 70, STRAAT_PAD = 160;
+HUIZEN.forEach((h, i) => { h.x = STRAAT_PAD + i * (HUIS_W + HUIS_GAP); });
+const WERELD_W = STRAAT_PAD * 2 + HUIZEN.length * (HUIS_W + HUIS_GAP) - HUIS_GAP;
+const KAMER_W = 860;                    // binnenruimte (voor elk huis gelijk)
+const GROND = 470;                      // straatniveau op het canvas
+const VLOER = 470;                      // vloerniveau binnen
+const MUUR_Y = 260;                     // ophanghoogte muurspullen
+const DEUR_BINNEN = 60;                 // deurpositie in de kamer
+
+// ---------- opgeslagen toestand ----------
+let save = null;
+const leeg = () => ({
+  versie: 1,
+  gepakt: {},          // "huis:index" -> true (weggehaald uit dat huis)
+  bus: [],             // typen in de bus
+  geplaatst: [],       // {type, x} in jouw huis
+  sterren: 0,
+  questNr: 0,
+  spelerX: HUIZEN[0].x + HUIS_W / 2,
+});
+try { save = JSON.parse(localStorage.getItem('verhuisdag.v1') || 'null'); } catch (e) { save = null; }
+if (!save || save.versie !== 1) save = leeg();
+function bewaar() { try { localStorage.setItem('verhuisdag.v1', JSON.stringify(save)); } catch (e) { /* prima */ } }
+
+// ---------- geluid ----------
+let actx = null, muted = false;
+function ensureAudio() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+  if (actx && actx.state === 'suspended') actx.resume();
+}
+function toon(freq, dur, type, vol, slideTo, at) {
+  if (muted || !actx) return;
+  const t = actx.currentTime + (at || 0);
+  const o = actx.createOscillator(), gn = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t + dur);
+  gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(gn).connect(actx.destination); o.start(t); o.stop(t + dur);
+}
+const sPak = () => { toon(500, 0.08, 'triangle', 0.14, 760); };
+const sZet = () => { toon(300, 0.1, 'triangle', 0.13, 180); };
+const sDeur = () => { toon(220, 0.12, 'square', 0.06, 160); };
+const sSter = () => { toon(660, 0.12, 'square', 0.1, 880); toon(880, 0.16, 'square', 0.1, 1320, 0.1); };
+
+// ---------- opdrachten (eindeloos: de lijst herhaalt met hogere aantallen) ----------
+const QUESTS = [
+  { tekst: 'Zet een bank in je huis', type: 'bank', n: 1 },
+  { tekst: 'Zet een bed in je huis', type: 'bed', n: 1 },
+  { tekst: 'Hang een schilderij op', type: 'schilderij', n: 1 },
+  { tekst: 'Zet 2 planten in je huis', type: 'plant', n: 2 },
+  { tekst: 'Zet een tv neer', type: 'tv', n: 1 },
+  { tekst: 'Hang een klok op', type: 'klok', n: 1 },
+  { tekst: 'Zet een tafel en een stoel neer', type: ['tafel', 'stoel'], n: 1 },
+  { tekst: 'Leg een vloerkleed neer', type: 'vloerkleed', n: 1 },
+  { tekst: 'Zet een boekenkast neer', type: 'boekenkast', n: 1 },
+  { tekst: 'Hang een spiegel op', type: 'spiegel', n: 1 },
+  { tekst: 'Zet de wasmachine neer', type: 'wasmachine', n: 1 },
+  { tekst: 'Zet een staande lamp neer', type: 'lamp', n: 1 },
+  { tekst: 'Zet een theepot in je huis', type: 'theepot', n: 1 },
+];
+function actieveQuest() {
+  const basis = QUESTS[save.questNr % QUESTS.length];
+  const ronde = Math.floor(save.questNr / QUESTS.length);
+  const n = basis.n + ronde;                     // elke ronde eentje meer
+  const tekst = ronde === 0 ? basis.tekst : `${basis.tekst} (totaal ${n})`;
+  return { ...basis, n, tekst };
+}
+function telGeplaatst(type) { return save.geplaatst.filter((p) => p.type === type).length; }
+function questKlaar(q) {
+  const typen = Array.isArray(q.type) ? q.type : [q.type];
+  return typen.every((t) => telGeplaatst(t) >= q.n);
+}
+function checkQuest() {
+  const q = actieveQuest();
+  if (!questKlaar(q)) return;
+  save.sterren += 1;
+  save.questNr += 1;
+  sSter();
+  confettiT = 1.4;
+  hud();
+}
+
+// ---------- spelstatus ----------
+let plek = 'straat';                    // 'straat' of huis-index (binnen)
+let spelerX = save.spelerX;             // in straat- of kamercoördinaten
+let kijk = 1, loopFase = 0;
+let bewegen = 0;                        // -1/0/1 (gewenst, uit invoer)
+let ghost = null;                       // type dat je aan het plaatsen bent
+let confettiT = 0, deeltjes = [];
+let melding = '', meldingT = 0;
+let raf = 0, vorige = 0;
+
+function zegt(t) { melding = t; meldingT = 2.2; }
+
+function hud() {
+  document.getElementById('h-ster').textContent = save.sterren;
+  document.getElementById('h-bus').textContent = save.bus.length;
+  document.getElementById('h-huis').textContent = save.geplaatst.length;
+  document.getElementById('questregel').textContent = '📋 ' + actieveQuest().tekst;
+  bouwBusbar();
+}
+
+// ---------- bus-balk (alleen zichtbaar in je eigen huis) ----------
+function bouwBusbar() {
+  const bar = document.getElementById('busbar');
+  const binnen = plek === 0;
+  bar.classList.toggle('aan', binnen && save.bus.length > 0);
+  if (!binnen) { if (ghost) ghost = null; return; }
+  bar.innerHTML = '';
+  save.bus.forEach((type, i) => {
+    const b = document.createElement('button');
+    b.textContent = SPUL[type].naam;
+    if (ghost && ghost.busIndex === i) b.classList.add('sel');
+    b.addEventListener('click', () => {
+      ensureAudio();
+      ghost = (ghost && ghost.busIndex === i) ? null : { type, busIndex: i };
+      bouwBusbar();
+    });
+    bar.appendChild(b);
+  });
+}
+
+// ---------- acties ----------
+function huisBijDeur() {
+  // welke deur staat de speler voor (op straat)?
+  for (let i = 0; i < HUIZEN.length; i++) {
+    const deurX = HUIZEN[i].x + HUIS_W / 2;
+    if (Math.abs(spelerX - deurX) < 34) return i;
+  }
+  return null;
+}
+function spulInBuurt() {
+  if (plek === 'straat') return null;
+  const h = HUIZEN[plek];
+  const lijst = plek === 0
+    ? save.geplaatst.map((p, i) => ({ ...p, eigenIndex: i }))
+    : h.spul.map((s, i) => ({ ...s, huisIndex: i })).filter((s) => !save.gepakt[plek + ':' + s.huisIndex]);
+  let best = null, bestAfstand = 55;
+  for (const s of lijst) {
+    const d = Math.abs(spelerX - s.x);
+    if (d < bestAfstand) { best = s; bestAfstand = d; }
+  }
+  return best;
+}
+function actie() {
+  ensureAudio();
+  if (plek === 'straat') {
+    const i = huisBijDeur();
+    if (i != null) {
+      plek = i; spelerX = DEUR_BINNEN + 30; sDeur(); bouwBusbar();
+      zegt(HUIZEN[i].eigen ? 'Welkom thuis! Kies iets uit de bus (onderin) en zet het neer.' : HUIZEN[i].naam + ' — pak wat je kunt gebruiken!');
+    }
+    return;
+  }
+  // binnen: bij de deur = naar buiten
+  if (spelerX < DEUR_BINNEN + 45) {
+    const terug = HUIZEN[plek].x + HUIS_W / 2;
+    plek = 'straat'; spelerX = terug; sDeur(); bouwBusbar();
+    return;
+  }
+  if (plek === 0) {
+    // eigen huis: ghost plaatsen of een geplaatst ding terugpakken
+    if (ghost) {
+      const def = SPUL[ghost.type];
+      const x = Math.max(DEUR_BINNEN + 70, Math.min(KAMER_W - 40, spelerX));
+      save.geplaatst.push({ type: ghost.type, x });
+      save.bus.splice(ghost.busIndex, 1);
+      ghost = null;
+      sZet();
+      bewaar(); hud(); checkQuest(); bewaar();
+      return;
+    }
+    const s = spulInBuurt();
+    if (s && s.eigenIndex != null) {
+      save.geplaatst.splice(s.eigenIndex, 1);
+      save.bus.push(s.type);
+      sPak(); zegt('Terug in de bus: ' + SPUL[s.type].naam);
+      bewaar(); hud();
+    }
+    return;
+  }
+  // andermans huis: spul pakken -> in de bus
+  const s = spulInBuurt();
+  if (s && s.huisIndex != null) {
+    save.gepakt[plek + ':' + s.huisIndex] = true;
+    save.bus.push(s.type);
+    sPak(); zegt(SPUL[s.type].naam + ' → in de bus!');
+    bewaar(); hud();
+  }
+}
+
+// ---------- update ----------
+function update(dt) {
+  if (meldingT > 0) meldingT -= dt;
+  if (confettiT > 0) {
+    confettiT -= dt;
+    if (deeltjes.length < 80) for (let i = 0; i < 4; i++) deeltjes.push({
+      x: Math.random() * W, y: -10, vy: 120 + Math.random() * 160, vx: (Math.random() - 0.5) * 60,
+      kleur: ['#ffd23d', '#ff6b9d', '#48d17a', '#4fc3ff', '#c08ee8'][i % 5], r: 3 + Math.random() * 4, rot: Math.random() * 6,
+    });
+  }
+  for (const p of deeltjes) { p.y += p.vy * dt; p.x += p.vx * dt; p.rot += dt * 4; }
+  deeltjes = deeltjes.filter((p) => p.y < H + 20);
+
+  const snelheid = 280;
+  if (bewegen !== 0) {
+    kijk = bewegen;
+    spelerX += bewegen * snelheid * dt;
+    loopFase += dt * 11;
+  }
+  const maxX = plek === 'straat' ? WERELD_W - 20 : KAMER_W - 20;
+  spelerX = Math.max(20, Math.min(maxX, spelerX));
+  if (plek === 'straat') { save.spelerX = spelerX; }
+}
+
+// ---------- tekenen: spullen ----------
+function tekenSpul(type, x, grondY, alpha) {
+  const d = SPUL[type];
+  g.save();
+  if (alpha != null) g.globalAlpha = alpha;
+  const y = d.muur ? MUUR_Y : grondY;   // muurspullen hangen, rest staat
+  const l = x - d.w / 2, t = d.muur ? y - d.h / 2 : y - d.h;
+  switch (type) {
+    case 'bank':
+      g.fillStyle = '#c05a5a'; rr(l, t + 14, d.w, d.h - 14, 10);
+      g.fillStyle = '#d87070'; rr(l + 6, t, d.w - 12, 26, 8);
+      g.fillStyle = '#a84848'; rr(l, t + 10, 16, d.h - 10, 6); rr(l + d.w - 16, t + 10, 16, d.h - 10, 6);
+      break;
+    case 'stoel':
+      g.fillStyle = '#8a5a2a'; g.fillRect(l + 4, t, 8, d.h); g.fillRect(l + 4, t + 34, d.w - 8, 8);
+      g.fillRect(l + 6, t + 42, 5, 20); g.fillRect(l + d.w - 12, t + 42, 5, 20);
+      break;
+    case 'tafel':
+      g.fillStyle = '#a8743a'; g.fillRect(l, t + 10, d.w, 10);
+      g.fillStyle = '#8a5a2a'; g.fillRect(l + 8, t + 20, 8, d.h - 20); g.fillRect(l + d.w - 16, t + 20, 8, d.h - 20);
+      break;
+    case 'lamp':
+      g.fillStyle = '#4a4e57'; g.fillRect(l + d.w / 2 - 3, t + 22, 6, d.h - 26); g.fillRect(l + 4, t + d.h - 6, d.w - 8, 6);
+      g.fillStyle = '#ffd98a'; g.beginPath(); g.moveTo(l + 2, t + 24); g.lineTo(l + d.w - 2, t + 24); g.lineTo(l + d.w - 9, t); g.lineTo(l + 9, t); g.closePath(); g.fill();
+      break;
+    case 'plant':
+      g.fillStyle = '#b8743a'; g.fillRect(l + 8, t + d.h - 22, d.w - 16, 22);
+      g.fillStyle = '#3a9a4a';
+      g.beginPath(); g.ellipse(x, t + 22, 18, 24, 0, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(x - 13, t + 32, 12, 16, -0.5, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(x + 13, t + 32, 12, 16, 0.5, 0, Math.PI * 2); g.fill();
+      break;
+    case 'bed':
+      g.fillStyle = '#8a5a2a'; g.fillRect(l, t, 10, d.h); g.fillRect(l + d.w - 10, t + 10, 10, d.h - 10);
+      g.fillStyle = '#e8e2f0'; rr(l + 6, t + 16, d.w - 12, 18, 6);
+      g.fillStyle = '#7a9ae0'; rr(l + 6, t + 30, d.w - 12, 14, 4);
+      g.fillStyle = '#fff'; rr(l + 12, t + 12, 30, 12, 5);
+      break;
+    case 'tv':
+      g.fillStyle = '#8a5a2a'; g.fillRect(l, t + d.h - 14, d.w, 14);
+      g.fillStyle = '#14161d'; rr(l + 6, t, d.w - 12, d.h - 18, 4);
+      g.fillStyle = '#3a6ae0'; rr(l + 10, t + 4, d.w - 20, d.h - 28, 2);
+      break;
+    case 'boekenkast':
+      g.fillStyle = '#8a5a2a'; g.fillRect(l, t, d.w, d.h);
+      g.fillStyle = '#6a4520'; g.fillRect(l + 5, t + 5, d.w - 10, d.h - 10);
+      for (let p = 0; p < 3; p++) {
+        const py = t + 12 + p * 32;
+        g.fillStyle = '#8a5a2a'; g.fillRect(l + 5, py + 22, d.w - 10, 5);
+        const kleuren = ['#c05a5a', '#5b79e0', '#48b17a', '#e8b84b'];
+        for (let b = 0; b < 5; b++) { g.fillStyle = kleuren[(p + b) % 4]; g.fillRect(l + 9 + b * 11, py, 9, 22); }
+      }
+      break;
+    case 'wasmachine':
+      g.fillStyle = '#dfe3ea'; rr(l, t, d.w, d.h, 6);
+      g.fillStyle = '#8a93a5'; g.beginPath(); g.arc(x, t + d.h / 2 + 4, 16, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#3a6a8a'; g.beginPath(); g.arc(x, t + d.h / 2 + 4, 11, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#5b79e0'; g.fillRect(l + 6, t + 5, 14, 5);
+      break;
+    case 'vloerkleed':
+      g.fillStyle = '#b8608a'; rr(l, t, d.w, d.h, 5);
+      g.fillStyle = '#d880aa'; rr(l + 12, t + 2, d.w - 24, d.h - 4, 4);
+      break;
+    case 'theepot':
+      g.fillStyle = '#5b9ae0'; g.beginPath(); g.ellipse(x, t + d.h - 10, 12, 10, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#5b9ae0'; g.fillRect(l + d.w - 8, t + 4, 5, 10); g.beginPath(); g.moveTo(l, t + 8); g.lineTo(l + 8, t + 6); g.lineTo(l + 8, t + 14); g.closePath(); g.fill();
+      g.fillStyle = '#3a6ab0'; g.beginPath(); g.arc(x, t + 4, 3, 0, Math.PI * 2); g.fill();
+      break;
+    case 'klok':
+      g.fillStyle = '#8a5a2a'; g.beginPath(); g.arc(x, y, 17, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff6e0'; g.beginPath(); g.arc(x, y, 13, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#222'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 9); g.moveTo(x, y); g.lineTo(x + 6, y + 2); g.stroke();
+      break;
+    case 'schilderij':
+      g.fillStyle = '#c8a03a'; rr(l, t, d.w, d.h, 3);
+      g.fillStyle = '#2a6fdb'; g.fillRect(l + 6, t + 6, d.w - 12, d.h - 12);
+      g.fillStyle = '#e8b84b'; g.beginPath(); g.arc(l + d.w * 0.3, t + d.h * 0.4, 6, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#3a7a3a'; g.beginPath(); g.moveTo(l + 6, t + d.h - 6); g.lineTo(l + d.w * 0.45, t + d.h * 0.45); g.lineTo(l + d.w - 6, t + d.h - 6); g.closePath(); g.fill();
+      break;
+    case 'spiegel':
+      g.fillStyle = '#c8a03a'; rr(l, t, d.w, d.h, 12);
+      g.fillStyle = '#bfe0e8'; rr(l + 5, t + 5, d.w - 10, d.h - 10, 9);
+      g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(l + 9, t + 9, 6, d.h - 22);
+      break;
+  }
+  g.restore();
+}
+function rr(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath(); g.fill();
+}
+
+// ---------- tekenen: speler ----------
+function tekenSpeler(x, grondY) {
+  const been = Math.sin(loopFase) * (bewegen !== 0 ? 6 : 0);
+  g.save();
+  g.translate(x, grondY);
+  g.scale(kijk, 1);
+  // benen
+  g.strokeStyle = '#2a3550'; g.lineWidth = 6; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-4, -26); g.lineTo(-4 + been, 0); g.moveTo(4, -26); g.lineTo(4 - been, 0); g.stroke();
+  // lijf (overall)
+  g.fillStyle = '#e07030'; rr(-11, -52, 22, 30, 8);
+  g.fillStyle = '#ffd23d'; g.fillRect(-11, -40, 22, 5);
+  // armen
+  g.strokeStyle = '#e07030'; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(-9, -48); g.lineTo(-14, -30 + been * 0.5); g.moveTo(9, -48); g.lineTo(14, -30 - been * 0.5); g.stroke();
+  // hoofd + pet
+  g.fillStyle = '#f2c894'; g.beginPath(); g.arc(0, -62, 11, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#5b79e0'; g.beginPath(); g.arc(0, -66, 11, Math.PI, 0); g.fill(); g.fillRect(-1, -68, 15, 4);
+  g.fillStyle = '#222'; g.beginPath(); g.arc(4, -62, 1.6, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+// ---------- tekenen: straat & interieur ----------
+function tekenStraat(camera) {
+  // lucht
+  const lucht = g.createLinearGradient(0, 0, 0, H);
+  lucht.addColorStop(0, '#8fd3ff'); lucht.addColorStop(0.75, '#d8f0ff');
+  g.fillStyle = lucht; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#fff6cf'; g.beginPath(); g.arc(W - 110 , 80, 38, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  for (const [cx, cy, s] of [[180, 90, 1], [520, 60, 0.8], [780, 120, 1.15]]) {
+    const wx = (cx - camera * 0.2 % W + W) % W;
+    g.beginPath(); g.ellipse(wx, cy, 46 * s, 15 * s, 0, 0, Math.PI * 2); g.ellipse(wx + 30 * s, cy - 8 * s, 30 * s, 12 * s, 0, 0, Math.PI * 2); g.fill();
+  }
+  // gras + stoep + weg
+  g.fillStyle = '#7ab86a'; g.fillRect(0, GROND - 14, W, 14);
+  g.fillStyle = '#c8ccd4'; g.fillRect(0, GROND, W, 26);
+  g.fillStyle = '#3a4150'; g.fillRect(0, GROND + 26, W, H - GROND - 26);
+  g.fillStyle = '#e8e8e8';
+  for (let x = -((camera) % 60); x < W; x += 60) g.fillRect(x, GROND + 44, 30, 5);
+
+  // huizen
+  HUIZEN.forEach((h, i) => {
+    const x = h.x - camera;
+    if (x + HUIS_W < -40 || x > W + 40) return;
+    // romp
+    g.fillStyle = h.kleur; g.fillRect(x, GROND - 170, HUIS_W, 156);
+    // dak
+    g.fillStyle = h.dak;
+    g.beginPath(); g.moveTo(x - 14, GROND - 170); g.lineTo(x + HUIS_W / 2, GROND - 228); g.lineTo(x + HUIS_W + 14, GROND - 170); g.closePath(); g.fill();
+    // ramen
+    g.fillStyle = '#bfe0f0';
+    g.fillRect(x + 22, GROND - 140, 40, 34); g.fillRect(x + HUIS_W - 62, GROND - 140, 40, 34);
+    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3;
+    g.strokeRect(x + 22, GROND - 140, 40, 34); g.strokeRect(x + HUIS_W - 62, GROND - 140, 40, 34);
+    // deur
+    const deurX = x + HUIS_W / 2 - 22;
+    g.fillStyle = h.deur; rr(deurX, GROND - 84, 44, 70, 6);
+    g.fillStyle = '#ffd98a'; g.beginPath(); g.arc(deurX + 36, GROND - 48, 3, 0, Math.PI * 2); g.fill();
+    // naambordje (eigen huis krijgt alleen het ster-label)
+    g.font = '700 12px system-ui'; g.textAlign = 'center';
+    if (h.eigen) {
+      g.fillStyle = '#1a3a6a';
+      g.fillText('⭐ JOUW HUIS', x + HUIS_W / 2, GROND - 180);
+    } else {
+      g.fillStyle = 'rgba(255,255,255,0.85)';
+      g.fillText(h.naam, x + HUIS_W / 2, GROND - 178);
+    }
+    g.textAlign = 'start';
+  });
+
+  // de verhuisbus voor jouw huis
+  const busX = HUIZEN[0].x - camera - 120;
+  if (busX > -160 && busX < W + 40) {
+    g.fillStyle = '#e8e2d8'; rr(busX, GROND - 6, 118, 44, 8);            // laadbak
+    g.fillStyle = '#e07030'; rr(busX + 84, GROND + 2, 42, 36, 6);        // cabine
+    g.fillStyle = '#bfe0f0'; rr(busX + 96, GROND + 6, 24, 14, 3);        // ruit
+    g.fillStyle = '#1a2138';
+    g.beginPath(); g.arc(busX + 24, GROND + 40, 10, 0, Math.PI * 2); g.arc(busX + 96, GROND + 40, 10, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e07030'; g.font = '800 11px system-ui'; g.fillText('VERHUISBUS', busX + 10, GROND + 22);
+    g.fillStyle = '#1a3a6a'; g.font = '700 11px system-ui'; g.fillText('🚚 ' + save.bus.length + ' spullen', busX + 14, GROND + 8);
+  }
+
+  tekenSpeler(spelerX - camera, GROND + 24);
+
+  // deur-hint
+  const bij = huisBijDeur();
+  if (bij != null) {
+    const hx = HUIZEN[bij].x + HUIS_W / 2 - camera;
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(hx - 74, GROND - 262, 148, 26, 8);
+    g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
+    g.fillText('E / tik: naar binnen', hx, GROND - 244);
+    g.textAlign = 'start';
+  }
+}
+
+function tekenBinnen() {
+  const h = HUIZEN[plek];
+  const camera = Math.max(0, Math.min(KAMER_W - W, spelerX - W / 2));
+  // muren + vloer
+  g.fillStyle = plek === 0 ? '#f0e0c0' : mix(h.kleur, '#ffffff', 0.55);
+  g.fillRect(0, 0, W, H);
+  // behangpatroon
+  g.fillStyle = 'rgba(255,255,255,0.25)';
+  for (let x = -((camera * 0.5) % 46); x < W; x += 46) for (let y = 60; y < VLOER - 40; y += 52) g.fillRect(x, y, 5, 5);
+  g.fillStyle = '#a8743a'; g.fillRect(0, VLOER, W, H - VLOER);
+  g.fillStyle = 'rgba(0,0,0,0.12)';
+  for (let x = -(camera % 70); x < W; x += 70) g.fillRect(x, VLOER, 3, H - VLOER);
+  // plint
+  g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, VLOER - 10, W, 10);
+  // raam met uitzicht
+  const rx = 470 - camera;
+  g.fillStyle = '#8fd3ff'; rr(rx, 150, 130, 100, 6);
+  g.fillStyle = '#7ab86a'; g.fillRect(rx, 220, 130, 30);
+  g.strokeStyle = '#fff'; g.lineWidth = 5; g.strokeRect(rx, 150, 130, 100);
+  g.beginPath(); g.moveTo(rx + 65, 150); g.lineTo(rx + 65, 250); g.stroke();
+  // deur (uitgang links)
+  const dx = DEUR_BINNEN - 40 - camera;
+  g.fillStyle = h.deur; rr(dx, VLOER - 130, 60, 130, 6);
+  g.fillStyle = '#ffd98a'; g.beginPath(); g.arc(dx + 48, VLOER - 66, 4, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(20,26,48,0.7)'; g.font = '600 12px system-ui'; g.textAlign = 'center';
+  g.fillText('⬅ straat', dx + 30, VLOER - 140); g.textAlign = 'start';
+
+  // spullen
+  if (plek === 0) {
+    for (const p of save.geplaatst) tekenSpul(p.type, p.x - camera, VLOER);
+  } else {
+    h.spul.forEach((s, i) => { if (!save.gepakt[plek + ':' + i]) tekenSpul(s.type, s.x - camera, VLOER); });
+  }
+
+  // ghost (te plaatsen spul volgt je)
+  if (plek === 0 && ghost) {
+    const gx = Math.max(DEUR_BINNEN + 70, Math.min(KAMER_W - 40, spelerX));
+    tekenSpul(ghost.type, gx - camera, VLOER, 0.55);
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(gx - camera - 80, 60, 160, 26, 8);
+    g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
+    g.fillText('E / tik: hier neerzetten', gx - camera, 78); g.textAlign = 'start';
+  }
+
+  tekenSpeler(spelerX - camera, VLOER);
+
+  // pak-hint
+  const s = spulInBuurt();
+  if (s && !ghost) {
+    const label = plek === 0 ? 'E / tik: terug in de bus' : 'E / tik: pak ' + SPUL[s.type].naam;
+    g.fillStyle = 'rgba(20,26,48,0.85)'; rr(s.x - camera - 85, 100, 170, 26, 8);
+    g.fillStyle = '#ffd98a'; g.font = '600 13px system-ui'; g.textAlign = 'center';
+    g.fillText(label, s.x - camera, 118); g.textAlign = 'start';
+  }
+}
+
+function mix(a, b, t) {
+  const pa = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
+  const pb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
+  const c = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function draw() {
+  if (plek === 'straat') {
+    const camera = Math.max(0, Math.min(WERELD_W - W, spelerX - W / 2));
+    tekenStraat(camera);
+  } else {
+    tekenBinnen();
+  }
+  // melding
+  if (meldingT > 0 && melding) {
+    g.globalAlpha = Math.min(1, meldingT);
+    g.fillStyle = 'rgba(20,26,48,0.9)'; rr(W / 2 - 190, 8, 380, 30, 10);
+    g.fillStyle = '#eaf0ff'; g.font = '600 14px system-ui'; g.textAlign = 'center';
+    g.fillText(melding, W / 2, 28); g.textAlign = 'start';
+    g.globalAlpha = 1;
+  }
+  // confetti
+  for (const p of deeltjes) {
+    g.save(); g.translate(p.x, p.y); g.rotate(p.rot);
+    g.fillStyle = p.kleur; g.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+    g.restore();
+  }
+}
+
+function loop(t) {
+  raf = requestAnimationFrame(loop);
+  const dt = vorige ? Math.min((t - vorige) / 1000, 0.05) : 0.016;
+  vorige = t;
+  update(dt);
+  draw();
+}
+
+// ---------- invoer ----------
+// vasthouden = lopen, loslaten = stoppen (toetsen of thumbstick-overal).
+const ingedrukt = [];
+function drukt(r) { const i = ingedrukt.indexOf(r); if (i >= 0) ingedrukt.splice(i, 1); ingedrukt.push(r); zetBeweging(); }
+function laat(r) { const i = ingedrukt.indexOf(r); if (i >= 0) ingedrukt.splice(i, 1); zetBeweging(); }
+function zetBeweging() {
+  const top = ingedrukt[ingedrukt.length - 1] || null;
+  bewegen = top === 'left' ? -1 : top === 'right' ? 1 : 0;
+}
+const TOETS = { ArrowLeft: 'left', ArrowRight: 'right', a: 'left', d: 'right' };
+window.addEventListener('keydown', (e) => {
+  ensureAudio();
+  if (e.key === 'e' || e.key === 'E' || e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') { e.preventDefault(); actie(); return; }
+  const r = TOETS[e.key];
+  if (r) { if (!e.repeat) drukt(r); e.preventDefault(); }
+});
+window.addEventListener('keyup', (e) => { const r = TOETS[e.key]; if (r) laat(r); });
+window.addEventListener('blur', () => { ingedrukt.length = 0; bewegen = 0; });
+
+// thumbstick overal (horizontaal); een korte tik zonder slepen = actie.
+const STICK_DODE = 14, STICK_MAX = 48;
+const stickBasis = document.getElementById('stick-basis');
+const stickKnop = document.getElementById('stick-knop');
+let stick = null;
+function stickTeken() {
+  if (!stick) { stickBasis.hidden = true; stickKnop.hidden = true; return; }
+  let dx = stick.x - stick.cx, dy = stick.y - stick.cy;
+  const len = Math.hypot(dx, dy);
+  if (len > STICK_MAX) { dx = (dx / len) * STICK_MAX; dy = (dy / len) * STICK_MAX; }
+  stickBasis.hidden = false; stickKnop.hidden = false;
+  stickBasis.style.left = stick.cx + 'px'; stickBasis.style.top = stick.cy + 'px';
+  stickKnop.style.left = (stick.cx + dx) + 'px'; stickKnop.style.top = (stick.cy + dy) + 'px';
+}
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('button, .paneel, .busbar, .top')) return;
+  ensureAudio();
+  if (stick) return;
+  stick = { id: e.pointerId, cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY, richting: null, bewogen: false };
+});
+document.addEventListener('pointermove', (e) => {
+  if (!stick || e.pointerId !== stick.id) return;
+  stick.x = e.clientX; stick.y = e.clientY;
+  const dx = stick.x - stick.cx;
+  if (Math.hypot(stick.x - stick.cx, stick.y - stick.cy) >= STICK_DODE) stick.bewogen = true;
+  const r = !stick.bewogen ? null : (Math.abs(dx) < STICK_DODE ? null : dx > 0 ? 'right' : 'left');
+  if (r !== stick.richting) {
+    if (stick.richting) laat(stick.richting);
+    if (r) drukt(r);
+    stick.richting = r;
+  }
+  if (stick.bewogen) stickTeken();
+});
+function stickLos(e) {
+  if (!stick || (e && e.pointerId !== stick.id)) return;
+  if (stick.richting) laat(stick.richting);
+  const wasTik = !stick.bewogen;
+  stick = null;
+  stickTeken();
+  if (wasTik) actie();          // korte tik = pakken / deur / plaatsen
+}
+document.addEventListener('pointerup', stickLos);
+document.addEventListener('pointercancel', stickLos);
+
+// ---------- panelen ----------
+const paneelWrap = document.getElementById('paneel-wrap');
+const paneelEl = document.getElementById('paneel');
+function openPaneel(html) {
+  paneelEl.innerHTML = html + '<button class="dicht" id="p-dicht">Sluiten</button>';
+  paneelWrap.classList.add('open');
+  document.getElementById('p-dicht').addEventListener('click', () => paneelWrap.classList.remove('open'));
+}
+paneelWrap.addEventListener('pointerdown', (e) => { if (e.target === paneelWrap) paneelWrap.classList.remove('open'); });
+document.getElementById('b-quest').addEventListener('click', () => {
+  const q = actieveQuest();
+  openPaneel(`<h2>📋 Opdracht</h2><p><b>${q.tekst}</b></p>
+    <p>Klaar? Dan verdien je een ⭐ en krijg je een nieuwe opdracht. Je hebt er al <b>${save.sterren}</b>.</p>
+    <p>In je bus: ${save.bus.length ? save.bus.map((t) => SPUL[t].naam).join(', ') : 'nog niets — ga huizen leeghalen!'}</p>`);
+});
+document.getElementById('b-help').addEventListener('click', () => {
+  openPaneel(`<h2>🚚 Zo speel je Verhuisdag</h2>
+    <ul style="padding-left:1.1rem;margin:0">
+      <li>Loop door de straat met <b>← →</b> (of sleep als joystick — loslaten is stoppen).</li>
+      <li>Sta je voor een deur? <b>E</b>, <b>↑</b> of een <b>korte tik</b> = naar binnen.</li>
+      <li>In andermans huizen: loop naar spullen en <b>pak ze</b> — ze gaan in je verhuisbus.</li>
+      <li>In <b>jouw huis</b> (het gele, met de bus ervoor): kies onderin iets uit de bus, loop naar een mooie plek en <b>zet het neer</b>. Muurspullen hangen vanzelf op.</li>
+      <li>Fout neergezet? Pak het gewoon weer terug in de bus.</li>
+      <li>📋-opdrachten leveren <b>sterren</b> op. Een einde is er niet — richt je huis zo mooi in als jij wilt!</li>
+    </ul>`);
+});
+document.getElementById('b-mute').addEventListener('click', () => {
+  muted = !muted;
+  document.getElementById('b-mute').textContent = muted ? '🔇' : '🔊';
+  ensureAudio();
+});
+
+// canvas passend maken
+function pasAan() {
+  const veld = document.getElementById('veld');
+  const s = Math.min((veld.clientWidth - 8) / W, (veld.clientHeight - 4) / H);
+  canvas.style.width = Math.floor(W * s) + 'px';
+  canvas.style.height = Math.floor(H * s) + 'px';
+}
+window.addEventListener('resize', pasAan);
+new ResizeObserver(pasAan).observe(document.getElementById('veld'));
+
+// testhaakje voor geautomatiseerde tests (alleen uitlezen + invoer, geen cheats)
+window.__verhuis = {
+  get plek() { return plek; },
+  get spelerX() { return spelerX; },
+  get bus() { return [...save.bus]; },
+  get geplaatst() { return save.geplaatst.map((p) => ({ ...p })); },
+  get sterren() { return save.sterren; },
+  get quest() { return actieveQuest().tekst; },
+  actie,
+  zetRichting(r) { drukt(r); },
+  losRichting(r) { laat(r); },
+  kiesUitBus(i) { if (plek === 0 && save.bus[i]) { ghost = { type: save.bus[i], busIndex: i }; bouwBusbar(); } },
+};
+
+hud();
+pasAan();
+zegt('Welkom in de straat! Haal spullen op en richt je eigen huis in. 🚚');
+raf = requestAnimationFrame(loop);
+</script>
+</body>
+</html>

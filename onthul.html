@@ -44,7 +44,7 @@
     position: relative; flex: 1 1 auto; min-height: 0;
     width: 100%; max-width: 920px;
     display: flex; align-items: center; justify-content: center;
-    padding: 0 0.5rem;
+    padding: 0 0.25rem 0.25rem;
   }
   canvas {
     display: block; max-width: 100%; max-height: 100%;
@@ -72,21 +72,24 @@
     padding: 0.6rem 1.6rem; cursor: pointer; font-family: inherit;
   }
   .paneel button:hover { filter: brightness(1.08); }
-  .pad {
-    flex: 0 0 auto; width: 100%; max-width: 920px;
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem;
-    padding: 0.5rem 0.7rem 0.75rem;
-  }
-  .pad button {
-    background: #141a30; color: #eaf0ff; border: 1px solid #26305c;
-    border-radius: 0.7rem; font-size: 1.5rem; padding: 0.55rem 0;
-    font-family: inherit; cursor: pointer; touch-action: none; user-select: none;
-  }
-  .pad button:active { background: #26305c; }
-  .pad .b-op { grid-column: 2; }
-  @media (min-width: 700px) and (hover: hover) { .pad { display: none; } }
   .hint { color: #7f89ad; font-size: 0.8rem; text-align: center; padding: 0 0.75rem 0.5rem; }
   @media (max-width: 699px), (hover: none) { .hint { display: none; } }
+  /* virtuele thumbstick: verschijnt waar je duim neerkomt, boven alles */
+  .stick-basis, .stick-knop {
+    position: fixed; border-radius: 50%; pointer-events: none;
+    transform: translate(-50%, -50%); z-index: 40;
+  }
+  .stick-basis {
+    width: 84px; height: 84px;
+    border: 2px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(1px);
+  }
+  .stick-knop {
+    width: 42px; height: 42px; z-index: 41;
+    background: rgba(255,255,255,0.5);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
 </style>
 </head>
 <body>
@@ -103,13 +106,9 @@
     <canvas id="c" width="900" height="600" aria-label="Speelveld"></canvas>
     <div class="overlay" id="overlay"></div>
   </div>
-  <div class="hint">Houd pijltjes/WASD ingedrukt of sleep op het veld (joystick) · loslaten = stoppen · P = pauze</div>
-  <div class="pad" aria-label="Bediening">
-    <button class="b-op" data-d="up">▲</button>
-    <button data-d="left" style="grid-row:2">◀</button>
-    <button data-d="down" style="grid-row:2">▼</button>
-    <button data-d="right" style="grid-row:2">▶</button>
-  </div>
+  <div class="hint">Houd pijltjes/WASD ingedrukt of sleep waar dan ook (joystick) · loslaten = stoppen · P = pauze</div>
+  <div class="stick-basis" id="stick-basis" hidden></div>
+  <div class="stick-knop" id="stick-knop" hidden></div>
 
 <script>
 'use strict';
@@ -238,8 +237,9 @@ function toonStart() {
        dan wordt het stuk <b>zonder bal</b> onthuld.</p>
     <p>Raakt een bal je lijn terwijl je tekent? Dan ben je een leven kwijt
        (je hebt er 3). Onthul <b>75%</b> om het level te halen — elke % extra is bonus!</p>
-    <p>Besturing: houd <b>pijltjes/WASD</b> ingedrukt, gebruik de <b>knoppen</b>,
-       of <b>sleep op het veld</b> als joystick — loslaten = stoppen.</p>
+    <p>Besturing: zet je duim <b>waar dan ook</b> op het scherm en sleep
+       (virtuele joystick), of houd <b>pijltjes/WASD</b> ingedrukt —
+       loslaten = stoppen.</p>
     ${beste > 0 ? `<p class="groot">🏆 Beste score: <b>${beste}</b></p>` : ''}
     <button id="b-start">▶ Spelen</button>`);
   document.getElementById('b-start').addEventListener('click', () => { ensureAudio(); startSpel(); });
@@ -464,22 +464,6 @@ function draw() {
 
   if (flits > 0) { g.fillStyle = `rgba(255,70,70,${Math.min(0.45, flits * 1.4)})`; g.fillRect(0, 0, GW * CELL, GH * CELL); }
   g.restore();
-
-  // virtuele thumbstick tekenen (schermcoördinaten -> canvascoördinaten)
-  if (stick) {
-    const rect = canvas.getBoundingClientRect();
-    const sch = (GW * CELL) / rect.width;
-    const bx = (stick.cx - rect.left) * sch, by = (stick.cy - rect.top) * sch;
-    let dx = (stick.x - stick.cx), dy = (stick.y - stick.cy);
-    const len = Math.hypot(dx, dy);
-    if (len > STICK_MAX) { dx = (dx / len) * STICK_MAX; dy = (dy / len) * STICK_MAX; }
-    const basisR = 40 * sch, knopR = 19 * sch;
-    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2 * sch;
-    g.fillStyle = 'rgba(255,255,255,0.08)';
-    g.beginPath(); g.arc(bx, by, basisR, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.fillStyle = 'rgba(255,255,255,0.45)';
-    g.beginPath(); g.arc(bx + dx * sch, by + dy * sch, knopR, 0, Math.PI * 2); g.fill();
-  }
 }
 
 function loop(t) {
@@ -518,25 +502,34 @@ window.addEventListener('keyup', (e) => {
   if (r) laat(r);
 });
 window.addEventListener('blur', () => { ingedrukt.length = 0; gewenst = null; });
-document.querySelectorAll('.pad button').forEach((b) => {
-  const stop = () => laat(b.dataset.d);
-  b.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); drukt(b.dataset.d); });
-  b.addEventListener('pointerup', stop);
-  b.addEventListener('pointerleave', stop);
-  b.addEventListener('pointercancel', stop);
-});
-// virtuele thumbstick op het veld: neerzetten = middelpunt, slepen = richting
-// (dode zone in het midden = stilstaan), loslaten = stoppen.
+// Virtuele thumbstick, overal op het scherm: waar je duim neerkomt wordt het
+// middelpunt. Slepen = richting (dode zone in het midden = stilstaan),
+// loslaten = stoppen. Knoppen en panelen blijven gewoon klikbaar.
 const STICK_DODE = 14;   // px vanaf het middelpunt voordat er richting is
 const STICK_MAX = 48;    // px waarop de knop visueel wordt begrensd
+const stickBasis = document.getElementById('stick-basis');
+const stickKnop = document.getElementById('stick-knop');
 let stick = null;        // {id, cx, cy, x, y, richting}
-canvas.addEventListener('pointerdown', (e) => {
+
+function stickTeken() {
+  if (!stick) { stickBasis.hidden = true; stickKnop.hidden = true; return; }
+  let dx = stick.x - stick.cx, dy = stick.y - stick.cy;
+  const len = Math.hypot(dx, dy);
+  if (len > STICK_MAX) { dx = (dx / len) * STICK_MAX; dy = (dy / len) * STICK_MAX; }
+  stickBasis.hidden = false; stickKnop.hidden = false;
+  stickBasis.style.left = stick.cx + 'px'; stickBasis.style.top = stick.cy + 'px';
+  stickKnop.style.left = (stick.cx + dx) + 'px'; stickKnop.style.top = (stick.cy + dy) + 'px';
+}
+
+document.addEventListener('pointerdown', (e) => {
+  // niet starten bovenop knoppen of dialoogpanelen — die blijven bedienbaar
+  if (e.target.closest('button, .paneel, .top')) return;
   ensureAudio();
   if (stick) return;     // één vinger tegelijk bestuurt de stick
-  canvas.setPointerCapture(e.pointerId);
   stick = { id: e.pointerId, cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY, richting: null };
+  stickTeken();
 });
-canvas.addEventListener('pointermove', (e) => {
+document.addEventListener('pointermove', (e) => {
   if (!stick || e.pointerId !== stick.id) return;
   stick.x = e.clientX; stick.y = e.clientY;
   const dx = stick.x - stick.cx, dy = stick.y - stick.cy;
@@ -547,14 +540,16 @@ canvas.addEventListener('pointermove', (e) => {
     if (r) drukt(r);
     stick.richting = r;
   }
+  stickTeken();
 });
 function stickLos(e) {
   if (!stick || (e && e.pointerId !== stick.id)) return;
   if (stick.richting) laat(stick.richting);
   stick = null;
+  stickTeken();
 }
-canvas.addEventListener('pointerup', stickLos);
-canvas.addEventListener('pointercancel', stickLos);
+document.addEventListener('pointerup', stickLos);
+document.addEventListener('pointercancel', stickLos);
 
 function wisselPauze() {
   if (status === 'spel') {
@@ -579,7 +574,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 // Canvas passend maken binnen het veld (3:2), zonder scrollen.
 function pasAan() {
   const veld = document.getElementById('veld');
-  const vw = veld.clientWidth - 16, vh = veld.clientHeight - 8;
+  const vw = veld.clientWidth - 8, vh = veld.clientHeight - 4;
   const s = Math.min(vw / 900, vh / 600);
   canvas.style.width = Math.floor(900 * s) + 'px';
   canvas.style.height = Math.floor(600 * s) + 'px';

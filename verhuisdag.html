@@ -142,7 +142,7 @@ const HUIZEN = [
   { naam: 'Grijsstee',     kleur: '#9aa4b5', dak: '#3a4150', deur: '#2e3542', spul: [
     { type: 'boekenkast', x: 190 }, { type: 'tv', x: 330 }, { type: 'spiegel', x: 460 }, { type: 'stoel', x: 570 }, { type: 'plant', x: 700 }] },
 ];
-const HUIS_W = 190, HUIS_GAP = 70, STRAAT_PAD = 160;
+const HUIS_W = 190, HUIS_GAP = 70, STRAAT_PAD = 300; // extra ruimte links voor de bus
 HUIZEN.forEach((h, i) => { h.x = STRAAT_PAD + i * (HUIS_W + HUIS_GAP); });
 const WERELD_W = STRAAT_PAD * 2 + HUIZEN.length * (HUIS_W + HUIS_GAP) - HUIS_GAP;
 const KAMER_W = 860;                    // binnenruimte (voor elk huis gelijk)
@@ -527,16 +527,29 @@ function tekenStraat(camera) {
     g.textAlign = 'start';
   });
 
-  // de verhuisbus voor jouw huis
-  const busX = HUIZEN[0].x - camera - 120;
-  if (busX > -160 && busX < W + 40) {
-    g.fillStyle = '#e8e2d8'; rr(busX, GROND - 6, 118, 44, 8);            // laadbak
-    g.fillStyle = '#e07030'; rr(busX + 84, GROND + 2, 42, 36, 6);        // cabine
-    g.fillStyle = '#bfe0f0'; rr(busX + 96, GROND + 6, 24, 14, 3);        // ruit
+  // de verhuisbus voor jouw huis — een flinke bakwagen
+  const busX = HUIZEN[0].x - camera - 250;
+  if (busX > -300 && busX < W + 40) {
+    // laadbak
+    g.fillStyle = '#e8e2d8'; rr(busX, GROND - 34, 152, 76, 8);
+    g.fillStyle = '#d8d0c2'; g.fillRect(busX, GROND - 34, 152, 8);        // dakrand
+    g.fillStyle = '#e07030'; g.fillRect(busX, GROND + 16, 152, 12);       // oranje streep
+    // cabine met ruit, grille en koplamp
+    g.fillStyle = '#e07030'; rr(busX + 150, GROND - 14, 62, 56, 8);
+    g.fillStyle = '#bfe0f0'; rr(busX + 162, GROND - 8, 38, 24, 4);
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(busX + 166, GROND - 6, 9, 20);
+    g.fillStyle = '#c85a20'; g.fillRect(busX + 150, GROND + 24, 62, 6);
+    g.fillStyle = '#ffd98a'; rr(busX + 205, GROND + 12, 7, 12, 3);
+    // bumper
+    g.fillStyle = '#8a93a5'; rr(busX + 146, GROND + 36, 70, 8, 4);
+    // wielen met velg
     g.fillStyle = '#1a2138';
-    g.beginPath(); g.arc(busX + 24, GROND + 40, 10, 0, Math.PI * 2); g.arc(busX + 96, GROND + 40, 10, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#e07030'; g.font = '800 11px system-ui'; g.fillText('VERHUISBUS', busX + 10, GROND + 22);
-    g.fillStyle = '#1a3a6a'; g.font = '700 11px system-ui'; g.fillText('🚚 ' + save.bus.length + ' spullen', busX + 14, GROND + 8);
+    g.beginPath(); g.arc(busX + 38, GROND + 42, 16, 0, Math.PI * 2); g.arc(busX + 178, GROND + 42, 16, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#8a93a5';
+    g.beginPath(); g.arc(busX + 38, GROND + 42, 7, 0, Math.PI * 2); g.arc(busX + 178, GROND + 42, 7, 0, Math.PI * 2); g.fill();
+    // opdruk + teller erboven
+    g.fillStyle = '#e07030'; g.font = '800 15px system-ui'; g.fillText('VERHUISBUS', busX + 16, GROND + 4);
+    g.fillStyle = '#1a3a6a'; g.font = '700 13px system-ui'; g.fillText('🚚 ' + save.bus.length + ' spullen', busX + 16, GROND - 44);
   }
 
   tekenSpeler(spelerX - camera, GROND + 24);

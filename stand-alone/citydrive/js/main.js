@@ -12,6 +12,7 @@ import { initAudioControls, updAudio } from './audio.js';
 import { initRender, render } from './render.js';
 import { physics } from './physics.js';
 import { initGarage, toggleGarage, isGarageOpen, renderPreview } from './garage.js';
+import { initMap, isMapOpen, renderBigMap } from './map.js';
 import { updMoneyUI } from './economy.js';
 import { tick } from './daynight.js';
 import { initPWA } from './pwa.js';
@@ -25,6 +26,7 @@ initInput();                // toetsenbord + joysticks
 onGarageToggle(toggleGarage); // 'G'-toets opent/sluit de garage
 initAudioControls();        // motorsound + mute-knop
 initGarage();               // garage-knoppen en tabbladen
+initMap();                  // uitklapbare grote kaart
 initPWA();                  // installatieknop + service worker
 updMoneyUI();               // begingeld tonen
 
@@ -34,7 +36,8 @@ function loop(now) {
   tick(dt);                  // dag/nacht-klok laten doorlopen
   readInput();
   let spd = Math.hypot(P.vx, P.vy);
-  if (!isGarageOpen()) { spd = physics(dt); }
+  // rijden pauzeert als de garage of de grote kaart open staat
+  if (!isGarageOpen() && !isMapOpen()) { spd = physics(dt); }
   else updAudio(0);
   // camera: kijk vooruit, volg soepel, zoom licht uit bij snelheid
   const look = Math.min(130, spd * 0.22);
@@ -45,6 +48,7 @@ function loop(now) {
   cam.z += (tz - cam.z) * Math.min(1, 3 * dt);
   render(spd);
   if (isGarageOpen()) renderPreview();
+  if (isMapOpen()) renderBigMap();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

@@ -1,0 +1,25 @@
+/* map.css — de uitklapbare grote kaart (klik op de minimap om te openen).
+   De minimap zelf staat in hud.css; het tekenwerk in js/citymap.js. */
+
+#mini { cursor: pointer; }
+
+#mapOverlay {
+  position: fixed; inset: 0; z-index: 15; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(8,9,12,.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+#mapOverlay.open { display: flex; }
+
+#bigmap {
+  border-radius: 22px; border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 24px 70px rgba(0,0,0,.55); touch-action: none;
+}
+
+#mapClose {
+  position: fixed; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right));
+  width: 44px; height: 44px; border-radius: 14px; z-index: 16;
+  background: rgba(20,22,28,.8); border: 1px solid rgba(255,255,255,.14); color: #e8eaef;
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+#mapClose:active { background: rgba(40,44,52,.9); }

@@ -10,6 +10,7 @@ import { drawCar, roundRect, shade } from './draw-car.js';
 import { defById } from './cars.js';
 import { input } from './input.js';
 import { nightAmount } from './daynight.js';
+import { drawCityMap } from './citymap.js';
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const miniCv = document.getElementById('mini'), mtx = miniCv.getContext('2d');
@@ -186,52 +187,8 @@ export function render(spd) {
     ctx.restore();
   }
 
-  // ---------- minimap (stadskaart) ----------
-  const sc = 236 / WORLD;
-  mtx.clearRect(0, 0, 236, 236);
-  mtx.save();
-  roundRect(mtx, 0, 0, 236, 236, 30); mtx.clip();               // afgeronde kaart
-  const bgG = mtx.createLinearGradient(0, 0, 0, 236);            // achtergrond = wegennet
-  bgG.addColorStop(0, '#14171e'); bgG.addColorStop(1, '#0c0e13');
-  mtx.fillStyle = bgG; mtx.fillRect(0, 0, 236, 236);
-  // wegen: subtiele lijnen langs de rasterassen
-  mtx.strokeStyle = 'rgba(120,132,150,.16)'; mtx.lineWidth = Math.max(1.5, ROAD * sc * 0.6);
-  mtx.beginPath();
-  for (let i = 0; i <= N; i++) { const r = (i * CELL + ROAD / 2) * sc; mtx.moveTo(r, 0); mtx.lineTo(r, 236); mtx.moveTo(0, r); mtx.lineTo(236, r); }
-  mtx.stroke();
-  // blokken als afgeronde cellen: parken groen, bebouwing blauwgrijs
-  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
-    const b = blocks[i][j], bx = b.x * sc, by = b.y * sc, bw = b.w * sc, bh = b.h * sc;
-    mtx.fillStyle = b.park ? '#356b45' : '#39414f';
-    roundRect(mtx, bx, by, bw, bh, 2.5); mtx.fill();
-    if (!b.park) { mtx.fillStyle = 'rgba(255,255,255,.05)'; roundRect(mtx, bx, by, bw, bh * 0.5, 2.5); mtx.fill(); }
-  }
-  // nacht-waas + stadslichtjes bovenop
-  if (night > 0.02) {
-    mtx.fillStyle = `rgba(8,12,32,${(0.45 * night).toFixed(3)})`; mtx.fillRect(0, 0, 236, 236);
-    if (night > 0.15) {
-      mtx.fillStyle = `rgba(255,205,130,${(0.65 * night).toFixed(3)})`;
-      for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (!blocks[i][j].park) {
-        const b = blocks[i][j]; mtx.fillRect(b.x * sc + b.w * sc * 0.5 - 1, b.y * sc + b.h * sc * 0.5 - 1, 2, 2);
-      }
-    }
-  }
-  // zichtbaar gebied (viewport-kader)
-  mtx.strokeStyle = 'rgba(255,255,255,.20)'; mtx.lineWidth = 1;
-  mtx.strokeRect(x0 * sc, y0 * sc, (x1 - x0) * sc, (y1 - y0) * sc);
-  // speler: halo + kijkkegel + kompas-driehoek
-  const px = P.x * sc, py = P.y * sc;
-  mtx.fillStyle = 'rgba(126,226,168,.22)'; mtx.beginPath(); mtx.arc(px, py, 8, 0, 7); mtx.fill();
-  mtx.save(); mtx.translate(px, py); mtx.rotate(P.ang);
-  const cone = mtx.createLinearGradient(0, 0, 28, 0);
-  cone.addColorStop(0, 'rgba(126,226,168,.38)'); cone.addColorStop(1, 'rgba(126,226,168,0)');
-  mtx.fillStyle = cone; mtx.beginPath(); mtx.moveTo(0, 0); mtx.lineTo(28, -14); mtx.lineTo(28, 14); mtx.closePath(); mtx.fill();
-  mtx.fillStyle = '#7ee2a8'; mtx.beginPath(); mtx.moveTo(8, 0); mtx.lineTo(-5, -5); mtx.lineTo(-5, 5); mtx.closePath(); mtx.fill();
-  mtx.strokeStyle = 'rgba(255,255,255,.7)'; mtx.lineWidth = 1; mtx.stroke();
-  mtx.restore();
-  // subtiele binnenrand
-  mtx.strokeStyle = 'rgba(255,255,255,.06)'; mtx.lineWidth = 2; roundRect(mtx, 1, 1, 234, 234, 29); mtx.stroke();
-  mtx.restore();
+  // minimap (gedeelde stadskaart-tekening; ook gebruikt door de uitklapkaart)
+  drawCityMap(mtx, 236, night, { x0, y0, x1, y1 }, P);
 
   speedEl.innerHTML = Math.round(spd * 0.28) + '<small>KM/U</small>';
 }

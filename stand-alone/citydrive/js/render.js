@@ -12,12 +12,14 @@ import { input } from './input.js';
 import { nightAmount, ambientOverlay, sunShadow } from './daynight.js';
 import { drawCityMap } from './citymap.js';
 import { boostFx } from './boost.js';
+import { combo } from './combo.js';
 import { drawParticles } from './particles.js';
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const miniCv = document.getElementById('mini'), mtx = miniCv.getContext('2d');
 const speedEl = document.getElementById('speed');
 const boostMeterEl = document.getElementById('boostMeter'), boostFillEl = document.getElementById('boostFill');
+const comboEl = document.getElementById('combo'), comboMultEl = document.getElementById('comboMult'), comboCashEl = document.getElementById('comboCash');
 
 let DPR = Math.min(devicePixelRatio || 1, 2), VW = 0, VH = 0;
 let animT = 0; // vrij lopende klok voor kleine animaties (water e.d.)
@@ -328,6 +330,17 @@ export function render(spd) {
   // HUD: boost-meter bijwerken
   if (boostFillEl) boostFillEl.style.width = (boostFx.charge * 100).toFixed(0) + '%';
   if (boostMeterEl) { boostMeterEl.classList.toggle('full', boostFx.charge > 0.98); boostMeterEl.classList.toggle('active', boostFx.active); }
+
+  // HUD: drift-combo bijwerken
+  if (comboEl) {
+    const show = combo.active && combo.pending > 1;
+    comboEl.classList.toggle('on', show);
+    if (show) {
+      comboMultEl.textContent = 'x' + combo.mult;
+      comboCashEl.textContent = '+€ ' + Math.round(combo.pending);
+      comboEl.dataset.level = combo.mult;
+    }
+  }
 
   speedEl.innerHTML = Math.round(spd * 0.28) + '<small>KM/U</small>';
 }

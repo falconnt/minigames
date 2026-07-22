@@ -12,6 +12,7 @@ import { skids, smoke, addPopup } from './fx.js';
 import { updMoneyUI } from './economy.js';
 import { updAudio } from './audio.js';
 import { boostFx } from './boost.js';
+import { combo, resetCombo } from './combo.js';
 
 let distAcc = 0, driftAcc = 0, wasDrifting = false;
 
@@ -68,7 +69,12 @@ export function physics(dt) {
           const push = (R - dist); P.x += dx / dist * push; P.y += dy / dist * push;
           const nlen = Math.hypot(dx, dy) || 1, nX = dx / nlen, nY = dy / nlen;
           const vn = P.vx * nX + P.vy * nY;
-          if (vn < 0) { P.vx -= 1.4 * vn * nX; P.vy -= 1.4 * vn * nY; P.vx *= 0.55; P.vy *= 0.55; boostFx.shake = Math.min(1, boostFx.shake + Math.min(0.5, -vn / 800)); }
+          if (vn < 0) {
+            P.vx -= 1.4 * vn * nX; P.vy -= 1.4 * vn * nY; P.vx *= 0.55; P.vy *= 0.55;
+            boostFx.shake = Math.min(1, boostFx.shake + Math.min(0.5, -vn / 800));
+            // stevige klap breekt de drift-combo
+            if (vn < -140) { if (combo.mult > 1) addPopup('COMBO x' + combo.mult + ' KWIJT!', '#ff6a6a'); driftAcc = 0; resetCombo(); }
+          }
         }
       }
     }
@@ -78,6 +84,10 @@ export function physics(dt) {
   const drifting = Math.abs(vl) > 85 && spd > 150;
   if (drifting) {
     driftAcc += Math.abs(vl) * dt * 0.055;
+    combo.driftTime += dt;
+    combo.mult = Math.min(5, 1 + Math.floor(combo.driftTime / 1.2)); // elke ~1,2s drift +1
+    combo.pending = driftAcc * combo.mult;
+    combo.active = true;
     boostFx.charge = Math.min(1, boostFx.charge + dt * 0.3); // driften laadt de nitro op
 
     const bx = P.x - fx * d.l * 0.35, by = P.y - fy * d.l * 0.35;
@@ -87,8 +97,11 @@ export function physics(dt) {
     if (skids.length > 500) skids.splice(0, skids.length - 500);
     if (Math.random() < 0.6) smoke.push({ x: bx, y: by, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, r: 8 + Math.random() * 8, t: 0 });
   } else if (wasDrifting && driftAcc >= 6) {
-    const b = Math.round(driftAcc); state.money += b; addPopup('+€' + b + '  DRIFT', '#7ee2a8'); driftAcc = 0; updMoneyUI();
-  } else if (!drifting) { driftAcc = Math.max(0, driftAcc - 30 * dt); }
+    const b = Math.round(driftAcc * combo.mult); state.money += b;
+    addPopup('+€' + b + (combo.mult > 1 ? '  x' + combo.mult : '') + '  DRIFT', combo.mult >= 4 ? '#ffd34d' : '#7ee2a8');
+    if (combo.mult >= 3) boostFx.shake = Math.min(1, boostFx.shake + 0.3);
+    driftAcc = 0; resetCombo(); updMoneyUI();
+  } else if (!drifting) { driftAcc = Math.max(0, driftAcc - 30 * dt); if (driftAcc <= 0.01) resetCombo(); }
   wasDrifting = drifting;
 
   // verdienen per afgelegde afstand

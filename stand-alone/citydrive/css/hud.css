@@ -3,6 +3,18 @@
 
 #hud{position:fixed;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:8px;z-index:5}
 #money{color:#7ee2a8;font-variant-numeric:tabular-nums}
+
+/* drift-combo teller, groot en centraal bovenin tijdens het driften */
+#combo{position:fixed;left:50%;top:max(64px,calc(env(safe-area-inset-top) + 52px));transform:translateX(-50%);
+  display:none;flex-direction:column;align-items:center;gap:1px;z-index:5;pointer-events:none;
+  font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.55)}
+#combo.on{display:flex;animation:comboPulse 1.05s ease-in-out infinite}
+#comboMult{font-size:34px;font-weight:900;letter-spacing:1px;color:#7ee2a8;line-height:1}
+#comboCash{font-size:14px;font-weight:800;color:#e8eaef;opacity:.92}
+#combo[data-level="3"] #comboMult{color:#8ad6ff}
+#combo[data-level="4"] #comboMult{color:#ffd34d}
+#combo[data-level="5"] #comboMult{color:#ff7a5c}
+@keyframes comboPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.09)}}
 #topR{position:fixed;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:5}
 .btnrow{display:flex;gap:8px}
 .icobtn{width:42px;height:42px;border-radius:13px;background:rgba(14,16,20,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);

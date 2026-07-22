@@ -29,7 +29,7 @@ export function initRender() {
 }
 
 export function render(spd) {
-  ctx.fillStyle = '#33363c'; ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = '#2f3238'; ctx.fillRect(0, 0, VW, VH);
   const z = cam.z;
   ctx.save();
   ctx.translate(VW / 2, VH / 2); ctx.scale(z, z); ctx.translate(-cam.x, -cam.y);
@@ -64,20 +64,53 @@ export function render(spd) {
     // binnenterrein
     ctx.fillStyle = b.park ? '#4a7d52' : '#4a4e56';
     roundRect(ctx, b.x + 22, b.y + 22, b.w - 44, b.h - 44, 14); ctx.fill();
-    // gebouwen
+    // gebouwen — lichte 3D-extrusie (muren + dak) met verlichte ramen
     for (const g of b.builds) {
-      ctx.fillStyle = 'rgba(0,0,0,.28)'; roundRect(ctx, g.x + g.sh * 0.7, g.y + g.sh, g.w, g.h, 8); ctx.fill();
-      ctx.fillStyle = g.col; roundRect(ctx, g.x, g.y, g.w, g.h, 8); ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 2; roundRect(ctx, g.x, g.y, g.w, g.h, 8); ctx.stroke();
-      ctx.fillStyle = shade(g.col, 1.14); roundRect(ctx, g.x + 8, g.y + 8, g.w - 16, g.h - 16, 5); ctx.fill();
-      ctx.fillStyle = 'rgba(0,0,0,.20)';
-      for (const a of g.acs) ctx.fillRect(a.x, a.y, a.s, a.s);
+      const ox = g.elev * 0.5, oy = g.elev * 0.72;
+      // grondschaduw
+      ctx.fillStyle = 'rgba(0,0,0,.30)';
+      roundRect(ctx, g.x + ox + 2, g.y + oy + 3, g.w, g.h, 8); ctx.fill();
+      // ondervlak (muur)
+      ctx.fillStyle = shade(g.col, 0.66);
+      ctx.beginPath();
+      ctx.moveTo(g.x, g.y + g.h); ctx.lineTo(g.x + g.w, g.y + g.h);
+      ctx.lineTo(g.x + g.w + ox, g.y + g.h + oy); ctx.lineTo(g.x + ox, g.y + g.h + oy); ctx.closePath(); ctx.fill();
+      // rechtervlak (muur)
+      ctx.fillStyle = shade(g.col, 0.52);
+      ctx.beginPath();
+      ctx.moveTo(g.x + g.w, g.y); ctx.lineTo(g.x + g.w + ox, g.y + oy);
+      ctx.lineTo(g.x + g.w + ox, g.y + g.h + oy); ctx.lineTo(g.x + g.w, g.y + g.h); ctx.closePath(); ctx.fill();
+      // verlichte ramen op de muren (deterministisch patroon, geen geflikker)
+      if (g.elev > 8) {
+        const wh = Math.max(2, oy * 0.34), ww = Math.max(2, ox * 0.34);
+        for (let wx = g.x + 5; wx < g.x + g.w - 3; wx += 7) {
+          ctx.fillStyle = ((Math.round(wx) + Math.round(g.y)) % 3) !== 0 ? 'rgba(255,214,138,.85)' : 'rgba(18,20,26,.5)';
+          ctx.fillRect(wx + ox * 0.35, g.y + g.h + oy * 0.3, 3, wh);
+        }
+        for (let wy = g.y + 5; wy < g.y + g.h - 3; wy += 7) {
+          ctx.fillStyle = ((Math.round(wy) + Math.round(g.x)) % 3) === 0 ? 'rgba(255,214,138,.8)' : 'rgba(18,20,26,.5)';
+          ctx.fillRect(g.x + g.w + ox * 0.3, wy + oy * 0.35, ww, 3);
+        }
+      }
+      // dak
+      ctx.fillStyle = g.col; roundRect(ctx, g.x, g.y, g.w, g.h, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1.5; roundRect(ctx, g.x, g.y, g.w, g.h, 7); ctx.stroke();
+      // parapet / dakpaneel
+      ctx.fillStyle = shade(g.col, 1.12); roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
+      // dakunits (airco/opbouw) met lichtrandje
+      for (const a of g.acs) {
+        ctx.fillStyle = shade(g.col, 0.8); ctx.fillRect(a.x, a.y, a.s, a.s);
+        ctx.fillStyle = shade(g.col, 1.28); ctx.fillRect(a.x, a.y, a.s, Math.max(1, a.s * 0.3));
+      }
     }
-    // bomen
+    // bomen — zachte schaduw + bladerdek met gradient en highlight
     for (const t of b.trees) {
-      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.arc(t.x + 3, t.y + 4, t.r, 0, 7); ctx.fill();
-      ctx.fillStyle = '#2f5d38'; ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, 7); ctx.fill();
-      ctx.fillStyle = '#3e7a49'; ctx.beginPath(); ctx.arc(t.x - t.r * 0.22, t.y - t.r * 0.22, t.r * 0.62, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,.24)';
+      ctx.beginPath(); ctx.ellipse(t.x + t.r * 0.3, t.y + t.r * 0.42, t.r * 0.98, t.r * 0.82, 0, 0, 7); ctx.fill();
+      const tg = ctx.createRadialGradient(t.x - t.r * 0.3, t.y - t.r * 0.3, t.r * 0.2, t.x, t.y, t.r);
+      tg.addColorStop(0, '#4f9058'); tg.addColorStop(1, '#244f31');
+      ctx.fillStyle = tg; ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(160,214,160,.22)'; ctx.beginPath(); ctx.arc(t.x - t.r * 0.28, t.y - t.r * 0.28, t.r * 0.42, 0, 7); ctx.fill();
     }
   }
 
@@ -103,6 +136,12 @@ export function render(spd) {
   }
   ctx.restore();
 
+  // sfeer: zacht vignet naar de schermranden
+  const vg = ctx.createRadialGradient(VW / 2, VH * 0.44, Math.min(VW, VH) * 0.30, VW / 2, VH * 0.52, Math.max(VW, VH) * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,.40)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
+
   // minimap
   mtx.clearRect(0, 0, 236, 236);
   mtx.fillStyle = 'rgba(20,22,26,.9)'; mtx.fillRect(0, 0, 236, 236);
@@ -117,7 +156,10 @@ export function render(spd) {
   for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (blocks[i][j].park) {
     const b = blocks[i][j]; mtx.fillStyle = '#3d6845'; mtx.fillRect(b.x * sc, b.y * sc, b.w * sc, b.h * sc);
   }
-  mtx.fillStyle = '#7ee2a8'; mtx.beginPath(); mtx.arc(P.x * sc, P.y * sc, 5, 0, 7); mtx.fill();
+  // speler als kompas-driehoek in de rijrichting
+  mtx.save(); mtx.translate(P.x * sc, P.y * sc); mtx.rotate(P.ang);
+  mtx.fillStyle = '#7ee2a8'; mtx.beginPath(); mtx.moveTo(7, 0); mtx.lineTo(-4, -4); mtx.lineTo(-4, 4); mtx.closePath(); mtx.fill();
+  mtx.restore();
 
   speedEl.innerHTML = Math.round(spd * 0.28) + '<small>KM/U</small>';
 }

@@ -13,6 +13,20 @@ export function nightAmount() {
   return (1 - Math.cos(clock / CYCLE * Math.PI * 2)) / 2;
 }
 
+// Zon-gedreven slagschaduw voor gebouwen. De richting draait over de dag mee
+// met de zon; de lengte is kort rond het middaguur en lang bij zonsopgang/
+// -ondergang (gouden uur); 's nachts staat de zon onder en is er geen schaduw.
+//   reach — lengtefactor (× gebouwhoogte) · alpha — dekking per smeer-kopie
+//   dx,dy — genormaliseerde richting (van de zon af)
+export function sunShadow() {
+  const p = clock / CYCLE;
+  const elev = Math.cos(p * 2 * Math.PI);       // 1 = middag, -1 = middernacht
+  const up = Math.max(0, elev);                  // hoe hoog de zon staat
+  if (up < 0.04) return { reach: 0, alpha: 0, dx: 0, dy: 0 };
+  const az = p * 2 * Math.PI + Math.PI * 0.5;    // azimut draait over de dag
+  return { reach: 0.6 + (1 - up) * 3.2, alpha: 0.05 + 0.055 * up, dx: -Math.cos(az), dy: -Math.sin(az) };
+}
+
 // Sfeer-waas over de scène, afhankelijk van het tijdstip:
 //   warmA — warme "golden hour"-gloed, piekt bij zonsopgang/-ondergang
 //   blueA — koele blauwe nachtwaas, diep in de nacht het sterkst

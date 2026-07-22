@@ -9,7 +9,7 @@ import { skids, smoke, popups } from './fx.js';
 import { drawCar, roundRect, shade } from './draw-car.js';
 import { defById } from './cars.js';
 import { input } from './input.js';
-import { nightAmount, ambientOverlay } from './daynight.js';
+import { nightAmount, ambientOverlay, sunShadow } from './daynight.js';
 import { drawCityMap } from './citymap.js';
 import { boostFx } from './boost.js';
 import { drawParticles } from './particles.js';
@@ -36,6 +36,7 @@ export function initRender() {
 
 export function render(spd) {
   const night = nightAmount();
+  const sun = sunShadow();
   animT += 0.016;
   // buiten de wereld: donkere rand ("out of bounds"), zodat de stad een duidelijke grens heeft
   ctx.fillStyle = '#191b20'; ctx.fillRect(0, 0, VW, VH);
@@ -126,9 +127,14 @@ export function render(spd) {
     // gebouwen — lichte 3D-extrusie (muren + dak) met verlichte ramen
     for (const g of b.builds) {
       const ox = g.elev * 0.5, oy = g.elev * 0.72;
-      // grondschaduw
-      ctx.fillStyle = 'rgba(0,0,0,.30)';
-      roundRect(ctx, g.x + ox + 2, g.y + oy + 3, g.w, g.h, 8); ctx.fill();
+      // grondschaduw — zon-gedreven (lang bij gouden uur), of zacht ambient 's nachts
+      if (sun.reach > 0.01) {
+        ctx.fillStyle = `rgba(0,0,0,${sun.alpha.toFixed(3)})`;
+        const reach = sun.reach * g.elev;
+        for (let k = 1; k <= 6; k++) { const f = (k / 6) * reach; roundRect(ctx, g.x + sun.dx * f, g.y + sun.dy * f, g.w, g.h, 8); ctx.fill(); }
+      } else {
+        ctx.fillStyle = 'rgba(0,0,0,.26)'; roundRect(ctx, g.x + ox + 2, g.y + oy + 3, g.w, g.h, 8); ctx.fill();
+      }
       // ondervlak (muur)
       ctx.fillStyle = shade(g.col, 0.66);
       ctx.beginPath();

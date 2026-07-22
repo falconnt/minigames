@@ -3,7 +3,7 @@
 // de minimap en de snelheidsmeter. Bezit het hoofd-canvas en de resize-logica.
 
 import { CELL, ROAD, N, WORLD } from './constants.js';
-import { blocks, puddles, manholes, garageSpot, dealerSpot } from './world.js';
+import { blocks, puddles, manholes, speedbumps, garageSpot, dealerSpot } from './world.js';
 import { state, P, cam } from './state.js';
 import { skids, smoke, popups } from './fx.js';
 import { drawCar, roundRect, shade } from './draw-car.js';
@@ -73,15 +73,16 @@ export function render(spd) {
   ctx.fillStyle = '#2f3238'; ctx.fillRect(0, 0, WORLD, WORLD);
   ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 12; ctx.strokeRect(0, 0, WORLD, WORLD);
 
-  // wegmarkering
+  // wegmarkering — streepjes vast verankerd aan de wereld (0..WORLD), dus ze
+  // "kruipen" niet mee met de camera. De canvas clipt het niet-zichtbare deel.
   ctx.strokeStyle = 'rgba(255,255,255,.30)'; ctx.lineWidth = 3; ctx.setLineDash([26, 34]);
   for (let i = 0; i <= N; i++) {
     const rx = i * CELL + ROAD / 2;
-    if (rx > x0 && rx < x1) { ctx.beginPath(); ctx.moveTo(rx, Math.max(0, y0)); ctx.lineTo(rx, Math.min(WORLD, y1)); ctx.stroke(); }
+    if (rx > x0 && rx < x1) { ctx.beginPath(); ctx.moveTo(rx, 0); ctx.lineTo(rx, WORLD); ctx.stroke(); }
   }
   for (let j = 0; j <= N; j++) {
     const ry = j * CELL + ROAD / 2;
-    if (ry > y0 && ry < y1) { ctx.beginPath(); ctx.moveTo(Math.max(0, x0), ry); ctx.lineTo(Math.min(WORLD, x1), ry); ctx.stroke(); }
+    if (ry > y0 && ry < y1) { ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(WORLD, ry); ctx.stroke(); }
   }
   ctx.setLineDash([]);
 
@@ -134,6 +135,22 @@ export function render(spd) {
       ctx.beginPath(); ctx.ellipse(pu.x, yy, pu.rx * 0.6, 1.4, 0, 0, 7); ctx.stroke();
       ctx.restore();
     }
+  }
+
+  // verkeersdrempels: geel/zwarte hazard-band met opstaande rand
+  for (const sb of speedbumps) {
+    if (sb.x > x1 || sb.x + sb.w < x0 || sb.y > y1 || sb.y + sb.h < y0) continue;
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; roundRect(ctx, sb.x + 2, sb.y + 3, sb.w, sb.h, 4); ctx.fill(); // schaduw
+    ctx.fillStyle = '#232528'; roundRect(ctx, sb.x, sb.y, sb.w, sb.h, 4); ctx.fill();
+    ctx.save(); roundRect(ctx, sb.x, sb.y, sb.w, sb.h, 4); ctx.clip();
+    const step = 15;
+    if (sb.w >= sb.h) { for (let x = sb.x; x < sb.x + sb.w; x += step) { ctx.fillStyle = (((x - sb.x) / step) | 0) % 2 ? '#e8b93a' : '#232528'; ctx.fillRect(x, sb.y, step, sb.h); } }
+    else { for (let y = sb.y; y < sb.y + sb.h; y += step) { ctx.fillStyle = (((y - sb.y) / step) | 0) % 2 ? '#e8b93a' : '#232528'; ctx.fillRect(sb.x, y, sb.w, step); } }
+    ctx.restore();
+    // opstaande rand-highlight (doet 'm als drempel omhoog komen)
+    ctx.fillStyle = 'rgba(255,255,255,.18)';
+    if (sb.w >= sb.h) roundRect(ctx, sb.x, sb.y, sb.w, Math.max(3, sb.h * 0.32), 3); else roundRect(ctx, sb.x, sb.y, Math.max(3, sb.w * 0.32), sb.h, 3);
+    ctx.fill();
   }
 
   // remsporen

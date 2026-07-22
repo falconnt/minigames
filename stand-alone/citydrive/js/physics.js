@@ -6,7 +6,7 @@
 import { CELL, N, WORLD } from './constants.js';
 import { state, P } from './state.js';
 import { eff, defById } from './cars.js';
-import { blocks } from './world.js';
+import { blocks, speedbumps } from './world.js';
 import { input } from './input.js';
 import { skids, smoke, addPopup } from './fx.js';
 import { updMoneyUI } from './economy.js';
@@ -56,7 +56,17 @@ export function physics(dt) {
   if (P.x < R) { P.x = R; P.vx *= -0.3; } if (P.x > WORLD - R) { P.x = WORLD - R; P.vx *= -0.3; }
   if (P.y < R) { P.y = R; P.vy *= -0.3; } if (P.y > WORLD - R) { P.y = WORLD - R; P.vy *= -0.3; }
 
-  // botsingen met gebouwen in de omliggende cellen
+  // gedeelde botsingsreactie: eruit duwen + snelheid weerkaatsen + schok/combo-breuk
+  const collide = (nX, nY, push) => {
+    P.x += nX * push; P.y += nY * push;
+    const vn = P.vx * nX + P.vy * nY;
+    if (vn < 0) {
+      P.vx -= 1.4 * vn * nX; P.vy -= 1.4 * vn * nY; P.vx *= 0.55; P.vy *= 0.55;
+      boostFx.shake = Math.min(1, boostFx.shake + Math.min(0.5, -vn / 800));
+      if (vn < -140) { if (combo.mult > 1) addPopup('COMBO x' + combo.mult + ' KWIJT!', '#ff6a6a'); driftAcc = 0; resetCombo(); }
+    }
+  };
+  // botsingen met gebouwen én bomen/bosjes in de omliggende cellen
   const ci = Math.max(0, Math.min(N - 1, (P.x / CELL) | 0)), cj = Math.max(0, Math.min(N - 1, (P.y / CELL) | 0));
   for (let i = Math.max(0, ci - 1); i <= Math.min(N - 1, ci + 1); i++)
     for (let j = Math.max(0, cj - 1); j <= Math.min(N - 1, cj + 1); j++) {
@@ -66,20 +76,26 @@ export function physics(dt) {
         if (dd < R * R) {
           let dist = Math.sqrt(dd);
           if (dist < 0.01) { dx = P.x < b.x + b.w / 2 ? -1 : 1; dy = 0; dist = 1; }
-          const push = (R - dist); P.x += dx / dist * push; P.y += dy / dist * push;
-          const nlen = Math.hypot(dx, dy) || 1, nX = dx / nlen, nY = dy / nlen;
-          const vn = P.vx * nX + P.vy * nY;
-          if (vn < 0) {
-            P.vx -= 1.4 * vn * nX; P.vy -= 1.4 * vn * nY; P.vx *= 0.55; P.vy *= 0.55;
-            boostFx.shake = Math.min(1, boostFx.shake + Math.min(0.5, -vn / 800));
-            // stevige klap breekt de drift-combo
-            if (vn < -140) { if (combo.mult > 1) addPopup('COMBO x' + combo.mult + ' KWIJT!', '#ff6a6a'); driftAcc = 0; resetCombo(); }
-          }
+          collide(dx / dist, dy / dist, R - dist);
         }
+      }
+      // bomen en bosjes zijn nu ook vaste obstakels (cirkelvormig)
+      for (const t of blocks[i][j].trees) {
+        const tr = R + t.r * 0.66;
+        let dx = P.x - t.x, dy = P.y - t.y, dd = dx * dx + dy * dy;
+        if (dd < tr * tr) { const dist = Math.sqrt(dd) || 0.001; collide(dx / dist, dy / dist, tr - dist); }
       }
     }
 
   const spd = Math.hypot(P.vx, P.vy);
+  // verkeersdrempels: afremmen + schok bij het eroverheen rijden
+  for (const sb of speedbumps) {
+    if (P.x > sb.x && P.x < sb.x + sb.w && P.y > sb.y && P.y < sb.y + sb.h) {
+      if (spd > 110) { P.vx *= 0.9; P.vy *= 0.9; }
+      boostFx.shake = Math.min(1, boostFx.shake + Math.min(0.45, spd / 1300));
+      break;
+    }
+  }
   // drift & fx
   const drifting = Math.abs(vl) > 85 && spd > 150;
   if (drifting) {

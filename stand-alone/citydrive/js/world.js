@@ -57,7 +57,7 @@ export const blocks = generate();
 export const puddles = [];
 export const manholes = [];
 (function decorateRoads() {
-  for (let n = 0; n < 32; n++) {
+  for (let n = 0; n < 44; n++) {
     if (Math.random() < 0.5) { const xi = ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2;
       puddles.push({ x: xi + (Math.random() - 0.5) * ROAD * 0.55, y: ROAD + Math.random() * (WORLD - 2 * ROAD), rx: 26 + Math.random() * 30, ry: 13 + Math.random() * 15, ph: Math.random() * 6.28 });
     } else { const yj = ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2;
@@ -67,6 +67,24 @@ export const manholes = [];
   for (let n = 0; n < 42; n++) {
     if (Math.random() < 0.5) manholes.push({ x: ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2 + (Math.random() - 0.5) * ROAD * 0.5, y: ROAD + Math.random() * (WORLD - 2 * ROAD) });
     else manholes.push({ x: ROAD + Math.random() * (WORLD - 2 * ROAD), y: ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2 + (Math.random() - 0.5) * ROAD * 0.5 });
+  }
+})();
+
+// Verkeersdrempels dwars over de wegen. Een dunne band met geel/zwarte
+// hazard-strepen; physics geeft een schok + afremmen bij het eroverheen rijden.
+export const speedbumps = [];
+(function makeBumps() {
+  const half = ROAD * 0.42;
+  for (let n = 0; n < 15; n++) {
+    if (Math.random() < 0.5) { // op een verticale weg -> horizontale band
+      const xi = ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2;
+      const y = CELL + Math.random() * (WORLD - 2 * CELL);
+      speedbumps.push({ x: xi - half, y: y - 9, w: half * 2, h: 18 });
+    } else {                   // op een horizontale weg -> verticale band
+      const yj = ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2;
+      const x = CELL + Math.random() * (WORLD - 2 * CELL);
+      speedbumps.push({ x: x - 9, y: yj - half, w: 18, h: half * 2 });
+    }
   }
 })();
 

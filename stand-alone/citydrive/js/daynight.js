@@ -34,6 +34,6 @@ export function ambientOverlay() {
   const n = nightAmount();
   return {
     warmA: 0.18 * Math.sin(n * Math.PI),   // 0 bij volle dag/nacht, max bij schemering
-    blueA: 0.62 * Math.pow(n, 2.2),        // vooral diep in de nacht
+    blueA: 0.5 * Math.pow(n, 2.2),         // nacht: donker maar goed rijdbaar (koplampen/lantaarns helpen)
   };
 }

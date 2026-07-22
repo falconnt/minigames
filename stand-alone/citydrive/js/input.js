@@ -39,8 +39,8 @@ export function initInput() {
   });
   addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-  stick('stickL', 'knobL', (x) => { stkSteer = x; });
-  stick('stickR', 'knobR', (x, y) => { stkTh = -y; });
+  // Eén stick doet alles: links/rechts = sturen, omhoog = gas, omlaag = rem/achteruit.
+  stick('stickL', 'knobL', (x, y) => { stkSteer = x; stkTh = -y; });
 
   const dBtn = document.getElementById('driftBtn');
   dBtn.addEventListener('pointerdown', (e) => { btnDrift = true; dBtn.classList.add('on'); e.preventDefault(); });

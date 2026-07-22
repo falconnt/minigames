@@ -53,6 +53,14 @@ export function drawCar(c, x, y, ang, steer, def, cfg, brake, scale) {
   grad.addColorStop(0, shade(cfg.color, 1.18)); grad.addColorStop(0.5, cfg.color); grad.addColorStop(1, shade(cfg.color, 0.72));
   c.fillStyle = grad; roundRect(c, -L / 2, -W / 2, L, W, 7 * s); c.fill();
   c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1 * s; roundRect(c, -L / 2, -W / 2, L, W, 7 * s); c.stroke();
+  // glanzende lak: zachte reflectie die met de auto meedraait (wereldlicht van linksboven)
+  {
+    const la = -2.3 - ang, hx = Math.cos(la) * L * 0.24, hy = Math.sin(la) * W * 0.34;
+    c.save(); roundRect(c, -L / 2, -W / 2, L, W, 7 * s); c.clip();
+    const sh = c.createRadialGradient(hx, hy, 1, hx, hy, L * 0.55);
+    sh.addColorStop(0, 'rgba(255,255,255,.30)'); sh.addColorStop(0.6, 'rgba(255,255,255,.06)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = sh; c.fillRect(-L / 2, -W / 2, L, W); c.restore();
+  }
   // striping
   if (cfg.stripe) {
     c.fillStyle = 'rgba(255,255,255,.85)';

@@ -20,6 +20,7 @@ const speedEl = document.getElementById('speed');
 const boostMeterEl = document.getElementById('boostMeter'), boostFillEl = document.getElementById('boostFill');
 
 let DPR = Math.min(devicePixelRatio || 1, 2), VW = 0, VH = 0;
+let animT = 0; // vrij lopende klok voor kleine animaties (water e.d.)
 
 function resize() {
   VW = innerWidth; VH = innerHeight;
@@ -35,6 +36,7 @@ export function initRender() {
 
 export function render(spd) {
   const night = nightAmount();
+  animT += 0.016;
   // buiten de wereld: donkere rand ("out of bounds"), zodat de stad een duidelijke grens heeft
   ctx.fillStyle = '#191b20'; ctx.fillRect(0, 0, VW, VH);
   const z = cam.z;
@@ -109,6 +111,14 @@ export function render(spd) {
         const wg = ctx.createRadialGradient(pd.x - pd.rx * 0.3, pd.y - pd.ry * 0.35, 2, pd.x, pd.y, pd.rx);
         wg.addColorStop(0, 'rgba(150,215,230,.55)'); wg.addColorStop(1, 'rgba(150,215,230,0)');
         ctx.fillStyle = wg; ctx.beginPath(); ctx.ellipse(pd.x, pd.y, pd.rx, pd.ry, 0, 0, 7); ctx.fill();
+        // bewegende glinstering op het water
+        ctx.save(); ctx.beginPath(); ctx.ellipse(pd.x, pd.y, pd.rx, pd.ry, 0, 0, 7); ctx.clip();
+        ctx.strokeStyle = 'rgba(205,238,248,.28)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+        for (let k = 0; k < 3; k++) {
+          const yy = pd.y + Math.sin(animT * 1.2 + k * 2.1) * pd.ry * 0.28 + (k - 1) * pd.ry * 0.42;
+          ctx.beginPath(); ctx.ellipse(pd.x, yy, pd.rx * 0.62, 1.6, 0, 0, 7); ctx.stroke();
+        }
+        ctx.restore();
         ctx.strokeStyle = 'rgba(0,0,0,.16)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(pd.x, pd.y, pd.rx, pd.ry, 0, 0, 7); ctx.stroke();
       }
       if (b.flowers) for (const f of b.flowers) { ctx.fillStyle = f.col; ctx.beginPath(); ctx.arc(f.x, f.y, 2.6, 0, 7); ctx.fill(); }

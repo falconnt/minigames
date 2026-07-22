@@ -210,6 +210,20 @@ export function render(spd) {
         ctx.fillText('GARAGE', g.x + g.w / 2, g.y + g.h * 0.66);
         ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = Math.max(2, g.w * 0.02); ctx.lineCap = 'round';
         ctx.beginPath(); ctx.arc(g.x + g.w / 2, g.y + g.h * 0.83, g.w * 0.045, 0.6, 5.4); ctx.stroke();
+      } else if (g.isDealer) {
+        ctx.fillStyle = shade(g.col, 1.14); roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
+        // glazen showroom-pui op de noordkant
+        const wx = g.x + g.w * 0.13, ww = g.w * 0.74, wh = g.h * 0.36;
+        ctx.fillStyle = '#2b5f7a'; roundRect(ctx, wx, g.y + 5, ww, wh, 4); ctx.fill();
+        ctx.fillStyle = 'rgba(150,210,235,.32)'; roundRect(ctx, wx + 4, g.y + 8, ww * 0.42, wh - 6, 3); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 1;
+        for (let mx = wx + ww / 4; mx < wx + ww; mx += ww / 4) { ctx.beginPath(); ctx.moveTo(mx, g.y + 6); ctx.lineTo(mx, g.y + 4 + wh); ctx.stroke(); }
+        // bord
+        ctx.fillStyle = '#7dd3fc'; ctx.textAlign = 'center';
+        ctx.font = '800 ' + Math.round(g.w * 0.12) + 'px system-ui,-apple-system,sans-serif';
+        ctx.fillText("AUTO'S", g.x + g.w / 2, g.y + g.h * 0.66);
+        ctx.font = Math.round(g.w * 0.11) + 'px system-ui,sans-serif';
+        ctx.fillText('DEALER', g.x + g.w / 2, g.y + g.h * 0.82);
       } else if (g.garden) {
         ctx.fillStyle = '#3f7a48'; roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
         ctx.fillStyle = 'rgba(28,58,34,.5)';

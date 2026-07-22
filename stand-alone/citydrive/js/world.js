@@ -70,15 +70,18 @@ export const manholes = [];
   }
 })();
 
-// Eén gebouw dicht bij de startplek is de GARAGE. Je rijdt ervoor en het
-// upgrade-menu opent vanzelf. De roldeur staat op de noordkant; de trigger is
-// het pleintje daarvoor. render.js tekent het speciaal, main.js opent het menu.
-export const garageSpot = (function makeGarage() {
-  const gi = 3, gj = 3;
+// Twee gebouwen dicht bij de startplek zijn winkels: de GARAGE (tunen/upgraden)
+// en de AUTODEALER (auto's kopen). Je rijdt voor de deur en het menu opent vanzelf.
+// De deur/pui staat op de noordkant; de trigger is het pleintje daarvoor.
+function makeShop(gi, gj, col, flag) {
   const gx = gi * CELL + ROAD, gy = gj * CELL + ROAD, gw = CELL - ROAD, gh = CELL - ROAD;
   const bx = gx + 50, by = gy + 140, bw = gw - 100, bh = gh - 190;
   const b = blocks[gi][gj];
   b.park = false; b.trees = []; b.pond = null; b.path = null; b.flowers = null;
-  b.builds = [{ x: bx, y: by, w: bw, h: bh, col: '#586273', elev: 18, acs: [], garden: false, isGarage: true }];
+  const bld = { x: bx, y: by, w: bw, h: bh, col, elev: 18, acs: [], garden: false };
+  bld[flag] = true;
+  b.builds = [bld];
   return { x: bx, y: by, w: bw, h: bh, trigger: { x: bx + bw * 0.16, y: by - 108, w: bw * 0.68, h: 116 } };
-})();
+}
+export const garageSpot = makeShop(3, 3, '#586273', 'isGarage');
+export const dealerSpot = makeShop(2, 3, '#3a5566', 'isDealer');

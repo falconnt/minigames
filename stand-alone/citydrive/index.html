@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="css/hud.css">
 <link rel="stylesheet" href="css/map.css">
 <link rel="stylesheet" href="css/garage.css">
+<link rel="stylesheet" href="css/dealer.css">
 </head>
 <body>
 <!-- Spelwereld -->
@@ -59,6 +60,25 @@
 <div id="mapOverlay">
   <button id="mapClose" title="Kaart sluiten">✕</button>
   <canvas id="bigmap"></canvas>
+</div>
+
+<!-- Autodealer-overlay (auto's kopen) -->
+<div id="dealer">
+  <div class="g-wrap">
+    <div class="g-head">
+      <div class="g-title">AUTODEALER</div>
+      <div class="g-money" id="dealerMoney">€ 0</div>
+      <button id="dealerClose">✕</button>
+    </div>
+    <div id="dPrevBox">
+      <canvas id="dPrev"></canvas>
+      <div id="dPrevName"></div>
+      <div id="dPrevSub"></div>
+    </div>
+    <div id="dStats"></div>
+    <button id="dBuy" class="d-buy"></button>
+    <div id="dList"></div>
+  </div>
 </div>
 
 <!-- Garage-overlay -->

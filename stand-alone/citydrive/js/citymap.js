@@ -3,7 +3,7 @@
 // zodat beide er identiek uitzien. Alle maten schalen mee via k = size/236.
 
 import { CELL, ROAD, N, WORLD } from './constants.js';
-import { blocks, garageSpot } from './world.js';
+import { blocks, garageSpot, dealerSpot } from './world.js';
 import { roundRect } from './draw-car.js';
 
 // night: 0..1 · view: {x0,y0,x1,y1} zichtbaar wereldgebied (of null)
@@ -39,12 +39,12 @@ export function drawCityMap(ctx, size, night, view, player) {
       }
     }
   }
-  // garage-markering (geel met ring)
-  {
-    const gx = (garageSpot.x + garageSpot.w / 2) * sc, gy = (garageSpot.y + garageSpot.h / 2) * sc;
-    ctx.fillStyle = '#ffd34d'; ctx.fillRect(gx - 2 * k, gy - 2 * k, 4 * k, 4 * k);
-    ctx.strokeStyle = 'rgba(255,211,77,.7)'; ctx.lineWidth = Math.max(1, k);
-    ctx.beginPath(); ctx.arc(gx, gy, 5.5 * k, 0, 7); ctx.stroke();
+  // winkelmarkeringen: garage (geel) en dealer (cyaan)
+  for (const m of [{ s: garageSpot, c: '#ffd34d' }, { s: dealerSpot, c: '#7dd3fc' }]) {
+    const mx = (m.s.x + m.s.w / 2) * sc, my = (m.s.y + m.s.h / 2) * sc;
+    ctx.fillStyle = m.c; ctx.fillRect(mx - 2 * k, my - 2 * k, 4 * k, 4 * k);
+    ctx.strokeStyle = m.c + 'b0'; ctx.lineWidth = Math.max(1, k);
+    ctx.beginPath(); ctx.arc(mx, my, 5.5 * k, 0, 7); ctx.stroke();
   }
   // zichtbaar gebied (viewport-kader)
   if (view) {

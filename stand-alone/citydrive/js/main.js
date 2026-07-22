@@ -13,7 +13,8 @@ import { initRender, render } from './render.js';
 import { physics } from './physics.js';
 import { initGarage, toggleGarage, openGarage, isGarageOpen, renderPreview } from './garage.js';
 import { initMap, isMapOpen, renderBigMap } from './map.js';
-import { garageSpot } from './world.js';
+import { initDealer, openDealer, isDealerOpen, renderDealerPreview } from './dealership.js';
+import { garageSpot, dealerSpot } from './world.js';
 import { updMoneyUI } from './economy.js';
 import { tick } from './daynight.js';
 import { initPWA } from './pwa.js';
@@ -27,25 +28,31 @@ initInput();                // toetsenbord + joysticks
 onGarageToggle(toggleGarage); // 'G'-toets opent/sluit de garage
 initAudioControls();        // motorsound + mute-knop
 initGarage();               // garage-knoppen en tabbladen
+initDealer();               // autodealer-showroom
 initMap();                  // uitklapbare grote kaart
 initPWA();                  // installatieknop + service worker
 updMoneyUI();               // begingeld tonen
 
-let wasInGarageZone = false;
+let wasInGarageZone = false, wasInDealerZone = false;
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.033, (now - last) / 1000); last = now;
   tick(dt);                  // dag/nacht-klok laten doorlopen
   readInput();
   let spd = Math.hypot(P.vx, P.vy);
-  // rijden pauzeert als de garage of de grote kaart open staat
-  if (!isGarageOpen() && !isMapOpen()) { spd = physics(dt); }
+  // rijden pauzeert als een menu (garage/dealer/kaart) open staat
+  const menuOpen = isGarageOpen() || isMapOpen() || isDealerOpen();
+  if (!menuOpen) { spd = physics(dt); }
   else updAudio(0);
-  // garagegebouw: open het menu bij het binnenrijden van het pleintje ervoor
+  // winkelgebouwen: open het menu bij het binnenrijden van het pleintje ervoor
   const gz = garageSpot.trigger;
   const inGarageZone = P.x > gz.x && P.x < gz.x + gz.w && P.y > gz.y && P.y < gz.y + gz.h;
-  if (inGarageZone && !wasInGarageZone && !isGarageOpen() && !isMapOpen()) openGarage();
+  if (inGarageZone && !wasInGarageZone && !menuOpen) openGarage();
   wasInGarageZone = inGarageZone;
+  const dz = dealerSpot.trigger;
+  const inDealerZone = P.x > dz.x && P.x < dz.x + dz.w && P.y > dz.y && P.y < dz.y + dz.h;
+  if (inDealerZone && !wasInDealerZone && !menuOpen) openDealer();
+  wasInDealerZone = inDealerZone;
   // camera: kijk vooruit, volg soepel, zoom licht uit bij snelheid
   const look = Math.min(130, spd * 0.22);
   const tx = P.x + Math.cos(P.ang) * look, ty = P.y + Math.sin(P.ang) * look;
@@ -55,6 +62,7 @@ function loop(now) {
   cam.z += (tz - cam.z) * Math.min(1, 3 * dt);
   render(spd);
   if (isGarageOpen()) renderPreview();
+  if (isDealerOpen()) renderDealerPreview();
   if (isMapOpen()) renderBigMap();
   requestAnimationFrame(loop);
 }

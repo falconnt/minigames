@@ -11,5 +11,7 @@ export function updMoneyUI() {
   if (moneyEl) moneyEl.textContent = fmt(state.money);
   const gm = document.getElementById('gMoney');
   if (gm) gm.textContent = fmt(state.money);
+  const dm = document.getElementById('dealerMoney');
+  if (dm) dm.textContent = fmt(state.money);
   queueSave();
 }

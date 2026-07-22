@@ -196,8 +196,21 @@ export function render(spd) {
       // dak
       ctx.fillStyle = g.col; roundRect(ctx, g.x, g.y, g.w, g.h, 7); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1.5; roundRect(ctx, g.x, g.y, g.w, g.h, 7); ctx.stroke();
-      // parapet / dakpaneel — soms een daktuin
-      if (g.garden) {
+      // parapet / dakpaneel — garage, daktuin of standaard
+      if (g.isGarage) {
+        ctx.fillStyle = shade(g.col, 1.14); roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
+        // roldeur op de noordkant (waar je naar binnen rijdt)
+        const dx = g.x + g.w * 0.27, dw = g.w * 0.46, dh = g.h * 0.34;
+        ctx.fillStyle = '#cfd3d9'; roundRect(ctx, dx, g.y + 5, dw, dh, 4); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 1;
+        for (let ly = g.y + 11; ly < g.y + 5 + dh; ly += 6) { ctx.beginPath(); ctx.moveTo(dx + 3, ly); ctx.lineTo(dx + dw - 3, ly); ctx.stroke(); }
+        // bord
+        ctx.fillStyle = '#ffd34d'; ctx.textAlign = 'center';
+        ctx.font = '800 ' + Math.round(g.w * 0.13) + 'px system-ui,-apple-system,sans-serif';
+        ctx.fillText('GARAGE', g.x + g.w / 2, g.y + g.h * 0.66);
+        ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = Math.max(2, g.w * 0.02); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(g.x + g.w / 2, g.y + g.h * 0.83, g.w * 0.045, 0.6, 5.4); ctx.stroke();
+      } else if (g.garden) {
         ctx.fillStyle = '#3f7a48'; roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
         ctx.fillStyle = 'rgba(28,58,34,.5)';
         for (let hy = g.y + 11; hy < g.y + g.h - 8; hy += 9) ctx.fillRect(g.x + 10, hy, g.w - 20, 3);

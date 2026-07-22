@@ -21,6 +21,14 @@ export function toggleGarage() {
   if (ui.garageOpen) { updMoneyUI(); renderGarage(); } else { saveState(); }
 }
 
+// Opent de garage als hij dicht is (gebruikt door het garagegebouw in de wereld).
+export function openGarage() {
+  if (ui.garageOpen) return;
+  ui.garageOpen = true;
+  garageEl.classList.add('open');
+  updMoneyUI(); renderGarage();
+}
+
 export function initGarage() {
   document.getElementById('garageBtn').addEventListener('click', toggleGarage);
   document.getElementById('gClose').addEventListener('click', toggleGarage);

@@ -69,3 +69,16 @@ export const manholes = [];
     else manholes.push({ x: ROAD + Math.random() * (WORLD - 2 * ROAD), y: ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2 + (Math.random() - 0.5) * ROAD * 0.5 });
   }
 })();
+
+// Eén gebouw dicht bij de startplek is de GARAGE. Je rijdt ervoor en het
+// upgrade-menu opent vanzelf. De roldeur staat op de noordkant; de trigger is
+// het pleintje daarvoor. render.js tekent het speciaal, main.js opent het menu.
+export const garageSpot = (function makeGarage() {
+  const gi = 3, gj = 3;
+  const gx = gi * CELL + ROAD, gy = gj * CELL + ROAD, gw = CELL - ROAD, gh = CELL - ROAD;
+  const bx = gx + 50, by = gy + 140, bw = gw - 100, bh = gh - 190;
+  const b = blocks[gi][gj];
+  b.park = false; b.trees = []; b.pond = null; b.path = null; b.flowers = null;
+  b.builds = [{ x: bx, y: by, w: bw, h: bh, col: '#586273', elev: 18, acs: [], garden: false, isGarage: true }];
+  return { x: bx, y: by, w: bw, h: bh, trigger: { x: bx + bw * 0.16, y: by - 108, w: bw * 0.68, h: 116 } };
+})();

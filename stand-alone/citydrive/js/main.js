@@ -11,8 +11,9 @@ import { initInput, onGarageToggle, readInput } from './input.js';
 import { initAudioControls, updAudio } from './audio.js';
 import { initRender, render } from './render.js';
 import { physics } from './physics.js';
-import { initGarage, toggleGarage, isGarageOpen, renderPreview } from './garage.js';
+import { initGarage, toggleGarage, openGarage, isGarageOpen, renderPreview } from './garage.js';
 import { initMap, isMapOpen, renderBigMap } from './map.js';
+import { garageSpot } from './world.js';
 import { updMoneyUI } from './economy.js';
 import { tick } from './daynight.js';
 import { initPWA } from './pwa.js';
@@ -30,6 +31,7 @@ initMap();                  // uitklapbare grote kaart
 initPWA();                  // installatieknop + service worker
 updMoneyUI();               // begingeld tonen
 
+let wasInGarageZone = false;
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.033, (now - last) / 1000); last = now;
@@ -39,6 +41,11 @@ function loop(now) {
   // rijden pauzeert als de garage of de grote kaart open staat
   if (!isGarageOpen() && !isMapOpen()) { spd = physics(dt); }
   else updAudio(0);
+  // garagegebouw: open het menu bij het binnenrijden van het pleintje ervoor
+  const gz = garageSpot.trigger;
+  const inGarageZone = P.x > gz.x && P.x < gz.x + gz.w && P.y > gz.y && P.y < gz.y + gz.h;
+  if (inGarageZone && !wasInGarageZone && !isGarageOpen() && !isMapOpen()) openGarage();
+  wasInGarageZone = inGarageZone;
   // camera: kijk vooruit, volg soepel, zoom licht uit bij snelheid
   const look = Math.min(130, spd * 0.22);
   const tx = P.x + Math.cos(P.ang) * look, ty = P.y + Math.sin(P.ang) * look;

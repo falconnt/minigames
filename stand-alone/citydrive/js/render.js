@@ -3,7 +3,7 @@
 // de minimap en de snelheidsmeter. Bezit het hoofd-canvas en de resize-logica.
 
 import { CELL, ROAD, N, WORLD } from './constants.js';
-import { blocks, puddles, manholes } from './world.js';
+import { blocks, puddles, manholes, garageSpot, dealerSpot } from './world.js';
 import { state, P, cam } from './state.js';
 import { skids, smoke, popups } from './fx.js';
 import { drawCar, roundRect, shade } from './draw-car.js';
@@ -34,6 +34,25 @@ function resize() {
 export function initRender() {
   resize();
   addEventListener('resize', resize);
+}
+
+// Wegwijzer-chip (schermruimte): label + optionele richtingspijl en afstand.
+function drawSign(x, y, text, col, arrowAng, dist) {
+  ctx.save();
+  ctx.font = '800 13px -apple-system,system-ui,sans-serif';
+  const label = dist != null ? text + '  ' + dist + 'm' : text;
+  const w = ctx.measureText(label).width + 30, h = 25;
+  ctx.fillStyle = 'rgba(12,14,18,.85)';
+  roundRect(ctx, x - w / 2, y - h / 2, w, h, 12); ctx.fill();
+  ctx.globalAlpha = 0.65; ctx.strokeStyle = col; ctx.lineWidth = 1.5; roundRect(ctx, x - w / 2, y - h / 2, w, h, 12); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x - w / 2 + 12, y, 3.4, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e8eaef'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x - w / 2 + 20, y);
+  if (arrowAng != null) {
+    ctx.translate(x + Math.cos(arrowAng) * (w / 2 + 12), y + Math.sin(arrowAng) * (h / 2 + 10)); ctx.rotate(arrowAng);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5, -5); ctx.lineTo(-5, 5); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
 }
 
 export function render(spd) {
@@ -350,6 +369,23 @@ export function render(spd) {
     }
     ctx.restore();
   }
+
+  // wegwijzers naar de winkels: label in beeld, pijl-chip met afstand erbuiten
+  const pois = [{ s: garageSpot, label: 'GARAGE', col: '#ffd34d' }, { s: dealerSpot, label: "AUTO'S", col: '#7dd3fc' }];
+  pois.forEach((poi, i) => {
+    const cx = poi.s.x + poi.s.w / 2, cy = poi.s.y + poi.s.h / 2;
+    const sx = VW / 2 + (cx - cam.x) * z, sy = VH / 2 + (cy - cam.y) * z;
+    const m = 52;
+    if (sx < m || sx > VW - m || sy < m || sy > VH - m) {
+      const a = Math.atan2(sy - VH / 2, sx - VW / 2);
+      const t = Math.min((VW / 2 - m) / (Math.abs(Math.cos(a)) || 1e-3), (VH / 2 - m) / (Math.abs(Math.sin(a)) || 1e-3));
+      // staggeren langs de rand zodat de twee chips elkaar niet overlappen
+      const off = (i - 0.5) * 32;
+      drawSign(VW / 2 + Math.cos(a) * t + Math.cos(a + Math.PI / 2) * off, VH / 2 + Math.sin(a) * t + Math.sin(a + Math.PI / 2) * off, poi.label, poi.col, a, Math.round(Math.hypot(cx - P.x, cy - P.y) / 10));
+    } else {
+      drawSign(sx, Math.max(m, sy - poi.s.h / 2 * z - 16), poi.label, poi.col, null, null);
+    }
+  });
 
   // minimap (gedeelde stadskaart-tekening; ook gebruikt door de uitklapkaart)
   drawCityMap(mtx, 236, night, { x0, y0, x1, y1 }, P);

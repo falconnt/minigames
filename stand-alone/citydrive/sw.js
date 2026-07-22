@@ -4,7 +4,7 @@
 // Deze map valt buiten de deploy-versiestempel van de Minigames-app, dus
 // verhoog CACHE_VERSION met de hand bij elke inhoudelijke wijziging zodat
 // oude bestanden worden opgeruimd en updates gegarandeerd doorkomen.
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const CACHE = 'citydrive-' + CACHE_VERSION;
 
 // App-shell: alles wat nodig is om offline te spelen. Relatieve paden, dus

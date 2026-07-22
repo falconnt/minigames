@@ -9,7 +9,7 @@ import { skids, smoke, popups } from './fx.js';
 import { drawCar, roundRect, shade } from './draw-car.js';
 import { defById } from './cars.js';
 import { input } from './input.js';
-import { nightAmount } from './daynight.js';
+import { nightAmount, ambientOverlay } from './daynight.js';
 import { drawCityMap } from './citymap.js';
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
@@ -49,6 +49,26 @@ export function render(spd) {
     if (ry > y0 && ry < y1) { ctx.beginPath(); ctx.moveTo(Math.max(0, x0), ry); ctx.lineTo(Math.min(WORLD, x1), ry); ctx.stroke(); }
   }
   ctx.setLineDash([]);
+
+  // zebrapaden op de kruispunten (per arm een reeks strepen)
+  ctx.fillStyle = 'rgba(228,231,236,.28)';
+  const cwLen = 24, sw = 10, step = 20, half = ROAD / 2;
+  for (let i = 0; i <= N; i++) {
+    const xi = i * CELL + ROAD / 2; if (xi < x0 - ROAD || xi > x1 + ROAD) continue;
+    for (let j = 0; j <= N; j++) {
+      const yj = j * CELL + ROAD / 2; if (yj < y0 - ROAD || yj > y1 + ROAD) continue;
+      // noord- en zuidarm: verticale strepen verdeeld over de wegbreedte
+      for (let sx = xi - half + 6; sx < xi + half - 6; sx += step) {
+        ctx.fillRect(sx, yj - half - cwLen, sw, cwLen);
+        ctx.fillRect(sx, yj + half, sw, cwLen);
+      }
+      // oost- en westarm: horizontale strepen
+      for (let sy = yj - half + 6; sy < yj + half - 6; sy += step) {
+        ctx.fillRect(xi + half, sy, cwLen, sw);
+        ctx.fillRect(xi - half - cwLen, sy, cwLen, sw);
+      }
+    }
+  }
 
   // remsporen
   ctx.strokeStyle = 'rgba(15,15,18,.30)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
@@ -148,12 +168,13 @@ export function render(spd) {
   vg.addColorStop(1, 'rgba(0,0,0,.40)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
 
-  // ---------- nacht ----------
-  if (night > 0.02) {
-    // donkerblauwe waas over de hele scène
-    ctx.fillStyle = `rgba(6,10,30,${(0.6 * night).toFixed(3)})`;
-    ctx.fillRect(0, 0, VW, VH);
+  // ---------- sfeer: kleurgradatie over de dag/nachtcyclus ----------
+  const amb = ambientOverlay();
+  if (amb.warmA > 0.003) { ctx.fillStyle = `rgba(255,150,70,${amb.warmA.toFixed(3)})`; ctx.fillRect(0, 0, VW, VH); }
+  if (amb.blueA > 0.003) { ctx.fillStyle = `rgba(6,10,30,${amb.blueA.toFixed(3)})`; ctx.fillRect(0, 0, VW, VH); }
 
+  // ---------- nacht: kunstlicht ----------
+  if (night > 0.02) {
     // additief licht: straatlantaarns op kruispunten + koplampen van de speler
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';

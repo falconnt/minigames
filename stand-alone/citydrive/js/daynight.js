@@ -12,3 +12,14 @@ export function tick(dt) { clock = (clock + dt) % CYCLE; }
 export function nightAmount() {
   return (1 - Math.cos(clock / CYCLE * Math.PI * 2)) / 2;
 }
+
+// Sfeer-waas over de scène, afhankelijk van het tijdstip:
+//   warmA — warme "golden hour"-gloed, piekt bij zonsopgang/-ondergang
+//   blueA — koele blauwe nachtwaas, diep in de nacht het sterkst
+export function ambientOverlay() {
+  const n = nightAmount();
+  return {
+    warmA: 0.18 * Math.sin(n * Math.PI),   // 0 bij volle dag/nacht, max bij schemering
+    blueA: 0.62 * Math.pow(n, 2.2),        // vooral diep in de nacht
+  };
+}

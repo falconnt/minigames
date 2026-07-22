@@ -12,6 +12,7 @@ import { input } from './input.js';
 import { nightAmount, ambientOverlay } from './daynight.js';
 import { drawCityMap } from './citymap.js';
 import { boostFx } from './boost.js';
+import { drawParticles } from './particles.js';
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const miniCv = document.getElementById('mini'), mtx = miniCv.getContext('2d');
@@ -97,6 +98,21 @@ export function render(spd) {
     // binnenterrein
     ctx.fillStyle = b.park ? '#4a7d52' : '#4a4e56';
     roundRect(ctx, b.x + 22, b.y + 22, b.w - 44, b.h - 44, 14); ctx.fill();
+    // subtiele stoeprand
+    ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 2; roundRect(ctx, b.x + 3, b.y + 3, b.w - 6, b.h - 6, 18); ctx.stroke();
+    // parkdetail: wandelpad, vijver, bloemen (bomen komen in de bomen-lus erna)
+    if (b.park) {
+      if (b.path) { ctx.strokeStyle = '#9a9179'; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(b.path.x1, b.path.y1); ctx.lineTo(b.path.x2, b.path.y2); ctx.stroke(); }
+      if (b.pond) {
+        const pd = b.pond;
+        ctx.fillStyle = '#2f6f86'; ctx.beginPath(); ctx.ellipse(pd.x, pd.y, pd.rx, pd.ry, 0, 0, 7); ctx.fill();
+        const wg = ctx.createRadialGradient(pd.x - pd.rx * 0.3, pd.y - pd.ry * 0.35, 2, pd.x, pd.y, pd.rx);
+        wg.addColorStop(0, 'rgba(150,215,230,.55)'); wg.addColorStop(1, 'rgba(150,215,230,0)');
+        ctx.fillStyle = wg; ctx.beginPath(); ctx.ellipse(pd.x, pd.y, pd.rx, pd.ry, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.16)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(pd.x, pd.y, pd.rx, pd.ry, 0, 0, 7); ctx.stroke();
+      }
+      if (b.flowers) for (const f of b.flowers) { ctx.fillStyle = f.col; ctx.beginPath(); ctx.arc(f.x, f.y, 2.6, 0, 7); ctx.fill(); }
+    }
     // gebouwen — lichte 3D-extrusie (muren + dak) met verlichte ramen
     for (const g of b.builds) {
       const ox = g.elev * 0.5, oy = g.elev * 0.72;
@@ -131,12 +147,18 @@ export function render(spd) {
       // dak
       ctx.fillStyle = g.col; roundRect(ctx, g.x, g.y, g.w, g.h, 7); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1.5; roundRect(ctx, g.x, g.y, g.w, g.h, 7); ctx.stroke();
-      // parapet / dakpaneel
-      ctx.fillStyle = shade(g.col, 1.12); roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
-      // dakunits (airco/opbouw) met lichtrandje
-      for (const a of g.acs) {
-        ctx.fillStyle = shade(g.col, 0.8); ctx.fillRect(a.x, a.y, a.s, a.s);
-        ctx.fillStyle = shade(g.col, 1.28); ctx.fillRect(a.x, a.y, a.s, Math.max(1, a.s * 0.3));
+      // parapet / dakpaneel — soms een daktuin
+      if (g.garden) {
+        ctx.fillStyle = '#3f7a48'; roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
+        ctx.fillStyle = 'rgba(28,58,34,.5)';
+        for (let hy = g.y + 11; hy < g.y + g.h - 8; hy += 9) ctx.fillRect(g.x + 10, hy, g.w - 20, 3);
+      } else {
+        ctx.fillStyle = shade(g.col, 1.12); roundRect(ctx, g.x + 6, g.y + 6, g.w - 12, g.h - 12, 5); ctx.fill();
+        // dakunits (airco/opbouw) met lichtrandje
+        for (const a of g.acs) {
+          ctx.fillStyle = shade(g.col, 0.8); ctx.fillRect(a.x, a.y, a.s, a.s);
+          ctx.fillStyle = shade(g.col, 1.28); ctx.fillRect(a.x, a.y, a.s, Math.max(1, a.s * 0.3));
+        }
       }
     }
     // bomen — zachte schaduw + bladerdek met gradient en highlight
@@ -157,6 +179,9 @@ export function render(spd) {
     ctx.fillStyle = `rgba(210,212,218,${0.28 * (1 - p.t / 0.8)})`;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
   }
+
+  // sfeerdeeltjes (blaadjes overdag, warme lichtjes 's nachts)
+  drawParticles(ctx, { x0, y0, x1, y1 }, night);
 
   // auto
   const def = defById(state.current), cfg = state.cfg[state.current];

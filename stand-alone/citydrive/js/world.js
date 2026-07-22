@@ -13,7 +13,19 @@ function generate() {
       const park = Math.random() < 0.13;
       const b = { x, y, w, h, park, builds: [], trees: [] };
       if (park) {
-        for (let t = 0; t < 7; t++) b.trees.push({ x: x + 40 + Math.random() * (w - 80), y: y + 40 + Math.random() * (h - 80), r: 16 + Math.random() * 10 });
+        // vijver in het midden(ish)
+        if (Math.random() < 0.65) b.pond = { x: x + w * (0.34 + Math.random() * 0.3), y: y + h * (0.4 + Math.random() * 0.22), rx: 42 + Math.random() * 44, ry: 30 + Math.random() * 30 };
+        const inPond = (px, py) => b.pond && ((px - b.pond.x) ** 2) / (b.pond.rx ** 2) + ((py - b.pond.y) ** 2) / (b.pond.ry ** 2) < 1.25;
+        // slingerpad dwars door het park
+        b.path = Math.random() < 0.5
+          ? { x1: x + 18, y1: y + h * (0.28 + Math.random() * 0.44), x2: x + w - 18, y2: y + h * (0.28 + Math.random() * 0.44) }
+          : { x1: x + w * (0.28 + Math.random() * 0.44), y1: y + 18, x2: x + w * (0.28 + Math.random() * 0.44), y2: y + h - 18 };
+        // bloemen (niet in de vijver)
+        b.flowers = [];
+        const fcols = ['#e6607a', '#e9c14b', '#7db5ff', '#c98bff', '#ff9a5c'];
+        for (let f = 0; f < 12; f++) { const fx = x + 24 + Math.random() * (w - 48), fy = y + 24 + Math.random() * (h - 48); if (!inPond(fx, fy)) b.flowers.push({ x: fx, y: fy, col: fcols[(Math.random() * fcols.length) | 0] }); }
+        // bomen (niet in de vijver)
+        for (let t = 0; t < 10; t++) { const tx = x + 30 + Math.random() * (w - 60), ty = y + 30 + Math.random() * (h - 60); if (!inPond(tx, ty)) b.trees.push({ x: tx, y: ty, r: 13 + Math.random() * 12 }); }
       } else {
         const m = 30, cols = 1 + ((Math.random() * 2) | 0), rows = 1 + ((Math.random() * 2) | 0), gap = 20;
         const cw = (w - 2 * m - (cols - 1) * gap) / cols, ch = (h - 2 * m - (rows - 1) * gap) / rows;
@@ -24,7 +36,7 @@ function generate() {
           const acs = []; const na = 1 + ((Math.random() * 3) | 0);
           for (let a = 0; a < na; a++) acs.push({ x: bx + 14 + Math.random() * (bw - 38), y: by + 14 + Math.random() * (bh - 38), s: 9 + Math.random() * 8 });
           // elev = visuele hoogte voor de 3D-extrusie (muren + verlichte ramen)
-          b.builds.push({ x: bx, y: by, w: bw, h: bh, col: bPal[(Math.random() * bPal.length) | 0], elev: 7 + Math.random() * 14, acs });
+          b.builds.push({ x: bx, y: by, w: bw, h: bh, col: bPal[(Math.random() * bPal.length) | 0], elev: 7 + Math.random() * 14, acs, garden: Math.random() < 0.22 });
         }
         // Van boven naar onder tekenen zodat lagere gebouwen netjes over
         // hogere heen vallen (correcte overlap bij de extrusie).

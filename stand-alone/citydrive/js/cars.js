@@ -2,8 +2,12 @@
 // Zuiver: geen game-state, alleen data + pure helpers. Nieuwe auto's toevoegen
 // doe je hier door een object aan DEFS te hangen.
 
+// Optionele per-auto uiterlijk-traits die draw-car.js oppikt:
+//   roof  — contrastkleur voor het dak (twee-toon look)
+//   led   — LED-koplampen + doorlopende LED-balk achter
+// Zo geef je een model een eigen uitstraling zonder de tekenfunctie te forken.
 export const DEFS = [
-  { id: 'kei', name: 'Vireo Kei',  sub: 'STADSAUTO', price: 0,     top: 470, acc: 280, steer: 2.7, grip: 8.5, l: 42, w: 24, defCol: '#e8e8ec' },
+  { id: 'kei', name: 'Vireo Kei',  sub: 'HATCHBACK',  price: 0,     top: 470, acc: 280, steer: 2.7, grip: 8.5, l: 44, w: 25, defCol: '#eef0f3', roof: '#17181c', led: true },
   { id: 'gti', name: 'Pulse GTi',  sub: 'HOT HATCH', price: 4500,  top: 560, acc: 360, steer: 3.0, grip: 8.8, l: 44, w: 25, defCol: '#c62f39' },
   { id: 'v8',  name: 'Brutus V8',  sub: 'MUSCLE',    price: 12000, top: 660, acc: 470, steer: 2.5, grip: 7.6, l: 52, w: 28, defCol: '#1b1d22' },
   { id: 'rs',  name: 'Kitsune RS', sub: 'SPORT',     price: 25000, top: 730, acc: 540, steer: 3.3, grip: 9.4, l: 48, w: 26, defCol: '#2563c9' },

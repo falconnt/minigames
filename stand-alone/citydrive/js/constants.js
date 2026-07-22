@@ -15,6 +15,6 @@ export const SAVE_KEY = 'citydrive.save.v1';
 export const bPal = ['#7d8aa0', '#8a93a6', '#98a2b4', '#6f7d95', '#a4abb9', '#8d99ad'];
 
 // Tuning-paletten voor de garage.
-export const bodyCols = ['#e8e8ec', '#1b1d22', '#c62f39', '#2563c9', '#26a35c', '#e9a13b', '#8b5cf6', '#e0559a', '#7d8496', '#f5f0e6'];
+export const bodyCols = ['#eef0f3', '#1b1d22', '#c62f39', '#2563c9', '#26a35c', '#e9a13b', '#8b5cf6', '#e0559a', '#7d8496', '#f5f0e6'];
 export const rimCols = ['#cfd6e4', '#1a1c20', '#e3b341', '#c62f39', '#7dd3fc'];
 export const glowCols = [null, '#22d3ee', '#a855f7', '#39ff88', '#ff3b5c', '#ffb020'];

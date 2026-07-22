@@ -62,8 +62,25 @@ export function drawCar(c, x, y, ang, steer, def, cfg, brake, scale) {
   c.strokeStyle = 'rgba(0,0,0,.22)'; c.lineWidth = 1 * s;
   c.beginPath(); c.moveTo(L * 0.16, -W / 2 + 2 * s); c.lineTo(L * 0.16, W / 2 - 2 * s); c.stroke();
   // cabine / ramen
-  c.fillStyle = 'rgba(18,22,30,.92)'; roundRect(c, -L * 0.24, -W * 0.34, L * 0.40, W * 0.68, 4 * s); c.fill();
-  c.fillStyle = 'rgba(120,160,210,.28)'; roundRect(c, L * 0.09, -W * 0.30, L * 0.06, W * 0.60, 2 * s); c.fill();
+  if (def.roof) {
+    // Twee-toon dak (contrastkleur) met aparte voor- en achterruit: de
+    // top-down look van een witte hatchback met zwart dak (bijv. VW Golf).
+    c.fillStyle = 'rgba(12,14,18,.95)';                         // greenhouse-omlijsting
+    roundRect(c, -L * 0.27, -W * 0.38, L * 0.46, W * 0.76, 5 * s); c.fill();
+    c.fillStyle = 'rgba(122,168,218,.42)';                      // voorruit
+    roundRect(c, L * 0.085, -W * 0.30, L * 0.085, W * 0.60, 2.5 * s); c.fill();
+    c.fillStyle = 'rgba(122,168,218,.32)';                      // achterruit
+    roundRect(c, -L * 0.255, -W * 0.28, L * 0.075, W * 0.56, 2.5 * s); c.fill();
+    const rg = c.createLinearGradient(0, -W * 0.30, 0, W * 0.30); // dakpaneel
+    rg.addColorStop(0, shade(def.roof, 1.55)); rg.addColorStop(0.5, def.roof); rg.addColorStop(1, shade(def.roof, 0.7));
+    c.fillStyle = rg; roundRect(c, -L * 0.155, -W * 0.31, L * 0.24, W * 0.62, 4 * s); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.10)'; c.lineWidth = 1 * s; roundRect(c, -L * 0.155, -W * 0.31, L * 0.24, W * 0.62, 4 * s); c.stroke();
+    c.fillStyle = shade(def.roof, 0.75);                        // haaienvin-antenne
+    c.beginPath(); c.ellipse(-L * 0.11, 0, L * 0.028, W * 0.05, 0, 0, 7); c.fill();
+  } else {
+    c.fillStyle = 'rgba(18,22,30,.92)'; roundRect(c, -L * 0.24, -W * 0.34, L * 0.40, W * 0.68, 4 * s); c.fill();
+    c.fillStyle = 'rgba(120,160,210,.28)'; roundRect(c, L * 0.09, -W * 0.30, L * 0.06, W * 0.60, 2 * s); c.fill();
+  }
   // spoiler
   if (cfg.spoiler) {
     c.fillStyle = shade(cfg.color, 0.55);
@@ -71,10 +88,25 @@ export function drawCar(c, x, y, ang, steer, def, cfg, brake, scale) {
     c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(-L / 2 + 2 * s, -W * 0.30, 3 * s, W * 0.60);
   }
   // koplampen
-  c.fillStyle = '#fff7d6';
-  c.fillRect(L / 2 - 3 * s, -W * 0.40, 2.6 * s, W * 0.20); c.fillRect(L / 2 - 3 * s, W * 0.20, 2.6 * s, W * 0.20);
+  if (def.led) {
+    c.fillStyle = '#eef4ff';                                    // koele LED-koplampen
+    c.fillRect(L / 2 - 3.2 * s, -W * 0.42, 3 * s, W * 0.15); c.fillRect(L / 2 - 3.2 * s, W * 0.27, 3 * s, W * 0.15);
+    c.fillStyle = 'rgba(150,200,255,.85)';                      // blauwe LED-kern
+    c.fillRect(L / 2 - 1.5 * s, -W * 0.42, 1 * s, W * 0.15); c.fillRect(L / 2 - 1.5 * s, W * 0.27, 1 * s, W * 0.15);
+  } else {
+    c.fillStyle = '#fff7d6';
+    c.fillRect(L / 2 - 3 * s, -W * 0.40, 2.6 * s, W * 0.20); c.fillRect(L / 2 - 3 * s, W * 0.20, 2.6 * s, W * 0.20);
+  }
   // achterlichten
-  c.fillStyle = brake ? '#ff3b4d' : '#8f1d26';
-  c.fillRect(-L / 2 + 0.5 * s, -W * 0.42, 2.6 * s, W * 0.22); c.fillRect(-L / 2 + 0.5 * s, W * 0.20, 2.6 * s, W * 0.22);
+  if (def.led) {
+    // doorlopende LED-balk (VW-stijl), feller bij remmen
+    c.fillStyle = brake ? '#ff3b4d' : '#9c2029';
+    roundRect(c, -L / 2 + 0.6 * s, -W * 0.40, 2.4 * s, W * 0.80, 1.2 * s); c.fill();
+    c.fillStyle = brake ? '#ff7b86' : '#cc3a42';
+    c.fillRect(-L / 2 + 0.6 * s, -W * 0.40, 2.4 * s, W * 0.15); c.fillRect(-L / 2 + 0.6 * s, W * 0.25, 2.4 * s, W * 0.15);
+  } else {
+    c.fillStyle = brake ? '#ff3b4d' : '#8f1d26';
+    c.fillRect(-L / 2 + 0.5 * s, -W * 0.42, 2.6 * s, W * 0.22); c.fillRect(-L / 2 + 0.5 * s, W * 0.20, 2.6 * s, W * 0.22);
+  }
   c.restore();
 }

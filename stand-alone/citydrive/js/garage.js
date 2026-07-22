@@ -4,14 +4,14 @@
 // preview. Elke wijziging slaat direct op via saveState.
 
 import { state, ui, saveState, resetPos } from './state.js';
-import { DEFS, defById, mkCfg, eff } from './cars.js';
+import { defById, eff } from './cars.js';
 import { bodyCols, rimCols, glowCols } from './constants.js';
 import { drawCar } from './draw-car.js';
 import { fmt, updMoneyUI } from './economy.js';
 
 const garageEl = document.getElementById('garage');
 const prevCv = document.getElementById('prev'), ptx = prevCv.getContext('2d');
-let curTab = 'cars', prevAng = -0.6;
+let curTab = 'tune', prevAng = -0.6;
 
 export function isGarageOpen() { return ui.garageOpen; }
 
@@ -52,43 +52,10 @@ function statBars() {
   document.getElementById('prevSub').textContent = d.sub;
 }
 
-function carThumb(def, cfg) {
-  const c = document.createElement('canvas'); c.width = 100; c.height = 64;
-  c.style.width = '50px'; c.style.height = '32px';
-  const t = c.getContext('2d'); t.scale(2, 2);
-  drawCar(t, 25, 16, -0.5, 0, def, cfg || { color: def.defCol, rim: '#cfd6e4', spoiler: false, stripe: false, glow: null }, false, 0.9);
-  return c;
-}
-
 function renderGarage() {
   statBars();
-  if (curTab === 'cars') {
-    const el = document.getElementById('tab-cars'); el.innerHTML = '';
-    for (const d of DEFS) {
-      const owned = state.owned.has(d.id), cur = state.current === d.id;
-      const card = document.createElement('div'); card.className = 'carCard' + (cur ? ' sel' : '');
-      card.appendChild(carThumb(d, state.cfg[d.id]));
-      const info = document.createElement('div'); info.className = 'cc-info';
-      info.innerHTML = `<div class="cc-name">${d.name}</div>
-        <div class="cc-spec">${d.sub} · ${Math.round(d.top * 0.28)} km/u</div>`;
-      card.appendChild(info);
-      const btn = document.createElement('button');
-      if (cur) { btn.className = 'cc-btn cur'; btn.textContent = 'In gebruik'; }
-      else if (owned) {
-        btn.className = 'cc-btn'; btn.textContent = 'Selecteer';
-        btn.onclick = () => { state.current = d.id; renderGarage(); saveState(); };
-      } else {
-        btn.className = 'cc-btn buy'; btn.textContent = fmt(d.price);
-        btn.disabled = state.money < d.price;
-        btn.onclick = () => {
-          if (state.money < d.price) return;
-          state.money -= d.price; state.owned.add(d.id); state.cfg[d.id] = mkCfg(d.id);
-          state.current = d.id; updMoneyUI(); renderGarage(); saveState();
-        };
-      }
-      card.appendChild(btn); el.appendChild(card);
-    }
-  }
+  // Auto's kopen/kiezen gebeurt bij de dealer; de garage tunet & upgradet
+  // alleen de huidige auto.
   if (curTab === 'tune') {
     const el = document.getElementById('tab-tune'); el.innerHTML = '';
     const cfg = state.cfg[state.current];

@@ -13,6 +13,7 @@ import { initRender, render } from './render.js';
 import { physics } from './physics.js';
 import { initGarage, toggleGarage, isGarageOpen, renderPreview } from './garage.js';
 import { updMoneyUI } from './economy.js';
+import { tick } from './daynight.js';
 import { initPWA } from './pwa.js';
 
 // Touch-besturing tonen op apparaten met een grof aanwijsapparaat.
@@ -30,6 +31,7 @@ updMoneyUI();               // begingeld tonen
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.033, (now - last) / 1000); last = now;
+  tick(dt);                  // dag/nacht-klok laten doorlopen
   readInput();
   let spd = Math.hypot(P.vx, P.vy);
   if (!isGarageOpen()) { spd = physics(dt); }

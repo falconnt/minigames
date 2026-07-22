@@ -9,6 +9,7 @@ import { skids, smoke, popups } from './fx.js';
 import { drawCar, roundRect, shade } from './draw-car.js';
 import { defById } from './cars.js';
 import { input } from './input.js';
+import { nightAmount } from './daynight.js';
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const miniCv = document.getElementById('mini'), mtx = miniCv.getContext('2d');
@@ -29,6 +30,7 @@ export function initRender() {
 }
 
 export function render(spd) {
+  const night = nightAmount();
   ctx.fillStyle = '#2f3238'; ctx.fillRect(0, 0, VW, VH);
   const z = cam.z;
   ctx.save();
@@ -83,12 +85,15 @@ export function render(spd) {
       // verlichte ramen op de muren (deterministisch patroon, geen geflikker)
       if (g.elev > 8) {
         const wh = Math.max(2, oy * 0.34), ww = Math.max(2, ox * 0.34);
+        // Ramen lichten 's nachts op (warm) en zijn overdag vrijwel uit.
+        const litWin = `rgba(255,214,138,${(0.1 + 0.85 * night).toFixed(3)})`;
+        const darkWin = 'rgba(18,20,26,.5)';
         for (let wx = g.x + 5; wx < g.x + g.w - 3; wx += 7) {
-          ctx.fillStyle = ((Math.round(wx) + Math.round(g.y)) % 3) !== 0 ? 'rgba(255,214,138,.85)' : 'rgba(18,20,26,.5)';
+          ctx.fillStyle = ((Math.round(wx) + Math.round(g.y)) % 3) !== 0 ? litWin : darkWin;
           ctx.fillRect(wx + ox * 0.35, g.y + g.h + oy * 0.3, 3, wh);
         }
         for (let wy = g.y + 5; wy < g.y + g.h - 3; wy += 7) {
-          ctx.fillStyle = ((Math.round(wy) + Math.round(g.x)) % 3) === 0 ? 'rgba(255,214,138,.8)' : 'rgba(18,20,26,.5)';
+          ctx.fillStyle = ((Math.round(wy) + Math.round(g.x)) % 3) === 0 ? litWin : darkWin;
           ctx.fillRect(g.x + g.w + ox * 0.3, wy + oy * 0.35, ww, 3);
         }
       }
@@ -141,6 +146,45 @@ export function render(spd) {
   vg.addColorStop(0, 'rgba(0,0,0,0)');
   vg.addColorStop(1, 'rgba(0,0,0,.40)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
+
+  // ---------- nacht ----------
+  if (night > 0.02) {
+    // donkerblauwe waas over de hele scène
+    ctx.fillStyle = `rgba(6,10,30,${(0.6 * night).toFixed(3)})`;
+    ctx.fillRect(0, 0, VW, VH);
+
+    // additief licht: straatlantaarns op kruispunten + koplampen van de speler
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i <= N; i++) {
+      const wx = i * CELL + ROAD / 2; if (wx < x0 || wx > x1) continue;
+      for (let j = 0; j <= N; j++) {
+        const wy = j * CELL + ROAD / 2; if (wy < y0 || wy > y1) continue;
+        const lx = VW / 2 + (wx - cam.x) * z, ly = VH / 2 + (wy - cam.y) * z, lr = 92 * z;
+        const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+        lg.addColorStop(0, `rgba(255,206,128,${(0.22 * night).toFixed(3)})`);
+        lg.addColorStop(1, 'rgba(255,206,128,0)');
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, ly, lr, 0, 7); ctx.fill();
+      }
+    }
+    // koplampstralen van de speler (schermruimte, additief)
+    const pdef = defById(state.current);
+    const psx = VW / 2 + (P.x - cam.x) * z, psy = VH / 2 + (P.y - cam.y) * z;
+    ctx.translate(psx, psy); ctx.rotate(P.ang); ctx.scale(z, z);
+    const L = pdef.l, W = pdef.w;
+    for (const side of [-1, 1]) {
+      const oyb = side * W * 0.30;
+      const bg = ctx.createLinearGradient(L * 0.5, 0, L * 3.6, 0);
+      bg.addColorStop(0, `rgba(255,244,198,${(0.26 * night).toFixed(3)})`);
+      bg.addColorStop(1, 'rgba(255,244,198,0)');
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.moveTo(L * 0.48, oyb - W * 0.12); ctx.lineTo(L * 3.6, oyb - W * 1.15);
+      ctx.lineTo(L * 3.6, oyb + W * 1.15); ctx.lineTo(L * 0.48, oyb + W * 0.12);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
 
   // minimap
   mtx.clearRect(0, 0, 236, 236);

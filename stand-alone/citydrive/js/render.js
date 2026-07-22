@@ -3,7 +3,7 @@
 // de minimap en de snelheidsmeter. Bezit het hoofd-canvas en de resize-logica.
 
 import { CELL, ROAD, N, WORLD } from './constants.js';
-import { blocks } from './world.js';
+import { blocks, puddles, manholes } from './world.js';
 import { state, P, cam } from './state.js';
 import { skids, smoke, popups } from './fx.js';
 import { drawCar, roundRect, shade } from './draw-car.js';
@@ -81,6 +81,37 @@ export function render(spd) {
         if (i < N) ctx.fillRect(xi + half, sy, cwLen, sw);
         if (i > 0) ctx.fillRect(xi - half - cwLen, sy, cwLen, sw);
       }
+    }
+  }
+
+  // putdeksels op de weg
+  for (const mh of manholes) {
+    if (mh.x < x0 || mh.x > x1 || mh.y < y0 || mh.y > y1) continue;
+    ctx.fillStyle = '#3a3e45'; ctx.beginPath(); ctx.arc(mh.x, mh.y, 7, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(mh.x, mh.y, 7, 0, 7); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(mh.x, mh.y, 4.4, 0, 7); ctx.stroke();
+  }
+
+  // reflecterende plassen — spiegelen de lucht/kleur van het tijdstip
+  {
+    const gh = Math.sin(night * Math.PI);
+    const coolA = 0.42 * (1 - night) + 0.1 * night, warmA = 0.32 * gh;
+    for (const pu of puddles) {
+      if (pu.x < x0 - 40 || pu.x > x1 + 40 || pu.y < y0 - 30 || pu.y > y1 + 30) continue;
+      ctx.fillStyle = 'rgba(10,12,16,.34)'; ctx.beginPath(); ctx.ellipse(pu.x, pu.y, pu.rx, pu.ry, 0, 0, 7); ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.ellipse(pu.x, pu.y, pu.rx, pu.ry, 0, 0, 7); ctx.clip();
+      const cg = ctx.createLinearGradient(pu.x, pu.y - pu.ry, pu.x, pu.y + pu.ry);
+      cg.addColorStop(0, `rgba(150,178,205,${coolA.toFixed(3)})`); cg.addColorStop(1, 'rgba(150,178,205,0)');
+      ctx.fillStyle = cg; ctx.fillRect(pu.x - pu.rx, pu.y - pu.ry, pu.rx * 2, pu.ry * 2);
+      if (warmA > 0.01) {
+        const wg = ctx.createLinearGradient(pu.x, pu.y - pu.ry, pu.x, pu.y + pu.ry);
+        wg.addColorStop(0, `rgba(255,180,110,${warmA.toFixed(3)})`); wg.addColorStop(1, 'rgba(255,180,110,0)');
+        ctx.fillStyle = wg; ctx.fillRect(pu.x - pu.rx, pu.y - pu.ry, pu.rx * 2, pu.ry * 2);
+      }
+      ctx.strokeStyle = `rgba(220,235,245,${(0.18 * (1 - night * 0.7)).toFixed(3)})`; ctx.lineWidth = 1;
+      const yy = pu.y + Math.sin(animT * 1.4 + pu.ph) * pu.ry * 0.3;
+      ctx.beginPath(); ctx.ellipse(pu.x, yy, pu.rx * 0.6, 1.4, 0, 0, 7); ctx.stroke();
+      ctx.restore();
     }
   }
 

@@ -2,7 +2,7 @@
 // parken en bomen. Wordt bij het importeren opgebouwd en daarna alleen gelezen
 // door de renderer en de botsingsdetectie in physics.
 
-import { CELL, ROAD, N, bPal } from './constants.js';
+import { CELL, ROAD, N, WORLD, bPal } from './constants.js';
 
 function generate() {
   const blocks = [];
@@ -51,3 +51,21 @@ function generate() {
 }
 
 export const blocks = generate();
+
+// Wegdecoratie: reflecterende plassen en putdeksels, verspreid over de wegen.
+// Eénmalig opgebouwd; render.js tekent ze (plassen met tijd-afhankelijke reflectie).
+export const puddles = [];
+export const manholes = [];
+(function decorateRoads() {
+  for (let n = 0; n < 32; n++) {
+    if (Math.random() < 0.5) { const xi = ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2;
+      puddles.push({ x: xi + (Math.random() - 0.5) * ROAD * 0.55, y: ROAD + Math.random() * (WORLD - 2 * ROAD), rx: 26 + Math.random() * 30, ry: 13 + Math.random() * 15, ph: Math.random() * 6.28 });
+    } else { const yj = ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2;
+      puddles.push({ x: ROAD + Math.random() * (WORLD - 2 * ROAD), y: yj + (Math.random() - 0.5) * ROAD * 0.55, rx: 26 + Math.random() * 30, ry: 13 + Math.random() * 15, ph: Math.random() * 6.28 });
+    }
+  }
+  for (let n = 0; n < 42; n++) {
+    if (Math.random() < 0.5) manholes.push({ x: ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2 + (Math.random() - 0.5) * ROAD * 0.5, y: ROAD + Math.random() * (WORLD - 2 * ROAD) });
+    else manholes.push({ x: ROAD + Math.random() * (WORLD - 2 * ROAD), y: ((Math.random() * (N + 1)) | 0) * CELL + ROAD / 2 + (Math.random() - 0.5) * ROAD * 0.5 });
+  }
+})();

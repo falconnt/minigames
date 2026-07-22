@@ -41,14 +41,16 @@
   <canvas id="mini" width="236" height="236"></canvas>
 </div>
 
-<!-- HUD: snelheidsmeter onderaan -->
+<!-- HUD: snelheidsmeter + boost-meter onderaan -->
 <div class="pill" id="speed">0<small>KM/U</small></div>
+<div id="boostMeter"><i id="boostFill"></i></div>
 
 <!-- Touch-besturing (alleen zichtbaar op touch-apparaten) -->
 <div class="stick" id="stickL"><div class="sticklbl">STUREN</div><div class="knob" id="knobL"></div></div>
 <div class="stick" id="stickR"><div class="sticklbl">GAS / REM</div><div class="knob" id="knobR"></div></div>
 <div id="driftBtn">DRIFT</div>
-<div id="kbHint">WASD / pijltjes rijden &nbsp;·&nbsp; Spatie = drift &nbsp;·&nbsp; G = garage</div>
+<div id="boostBtn">NITRO</div>
+<div id="kbHint">WASD / pijltjes rijden &nbsp;·&nbsp; Spatie = drift &nbsp;·&nbsp; Shift = nitro &nbsp;·&nbsp; G = garage</div>
 
 <!-- Uitklapbare grote kaart -->
 <div id="mapOverlay">

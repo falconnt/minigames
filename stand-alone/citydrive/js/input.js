@@ -2,10 +2,10 @@
 // driftknop) in één `input`-object dat physics elke frame leest. Weet niets van
 // de rest van de game; de garage-toets wordt via een callback teruggemeld.
 
-export const input = { steer: 0, th: 0, hb: false };
+export const input = { steer: 0, th: 0, hb: false, boost: false };
 
 const keys = {};
-let stkSteer = 0, stkTh = 0, btnDrift = false;
+let stkSteer = 0, stkTh = 0, btnDrift = false, btnBoost = false;
 let onGarage = () => {};
 
 // main koppelt hier de garage-toggle aan de 'G'-toets.
@@ -46,6 +46,11 @@ export function initInput() {
   dBtn.addEventListener('pointerdown', (e) => { btnDrift = true; dBtn.classList.add('on'); e.preventDefault(); });
   const dEnd = () => { btnDrift = false; dBtn.classList.remove('on'); };
   dBtn.addEventListener('pointerup', dEnd); dBtn.addEventListener('pointercancel', dEnd);
+
+  const bBtn = document.getElementById('boostBtn');
+  bBtn.addEventListener('pointerdown', (e) => { btnBoost = true; bBtn.classList.add('on'); e.preventDefault(); });
+  const bEnd = () => { btnBoost = false; bBtn.classList.remove('on'); };
+  bBtn.addEventListener('pointerup', bEnd); bBtn.addEventListener('pointercancel', bEnd);
 }
 
 // Toetsenbord en touch samensmelten tot genormaliseerde stuur-/gaswaarden.
@@ -60,4 +65,5 @@ export function readInput() {
   input.steer = Math.max(-1, Math.min(1, s));
   input.th = Math.max(-1, Math.min(1, t));
   input.hb = !!keys['Space'] || btnDrift;
+  input.boost = !!keys['ShiftLeft'] || !!keys['ShiftRight'] || btnBoost;
 }

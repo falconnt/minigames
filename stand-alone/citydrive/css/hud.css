@@ -31,7 +31,20 @@
   width:74px;height:46px;border-radius:14px;background:rgba(14,16,20,.6);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);
   color:#e8eaef;font-size:11px;font-weight:800;letter-spacing:1.6px;display:none;align-items:center;justify-content:center;z-index:6;touch-action:none}
 #driftBtn.on{background:rgba(255,90,110,.25);border-color:rgba(255,120,140,.5)}
-body.touch .stick,body.touch #driftBtn{display:flex}
-#kbHint{position:fixed;left:50%;transform:translateX(-50%);bottom:max(58px,calc(env(safe-area-inset-bottom) + 44px));
+/* NITRO-knop: spiegelbeeld van DRIFT, aan de linkerkant boven de stuurstick */
+#boostBtn{position:fixed;left:max(138px,calc(env(safe-area-inset-left) + 114px));bottom:max(168px,calc(env(safe-area-inset-bottom) + 156px));
+  width:74px;height:46px;border-radius:14px;background:rgba(14,16,20,.6);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);
+  color:#e8eaef;font-size:11px;font-weight:800;letter-spacing:1.6px;display:none;align-items:center;justify-content:center;z-index:6;touch-action:none}
+#boostBtn.on{background:rgba(34,211,238,.28);border-color:rgba(90,200,255,.6)}
+body.touch .stick,body.touch #driftBtn,body.touch #boostBtn{display:flex}
+
+/* boost-meter, net boven de snelheidsmeter */
+#boostMeter{position:fixed;left:50%;transform:translateX(-50%);bottom:max(52px,calc(env(safe-area-inset-bottom) + 40px));
+  width:132px;height:7px;border-radius:5px;background:rgba(14,16,20,.62);border:1px solid rgba(255,255,255,.10);overflow:hidden;z-index:5;transition:box-shadow .15s}
+#boostMeter i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#22d3ee,#5b8cff);transition:width .1s linear}
+#boostMeter.full i{background:linear-gradient(90deg,#39ff88,#22d3ee)}
+#boostMeter.active{box-shadow:0 0 14px rgba(34,211,238,.65)}
+
+#kbHint{position:fixed;left:50%;transform:translateX(-50%);bottom:max(76px,calc(env(safe-area-inset-bottom) + 62px));
   font-size:11.5px;color:rgba(255,255,255,.4);font-weight:500;letter-spacing:.4px;z-index:4}
 body.touch #kbHint{display:none}

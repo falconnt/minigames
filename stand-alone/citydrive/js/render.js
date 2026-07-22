@@ -11,10 +11,12 @@ import { defById } from './cars.js';
 import { input } from './input.js';
 import { nightAmount, ambientOverlay } from './daynight.js';
 import { drawCityMap } from './citymap.js';
+import { boostFx } from './boost.js';
 
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const miniCv = document.getElementById('mini'), mtx = miniCv.getContext('2d');
 const speedEl = document.getElementById('speed');
+const boostMeterEl = document.getElementById('boostMeter'), boostFillEl = document.getElementById('boostFill');
 
 let DPR = Math.min(devicePixelRatio || 1, 2), VW = 0, VH = 0;
 
@@ -36,7 +38,10 @@ export function render(spd) {
   ctx.fillStyle = '#191b20'; ctx.fillRect(0, 0, VW, VH);
   const z = cam.z;
   ctx.save();
-  ctx.translate(VW / 2, VH / 2); ctx.scale(z, z); ctx.translate(-cam.x, -cam.y);
+  // screen-shake (nitro/botsingen)
+  const shk = boostFx.shake;
+  const sax = shk ? (Math.random() - 0.5) * shk * 16 : 0, say = shk ? (Math.random() - 0.5) * shk * 16 : 0;
+  ctx.translate(VW / 2 + sax, VH / 2 + say); ctx.scale(z, z); ctx.translate(-cam.x, -cam.y);
   const x0 = cam.x - VW / 2 / z - 60, x1 = cam.x + VW / 2 / z + 60, y0 = cam.y - VH / 2 / z - 60, y1 = cam.y + VH / 2 / z + 60;
 
   // wegdek: gevuld tot de wereldgrens; alles daarbuiten blijft de donkere rand
@@ -155,6 +160,22 @@ export function render(spd) {
 
   // auto
   const def = defById(state.current), cfg = state.cfg[state.current];
+  // nitro-vlammen achter de auto
+  if (boostFx.active) {
+    ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(P.ang);
+    ctx.globalCompositeOperation = 'lighter';
+    const L = def.l, W = def.w;
+    for (const side of [-0.32, 0.32]) {
+      const fl = L * (0.5 + Math.random() * 0.55);
+      const g = ctx.createLinearGradient(-L * 0.5, 0, -L * 0.5 - fl, 0);
+      g.addColorStop(0, 'rgba(190,244,255,.9)'); g.addColorStop(0.45, 'rgba(70,150,255,.6)'); g.addColorStop(1, 'rgba(70,150,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.5, side * W - W * 0.16); ctx.lineTo(-L * 0.5 - fl, side * W); ctx.lineTo(-L * 0.5, side * W + W * 0.16);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
   drawCar(ctx, P.x, P.y, P.ang, P.steerVis, def, cfg, input.th < -0.05 || input.hb, 1);
 
   // popups
@@ -213,8 +234,28 @@ export function render(spd) {
     ctx.restore();
   }
 
+  // speed-lines: radiale strepen bij hoge snelheid, extra fel tijdens nitro
+  let slI = Math.max(0, (spd - 460) / 380);
+  if (boostFx.active) slI = Math.min(1, Math.max(slI, 0.6) + 0.4);
+  slI = Math.min(1, slI);
+  if (slI > 0.03) {
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,255,255,${(0.16 * slI).toFixed(3)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    const cxs = VW / 2, cys = VH / 2, r0 = Math.min(VW, VH) * 0.32, r1 = Math.max(VW, VH) * 0.78;
+    for (let n = 0; n < 18; n++) {
+      const a = Math.random() * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+      const rr0 = r0 * (0.85 + Math.random() * 0.3);
+      ctx.beginPath(); ctx.moveTo(cxs + c * rr0, cys + s * rr0); ctx.lineTo(cxs + c * r1, cys + s * r1); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // minimap (gedeelde stadskaart-tekening; ook gebruikt door de uitklapkaart)
   drawCityMap(mtx, 236, night, { x0, y0, x1, y1 }, P);
+
+  // HUD: boost-meter bijwerken
+  if (boostFillEl) boostFillEl.style.width = (boostFx.charge * 100).toFixed(0) + '%';
+  if (boostMeterEl) { boostMeterEl.classList.toggle('full', boostFx.charge > 0.98); boostMeterEl.classList.toggle('active', boostFx.active); }
 
   speedEl.innerHTML = Math.round(spd * 0.28) + '<small>KM/U</small>';
 }

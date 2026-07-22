@@ -11,12 +11,17 @@ import { input } from './input.js';
 import { skids, smoke, addPopup } from './fx.js';
 import { updMoneyUI } from './economy.js';
 import { updAudio } from './audio.js';
+import { boostFx } from './boost.js';
 
 let distAcc = 0, driftAcc = 0, wasDrifting = false;
 
 export function physics(dt) {
   const e = eff(state.current, state.cfg[state.current]), d = defById(state.current);
   const fx = Math.cos(P.ang), fy = Math.sin(P.ang);
+  // nitro: actief zolang de knop ingedrukt is én er lading is; verbruikt lading
+  const boosting = input.boost && boostFx.charge > 0.02;
+  boostFx.active = boosting;
+  if (boosting) boostFx.charge = Math.max(0, boostFx.charge - dt * 0.5);
   // decompose in voorwaartse (vf) en zijwaartse (vl) snelheid
   let vf = P.vx * fx + P.vy * fy;
   let vl = P.vx * (-fy) + P.vy * fx;
@@ -26,6 +31,8 @@ export function physics(dt) {
     if (vf > 15) vf += 1050 * t * dt;                 // remmen
     else { vf += e.acc * 0.55 * t * dt; if (vf < -170) vf = -170; } // achteruit
   }
+  // nitro: sterke versnelling richting ~1,65x de topsnelheid (kapt daar af)
+  if (boosting) { vf += e.acc * 2.4 * dt * Math.max(0.12, 1 - vf / (e.top * 1.65)); boostFx.shake = Math.min(1, boostFx.shake + dt * 2.2); }
   // drag + rolweerstand
   vf *= Math.exp(-0.32 * dt);
   if (Math.abs(vf) < 8 && Math.abs(t) < 0.02) vf *= Math.exp(-3 * dt);
@@ -61,7 +68,7 @@ export function physics(dt) {
           const push = (R - dist); P.x += dx / dist * push; P.y += dy / dist * push;
           const nlen = Math.hypot(dx, dy) || 1, nX = dx / nlen, nY = dy / nlen;
           const vn = P.vx * nX + P.vy * nY;
-          if (vn < 0) { P.vx -= 1.4 * vn * nX; P.vy -= 1.4 * vn * nY; P.vx *= 0.55; P.vy *= 0.55; }
+          if (vn < 0) { P.vx -= 1.4 * vn * nX; P.vy -= 1.4 * vn * nY; P.vx *= 0.55; P.vy *= 0.55; boostFx.shake = Math.min(1, boostFx.shake + Math.min(0.5, -vn / 800)); }
         }
       }
     }
@@ -71,6 +78,8 @@ export function physics(dt) {
   const drifting = Math.abs(vl) > 85 && spd > 150;
   if (drifting) {
     driftAcc += Math.abs(vl) * dt * 0.055;
+    boostFx.charge = Math.min(1, boostFx.charge + dt * 0.3); // driften laadt de nitro op
+
     const bx = P.x - fx * d.l * 0.35, by = P.y - fy * d.l * 0.35;
     const px = -fy * d.w * 0.42, py = fx * d.w * 0.42;
     skids.push({ x1: bx + px, y1: by + py, x2: bx + px - P.vx * dt, y2: by + py - P.vy * dt });
@@ -86,6 +95,8 @@ export function physics(dt) {
   distAcc += spd * dt;
   if (distAcc >= 500) { state.money += 8; distAcc -= 500; updMoneyUI(); }
 
+  if (spd > 250 && !boosting) boostFx.charge = Math.min(1, boostFx.charge + dt * 0.04); // langzaam bijladen bij snel rijden
+  boostFx.shake = Math.max(0, boostFx.shake - dt * 2.6); // schok dooft uit
   updAudio(spd);
   return spd;
 }

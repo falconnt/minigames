@@ -32,11 +32,16 @@ export function initRender() {
 
 export function render(spd) {
   const night = nightAmount();
-  ctx.fillStyle = '#2f3238'; ctx.fillRect(0, 0, VW, VH);
+  // buiten de wereld: donkere rand ("out of bounds"), zodat de stad een duidelijke grens heeft
+  ctx.fillStyle = '#191b20'; ctx.fillRect(0, 0, VW, VH);
   const z = cam.z;
   ctx.save();
   ctx.translate(VW / 2, VH / 2); ctx.scale(z, z); ctx.translate(-cam.x, -cam.y);
   const x0 = cam.x - VW / 2 / z - 60, x1 = cam.x + VW / 2 / z + 60, y0 = cam.y - VH / 2 / z - 60, y1 = cam.y + VH / 2 / z + 60;
+
+  // wegdek: gevuld tot de wereldgrens; alles daarbuiten blijft de donkere rand
+  ctx.fillStyle = '#2f3238'; ctx.fillRect(0, 0, WORLD, WORLD);
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 12; ctx.strokeRect(0, 0, WORLD, WORLD);
 
   // wegmarkering
   ctx.strokeStyle = 'rgba(255,255,255,.30)'; ctx.lineWidth = 3; ctx.setLineDash([26, 34]);
@@ -57,15 +62,15 @@ export function render(spd) {
     const xi = i * CELL + ROAD / 2; if (xi < x0 - ROAD || xi > x1 + ROAD) continue;
     for (let j = 0; j <= N; j++) {
       const yj = j * CELL + ROAD / 2; if (yj < y0 - ROAD || yj > y1 + ROAD) continue;
-      // noord- en zuidarm: verticale strepen verdeeld over de wegbreedte
+      // noord- en zuidarm: verticale strepen (armen buiten de wereld overslaan)
       for (let sx = xi - half + 6; sx < xi + half - 6; sx += step) {
-        ctx.fillRect(sx, yj - half - cwLen, sw, cwLen);
-        ctx.fillRect(sx, yj + half, sw, cwLen);
+        if (j > 0) ctx.fillRect(sx, yj - half - cwLen, sw, cwLen);
+        if (j < N) ctx.fillRect(sx, yj + half, sw, cwLen);
       }
       // oost- en westarm: horizontale strepen
       for (let sy = yj - half + 6; sy < yj + half - 6; sy += step) {
-        ctx.fillRect(xi + half, sy, cwLen, sw);
-        ctx.fillRect(xi - half - cwLen, sy, cwLen, sw);
+        if (i < N) ctx.fillRect(xi + half, sy, cwLen, sw);
+        if (i > 0) ctx.fillRect(xi - half - cwLen, sy, cwLen, sw);
       }
     }
   }

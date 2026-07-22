@@ -27,7 +27,7 @@
 .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;transform:translate(-50%,-50%);
   background:rgba(232,234,239,.16);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 14px rgba(0,0,0,.35);pointer-events:none}
 .sticklbl{position:absolute;left:0;right:0;top:-22px;text-align:center;font-size:10px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.35)}
-#driftBtn{position:fixed;right:max(38px,calc(env(safe-area-inset-right) + 14px));bottom:max(168px,calc(env(safe-area-inset-bottom) + 156px));
+#driftBtn{position:fixed;right:max(138px,calc(env(safe-area-inset-right) + 114px));bottom:max(168px,calc(env(safe-area-inset-bottom) + 156px));
   width:74px;height:46px;border-radius:14px;background:rgba(14,16,20,.6);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);
   color:#e8eaef;font-size:11px;font-weight:800;letter-spacing:1.6px;display:none;align-items:center;justify-content:center;z-index:6;touch-action:none}
 #driftBtn.on{background:rgba(255,90,110,.25);border-color:rgba(255,120,140,.5)}

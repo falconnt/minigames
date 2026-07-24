@@ -3,6 +3,7 @@
   "short_name": "City Drive",
   "description": "Top-down rijgame: cruise door de stad, drift voor geld en tune je auto's in de garage.",
   "lang": "nl",
+  "id": "/minigames/stand-alone/citydrive/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

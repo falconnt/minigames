@@ -2,10 +2,11 @@
 // instellingenmenu (settings.js); dit bestand vangt het install-aanbod van de
 // browser op en biedt het aan via canInstall()/promptInstall().
 
-let deferred = null;
 let onChange = () => {};
 
-export function canInstall() { return !!deferred; }
+// Het install-aanbod wordt al vroeg opgevangen in de <head> van index.html
+// (window.__installPrompt), zodat we het niet missen.
+export function canInstall() { return !!window.__installPrompt; }
 export function isStandalone() {
   return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 }
@@ -13,16 +14,17 @@ export function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); 
 export function onInstallChange(cb) { onChange = cb; }
 
 export async function promptInstall() {
-  if (!deferred) return false;
-  deferred.prompt();
-  const res = await deferred.userChoice;
-  deferred = null; onChange();
+  const e = window.__installPrompt;
+  if (!e) return false;
+  e.prompt();
+  const res = await e.userChoice;
+  window.__installPrompt = null; onChange();
   return res.outcome === 'accepted';
 }
 
 export function initPWA() {
-  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; onChange(); });
-  window.addEventListener('appinstalled', () => { deferred = null; onChange(); });
+  // De head-luisteraar meldt nieuwe beschikbaarheid via dit event.
+  addEventListener('install-available', () => onChange());
 
   // Service worker: relatief pad -> scope is deze map, los van de Minigames-app.
   if ('serviceWorker' in navigator) {

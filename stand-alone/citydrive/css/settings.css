@@ -15,3 +15,5 @@
 .set-row:active{background:rgba(255,255,255,.09)}
 .set-install{background:rgba(126,226,168,.16);border-color:rgba(126,226,168,.5);color:#7ee2a8;justify-content:center}
 .set-install:disabled{opacity:1;cursor:default;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);color:#9aa0ab;font-weight:600}
+.set-hint{font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.5);padding:8px 6px 2px;text-align:center}
+.set-hint:empty{display:none}

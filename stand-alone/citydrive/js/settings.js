@@ -12,12 +12,20 @@ export function openSettings() { ui.settingsOpen = true; el.classList.add('open'
 export function closeSettings() { ui.settingsOpen = false; el.classList.remove('open'); }
 
 function refresh() {
-  // installatie-rij past zich aan de situatie aan
-  const inst = document.getElementById('setInstall');
-  if (isStandalone()) { inst.textContent = 'App is geïnstalleerd ✓'; inst.disabled = true; }
-  else if (canInstall()) { inst.textContent = '📲  App installeren'; inst.disabled = false; }
-  else if (isIOS()) { inst.textContent = "Deel-knop → 'Zet op beginscherm'"; inst.disabled = true; }
-  else { inst.textContent = 'Installeren nog niet beschikbaar'; inst.disabled = true; }
+  // installatie-rij + uitleg passen zich aan de situatie aan
+  const inst = document.getElementById('setInstall'), hint = document.getElementById('setInstallHint');
+  if (isStandalone()) {
+    inst.textContent = 'App is geïnstalleerd ✓'; inst.disabled = true; hint.textContent = '';
+  } else if (canInstall()) {
+    inst.textContent = '📲  App installeren'; inst.disabled = false;
+    hint.textContent = 'Werkt de knop niet? Gebruik dan het browsermenu (⋮) → "App installeren".';
+  } else if (isIOS()) {
+    inst.textContent = 'Toevoegen aan beginscherm'; inst.disabled = true;
+    hint.textContent = "Open in Safari, tik op de Deel-knop en kies 'Zet op beginscherm'.";
+  } else {
+    inst.textContent = 'Installeren via browsermenu'; inst.disabled = true;
+    hint.textContent = 'Open deze pagina in Chrome (niet in een app-browser) en tik op ⋮ → "App installeren" of "Toevoegen aan startscherm". Verschijnt dat niet? Rijd even rond en probeer opnieuw.';
+  }
   // geluid-toggle
   document.getElementById('setSoundTog').classList.toggle('on', !ui.muted);
 }

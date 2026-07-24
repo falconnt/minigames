@@ -416,6 +416,11 @@ function renderSettings() {
     </div>
     <p class="muted-line test-note">🧪 In testmodus worden er <b>geen</b> highscores, badges of stats opgeslagen — handig om games (en verborgen testtools zoals de level-skipper) uit te proberen zonder de ranglijst te beïnvloeden.</p>
     <div class="settings-row">
+      <span class="settings-label">Badges</span>
+      <button id="badge-recheck" class="btn">🏅 Opnieuw controleren</button>
+    </div>
+    <p class="muted-line" id="badge-recheck-msg">Mis je een badge die je verdiend hebt? Deze controle leidt je prestaties af uit je highscores en kent gemiste badges alsnog toe.</p>
+    <div class="settings-row">
       <span class="settings-label">App-versie</span>
       <span class="muted-line">${APP_VERSION}</span>
     </div>
@@ -443,6 +448,18 @@ function renderSettings() {
       renderSettings();
     })
   );
+  dialog.querySelector('#badge-recheck').addEventListener('click', (e) => {
+    const nieuw = ach.reconcileBadges();
+    const msg = dialog.querySelector('#badge-recheck-msg');
+    if (nieuw.length) {
+      msg.innerHTML = `✅ ${nieuw.length} gemiste badge(s) alsnog toegekend: ${nieuw.map((b) => `${b.icon} ${b.title}`).join(', ')}. Bekijk ze op de 🏆-pagina.`;
+      e.currentTarget.textContent = '🏅 Toegekend!';
+    } else {
+      msg.textContent = '👍 Alles klopt al — je hebt alle badges die je op dit moment kunt verdienen.';
+      e.currentTarget.textContent = '🏅 Gecontroleerd';
+    }
+    e.currentTarget.disabled = true;
+  });
   dialog.querySelector('#app-refresh').addEventListener('click', (e) => forceUpdate(e.currentTarget));
   dialog.querySelector('#reset-btn').addEventListener('click', () => {
     if (confirm('Weet je zeker dat je ALLE saves en highscores op dit apparaat wilt wissen?')) {
@@ -650,6 +667,11 @@ function initSyncStatus() {
 // Opslag eerst laden/ontsleutelen (en oude opslag migreren), daarna renderen.
 (async () => {
   await storage.init();
+  // Automatische badge-herstelcontrole bij het opstarten: leidt gemiste
+  // prestaties af uit bestaande highscores en kent badges alsnog toe (bv. als
+  // een game al gespeeld was vóórdat de badge/stats bestonden). Slaat toast-
+  // spam over bij herhaald opstarten, want al toegekende badges tellen niet mee.
+  if (!isTestMode()) ach.reconcileBadges();
   initDataDialog();
   initAccount();
   initSyncStatus();

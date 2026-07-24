@@ -49,18 +49,53 @@ export function onScore(game, score, result) {
   checkBadges();
 }
 
-export function checkBadges() {
+export function checkBadges({ silent = false } = {}) {
   const s = storage.getStats();
   const ids = games.map((g) => g.id);
+  const nieuw = [];
   let delay = 800; // ná de eventuele record-toast
   for (const b of BADGES) {
     if (isEarned(b.id) || !b.test(s, ids)) continue;
     storage.setFlag('badge_' + b.id, true);
-    setTimeout(() => {
-      fx.toast(`🏅 Badge verdiend: ${b.title}!`);
-      sound.play('score');
-      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
-    }, delay);
-    delay += 2700;
+    nieuw.push(b);
+    if (!silent) {
+      setTimeout(() => {
+        fx.toast(`🏅 Badge verdiend: ${b.title}!`);
+        sound.play('score');
+        if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+      }, delay);
+      delay += 2700;
+    }
   }
+  return nieuw;
+}
+
+// Herstel/afleiden van stats uit bestaande (lokale) highscores en badges
+// opnieuw controleren. Nodig omdat de stats/badges pas later zijn toegevoegd:
+// wie een game al speelde vóór die functie bestond, mist de play-telling —
+// terwijl de highscore er wél is. We leiden plays_<id> en best_<id> daaruit af
+// (nooit verlagen) en evalueren daarna alle badges opnieuw.
+// Geeft de lijst nieuw toegekende badges terug.
+export function reconcileBadges({ silent = false } = {}) {
+  let somPlays = 0;
+  for (const g of games) {
+    const hs = storage.getHighscores(g.id); // [{score, date}], gesorteerd (beste eerst)
+    if (hs.length) {
+      // elke bewaarde highscore-regel telt als minstens één gespeeld potje
+      const huidige = storage.getStat('plays_' + g.id);
+      if (hs.length > huidige) storage.setStat('plays_' + g.id, hs.length);
+
+      // beste score afleiden (respecteer "lager is beter")
+      const beste = hs[0].score; // lijst is al op scoreMode gesorteerd
+      const bestKey = 'best_' + g.id;
+      const prev = storage.getStat(bestKey);
+      const beter = g.scoreMode === 'lower' ? (!prev || beste < prev) : beste > prev;
+      if (beter) storage.setStat(bestKey, beste);
+    }
+    somPlays += storage.getStat('plays_' + g.id);
+  }
+  // totaal aantal potjes mag niet lager zijn dan de som per game
+  if (somPlays > storage.getStat('totalPlays')) storage.setStat('totalPlays', somPlays);
+
+  return checkBadges({ silent });
 }

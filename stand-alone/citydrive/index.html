@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>City Drive</title>
+<meta name="description" content="City Drive — een top-down rijgame met garage, tuning en drifts. Installeerbaar als app.">
+
+<!-- PWA: installeerbaar via Chrome op Android (eigen scope, los van Minigames) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="City Drive">
+<meta name="theme-color" content="#1a1c20">
+
+<!-- Stijl per UI-gebied: basis, HUD (rijden), garage -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/hud.css">
+<link rel="stylesheet" href="css/map.css">
+<link rel="stylesheet" href="css/garage.css">
+<link rel="stylesheet" href="css/dealer.css">
+</head>
+<body>
+<!-- Spelwereld -->
+<canvas id="game"></canvas>
+
+<!-- HUD: geld linksboven -->
+<div id="hud">
+  <div class="pill" id="money">€ 0</div>
+</div>
+
+<!-- HUD: drift-combo (verschijnt tijdens driften) -->
+<div id="combo"><span id="comboMult">x2</span><span id="comboCash">+€ 0</span></div>
+
+<!-- HUD: knoppen + minimap rechtsboven -->
+<div id="topR">
+  <div class="btnrow">
+    <button class="icobtn" id="installBtn" title="App installeren" hidden>⬇</button>
+    <button class="icobtn" id="sndBtn" title="Geluid">🔊</button>
+    <button class="icobtn" id="rstBtn" title="Reset positie">↺</button>
+    <button id="garageBtn">⚙ GARAGE</button>
+  </div>
+  <canvas id="mini" width="236" height="236"></canvas>
+</div>
+
+<!-- HUD: snelheidsmeter + boost-meter onderaan -->
+<div class="pill" id="speed">0<small>KM/U</small></div>
+<div id="boostMeter"><i id="boostFill"></i></div>
+
+<!-- Touch-besturing: één stick links doet sturen + gas/rem; knoppen rechts -->
+<div class="stick" id="stickL"><div class="sticklbl">RIJDEN</div><div class="knob" id="knobL"></div></div>
+<div id="boostBtn">NITRO</div>
+<div id="driftBtn">DRIFT</div>
+<div id="kbHint">WASD / pijltjes rijden &nbsp;·&nbsp; Spatie = drift &nbsp;·&nbsp; Shift = nitro &nbsp;·&nbsp; G = garage</div>
+
+<!-- Uitklapbare grote kaart -->
+<div id="mapOverlay">
+  <button id="mapClose" title="Kaart sluiten">✕</button>
+  <canvas id="bigmap"></canvas>
+</div>
+
+<!-- Autodealer-overlay (auto's kopen) -->
+<div id="dealer">
+  <div class="g-wrap">
+    <div class="g-head">
+      <div class="g-title">AUTODEALER</div>
+      <div class="g-money" id="dealerMoney">€ 0</div>
+      <button id="dealerClose">✕</button>
+    </div>
+    <div id="dPrevBox">
+      <canvas id="dPrev"></canvas>
+      <div id="dPrevName"></div>
+      <div id="dPrevSub"></div>
+    </div>
+    <div id="dStats"></div>
+    <button id="dBuy" class="d-buy"></button>
+    <div id="dList"></div>
+  </div>
+</div>
+
+<!-- Garage-overlay -->
+<div id="garage">
+  <div class="g-wrap">
+    <div class="g-head">
+      <div class="g-title">GARAGE</div>
+      <div class="g-money" id="gMoney">€ 0</div>
+      <button id="gClose">✕</button>
+    </div>
+    <div id="prevBox">
+      <canvas id="prev"></canvas>
+      <div id="prevName"></div>
+      <div id="prevSub"></div>
+    </div>
+    <div id="gStats"></div>
+    <div class="tabs">
+      <button data-t="tune" class="on">Tuning</button>
+      <button data-t="up">Upgrades</button>
+    </div>
+    <div class="tabpage on" id="tab-tune"></div>
+    <div class="tabpage" id="tab-up"></div>
+  </div>
+</div>
+
+<!-- Game als ES-modules; main.js zet alles op en draait de loop -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

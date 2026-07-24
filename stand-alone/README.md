@@ -103,3 +103,8 @@ genereren. Ander gevechtsgevoel → `combat.js`. Nieuwe fase of scherm → `main
    je bestanden).
 5. Zet de PWA-tags en de installatieknop-logica in `index.html` / `js/pwa.js`.
 6. Maak iconen (192, 512 en een maskable 512) in `icons/`.
+7. Voeg een entry toe aan `js/standalone.js` (in de repo-root) zodat de game als
+   **losse app** op de Minigames-startpagina verschijnt. Deze link doet niet mee
+   aan highscores, badges of sync.
+8. Zet een "terug naar Minigames"-link in de game (naar `../../`), zodat spelers
+   vanuit het spel weer terug kunnen naar de verzameling.

@@ -146,6 +146,7 @@ export function showMenu() {
       <button class="ghost" id="mFit">🌍 Hele wereld tonen</button>
       <button class="ghost" id="mHelp">❔ Hoe werkt het?</button>
       <button class="ghost" id="mNew">🔄 Nieuw spel</button>
+      <a class="ghost" href="../../">← Terug naar Minigames</a>
     </div>`, 'menu');
   el('mResume').addEventListener('click', () => hideOverlay());
   el('mFit').addEventListener('click', () => { hideOverlay(); C.fit(); });
@@ -176,6 +177,7 @@ export function showSetup() {
       ${canAdd ? `<button class="ghost" id="addP">+ Speler toevoegen</button>` : ''}
       <button class="prim big" id="startG">Start nieuw spel</button>
       <button class="ghost" id="helpG">Hoe werkt het?</button>
+      <a class="ghost" href="../../">← Terug naar Minigames</a>
     `, 'menu');
     const res = el('resumeG');
     if (res) res.addEventListener('click', () => C.resume());

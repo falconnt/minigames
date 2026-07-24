@@ -13,6 +13,7 @@ const APP_SHELL = [
   './css/style.css',
   './js/main.js',
   './js/registry.js',
+  './js/standalone.js',
   './js/storage.js',
   './js/theme.js',
   './js/cloud.js',

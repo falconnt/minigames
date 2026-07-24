@@ -4,7 +4,7 @@
 // Deze map valt buiten de deploy-versiestempel van de Minigames-app, dus
 // verhoog CACHE_VERSION met de hand bij elke inhoudelijke wijziging zodat
 // oude bestanden worden opgeruimd en updates gegarandeerd doorkomen.
-const CACHE_VERSION = 'v20';
+const CACHE_VERSION = 'v21';
 const CACHE = 'citydrive-' + CACHE_VERSION;
 
 // App-shell: alles wat nodig is om offline te spelen. Relatieve paden, dus
@@ -17,6 +17,7 @@ const APP_SHELL = [
   './css/map.css',
   './css/garage.css',
   './css/dealer.css',
+  './css/settings.css',
   './js/main.js',
   './js/constants.js',
   './js/cars.js',
@@ -37,6 +38,7 @@ const APP_SHELL = [
   './js/garage.js',
   './js/dealership.js',
   './js/map.js',
+  './js/settings.js',
   './js/pwa.js',
   './manifest.webmanifest',
   './icons/icon-192.png',

@@ -1,0 +1,17 @@
+/* settings.css — het instellingenmenu (⚙ rechtsboven): installeren, geluid, reset. */
+
+#settings{position:fixed;inset:0;z-index:22;display:none;align-items:center;justify-content:center;
+  background:rgba(8,9,12,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#settings.open{display:flex}
+
+.set-card{width:min(420px,92vw);background:rgba(20,22,28,.92);border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;padding:6px 16px 18px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+#setClose{width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:#e8eaef;font-size:15px;cursor:pointer}
+
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;
+  padding:15px 16px;margin-top:10px;border-radius:14px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);color:#e8eaef;font-size:14px;font-weight:700;cursor:pointer}
+.set-row:active{background:rgba(255,255,255,.09)}
+.set-install{background:rgba(126,226,168,.16);border-color:rgba(126,226,168,.5);color:#7ee2a8;justify-content:center}
+.set-install:disabled{opacity:1;cursor:default;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);color:#9aa0ab;font-weight:600}

@@ -30,11 +30,8 @@ export function updAudio(spd) {
   gain.gain.setTargetAtTime(target, AC.currentTime, 0.08);
 }
 
-// Audio start pas na de eerste aanraking (browserregel) en de mute-knop.
+// Audio start pas na de eerste aanraking (browserregel). De mute-schakelaar
+// zelf zit in het instellingenmenu (settings.js) en zet ui.muted.
 export function initAudioControls() {
   addEventListener('pointerdown', initAudio, { once: false });
-  document.getElementById('sndBtn').addEventListener('click', (e) => {
-    ui.muted = !ui.muted;
-    e.currentTarget.textContent = ui.muted ? '🔇' : '🔊';
-  });
 }

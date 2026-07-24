@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="css/map.css">
 <link rel="stylesheet" href="css/garage.css">
 <link rel="stylesheet" href="css/dealer.css">
+<link rel="stylesheet" href="css/settings.css">
 </head>
 <body>
 <!-- Spelwereld -->
@@ -37,10 +38,8 @@
 <!-- HUD: knoppen + minimap rechtsboven -->
 <div id="topR">
   <div class="btnrow">
-    <button class="icobtn" id="installBtn" title="App installeren" hidden>⬇</button>
-    <button class="icobtn" id="sndBtn" title="Geluid">🔊</button>
-    <button class="icobtn" id="rstBtn" title="Reset positie">↺</button>
-    <button id="garageBtn">⚙ GARAGE</button>
+    <button class="icobtn" id="settingsBtn" title="Instellingen">⚙</button>
+    <button id="garageBtn">🔧 GARAGE</button>
   </div>
   <canvas id="mini" width="236" height="236"></canvas>
 </div>
@@ -54,6 +53,19 @@
 <div id="boostBtn">NITRO</div>
 <div id="driftBtn">DRIFT</div>
 <div id="kbHint">WASD / pijltjes rijden &nbsp;·&nbsp; Spatie = drift &nbsp;·&nbsp; Shift = nitro &nbsp;·&nbsp; G = garage</div>
+
+<!-- Instellingenmenu (installeren, geluid, reset) -->
+<div id="settings">
+  <div class="set-card">
+    <div class="g-head">
+      <div class="g-title">INSTELLINGEN</div>
+      <button id="setClose">✕</button>
+    </div>
+    <button id="setInstall" class="set-row set-install"></button>
+    <div id="setSound" class="set-row"><span>Geluid</span><div class="tog" id="setSoundTog"></div></div>
+    <button id="setReset" class="set-row">Reset positie</button>
+  </div>
+</div>
 
 <!-- Uitklapbare grote kaart -->
 <div id="mapOverlay">

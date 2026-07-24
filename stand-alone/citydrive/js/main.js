@@ -14,6 +14,7 @@ import { physics } from './physics.js';
 import { initGarage, toggleGarage, openGarage, isGarageOpen, renderPreview } from './garage.js';
 import { initMap, isMapOpen, renderBigMap } from './map.js';
 import { initDealer, openDealer, isDealerOpen, renderDealerPreview } from './dealership.js';
+import { initSettings, isSettingsOpen } from './settings.js';
 import { garageSpot, dealerSpot } from './world.js';
 import { updMoneyUI } from './economy.js';
 import { tick } from './daynight.js';
@@ -29,6 +30,7 @@ onGarageToggle(toggleGarage); // 'G'-toets opent/sluit de garage
 initAudioControls();        // motorsound + mute-knop
 initGarage();               // garage-knoppen en tabbladen
 initDealer();               // autodealer-showroom
+initSettings();             // instellingenmenu (installeren/geluid/reset)
 initMap();                  // uitklapbare grote kaart
 initPWA();                  // installatieknop + service worker
 updMoneyUI();               // begingeld tonen
@@ -41,7 +43,7 @@ function loop(now) {
   readInput();
   let spd = Math.hypot(P.vx, P.vy);
   // rijden pauzeert als een menu (garage/dealer/kaart) open staat
-  const menuOpen = isGarageOpen() || isMapOpen() || isDealerOpen();
+  const menuOpen = isGarageOpen() || isMapOpen() || isDealerOpen() || isSettingsOpen();
   if (!menuOpen) { spd = physics(dt); }
   else updAudio(0);
   // winkelgebouwen: open het menu bij het binnenrijden van het pleintje ervoor

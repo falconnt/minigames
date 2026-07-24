@@ -3,7 +3,7 @@
 // turbo, ophanging). Tekent ook de statbalken, thumbnails en de draaiende
 // preview. Elke wijziging slaat direct op via saveState.
 
-import { state, ui, saveState, resetPos } from './state.js';
+import { state, ui, saveState } from './state.js';
 import { defById, eff } from './cars.js';
 import { bodyCols, rimCols, glowCols } from './constants.js';
 import { drawCar } from './draw-car.js';
@@ -32,7 +32,6 @@ export function openGarage() {
 export function initGarage() {
   document.getElementById('garageBtn').addEventListener('click', toggleGarage);
   document.getElementById('gClose').addEventListener('click', toggleGarage);
-  document.getElementById('rstBtn').addEventListener('click', resetPos);
   document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
     curTab = b.dataset.t;
     document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));

@@ -1,29 +1,28 @@
-// pwa.js — maakt City Drive installeerbaar als losse app: toont de eigen
-// installatieknop zodra Chrome installeren aanbiedt en registreert de service
-// worker (offline spelen + installatie). Kent verder niets van de game.
+// pwa.js — installeerbaarheid + service worker. De installatie-actie zit in het
+// instellingenmenu (settings.js); dit bestand vangt het install-aanbod van de
+// browser op en biedt het aan via canInstall()/promptInstall().
+
+let deferred = null;
+let onChange = () => {};
+
+export function canInstall() { return !!deferred; }
+export function isStandalone() {
+  return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+export function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+export function onInstallChange(cb) { onChange = cb; }
+
+export async function promptInstall() {
+  if (!deferred) return false;
+  deferred.prompt();
+  const res = await deferred.userChoice;
+  deferred = null; onChange();
+  return res.outcome === 'accepted';
+}
 
 export function initPWA() {
-  const btn = document.getElementById('installBtn');
-  let deferred = null;
-
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferred = e;
-    if (btn) btn.hidden = false;
-  });
-
-  if (btn) btn.addEventListener('click', async () => {
-    if (!deferred) return;
-    btn.hidden = true;
-    deferred.prompt();
-    await deferred.userChoice;
-    deferred = null;
-  });
-
-  window.addEventListener('appinstalled', () => {
-    deferred = null;
-    if (btn) btn.hidden = true;
-  });
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; onChange(); });
+  window.addEventListener('appinstalled', () => { deferred = null; onChange(); });
 
   // Service worker: relatief pad -> scope is deze map, los van de Minigames-app.
   if ('serviceWorker' in navigator) {

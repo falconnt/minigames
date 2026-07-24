@@ -18,7 +18,7 @@ export const P = { x: 3 * CELL + ROAD / 2, y: 3 * CELL + ROAD / 2, ang: 0, vx: 0
 export const cam = { x: P.x, y: P.y, z: 1 };
 
 // Vluchtige UI-vlaggen die meerdere modules delen (audio, garage, loop).
-export const ui = { garageOpen: false, muted: false, dealerOpen: false };
+export const ui = { garageOpen: false, muted: false, dealerOpen: false, settingsOpen: false };
 
 export function resetPos() {
   P.x = 3 * CELL + ROAD / 2;

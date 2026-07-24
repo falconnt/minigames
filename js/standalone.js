@@ -17,6 +17,6 @@ export const standaloneGames = [
     title: 'Wereldverovering',
     folder: 'stand-alone/wereldverovering/',
     icon: 'stand-alone/wereldverovering/icons/icon-192.png',
-    description: 'Verover de echte wereldkaart. Beurten-strategie voor 2–6 spelers, om de beurt op één toestel.',
+    description: 'Verover de echte wereldkaart. Iedereen plant in het geheim, daarna wordt alles tegelijk uitgevoerd. Voor 2–6 spelers.',
   },
 ];

@@ -25,7 +25,7 @@ https://<gebruiker>.github.io/minigames/stand-alone/citydrive/
 | Game             | Map                 | Omschrijving                                                                        |
 | ---------------- | ------------------- | ----------------------------------------------------------------------------------- |
 | City Drive       | `citydrive/`        | Top-down rijgame met garage, tuning, upgrades en drifts.                             |
-| Wereldverovering | `wereldverovering/` | Beurten-strategie op de echte wereldkaart: verover landen, 2–6 spelers op één toestel. |
+| Wereldverovering | `wereldverovering/` | Strategie op de echte wereldkaart: iedereen plant in het geheim, alles wordt tegelijk uitgevoerd. 2–6 spelers op één toestel. |
 
 ## City Drive: modulaire opzet
 
@@ -59,11 +59,39 @@ Nieuw tuning-onderdeel → `garage.js` (+ evt. `constants.js`).
 
 ## Wereldverovering: modulaire opzet
 
-Een beurten-strategiespel (Risk-achtig) op de **echte wereldkaart**. Spelers
-starten met een klein thuisgebied; de rest van de wereld is neutraal en verover
-je gaandeweg. Alles wordt in code op canvas getekend — geen kaartafbeeldingen.
-De landgeometrie en buurrelaties komen uit een vooraf gegenereerde dataset
-(Natural Earth 110m, publiek domein; zie `js/world-data.js`).
+Een strategiespel op de **echte wereldkaart**. Spelers starten met een klein
+thuisgebied; de rest van de wereld is neutraal en verover je gaandeweg. Alles
+wordt in code op canvas getekend — geen kaartafbeeldingen. De landgeometrie en
+buurrelaties komen uit een vooraf gegenereerde dataset (Natural Earth 110m,
+publiek domein; zie `js/world-data.js`).
+
+### Gelijktijdige beurten
+
+Het spel gebruikt **geen** klassieke om-de-beurt-volgorde. Elke speler plant zijn
+zetten in het geheim en geeft de telefoon door; pas als iedereen klaar is, gaat
+de telefoon in het midden en worden **alle bevelen tegelijk** uitgevoerd. Dat is
+een bewuste keuze: zo levert "eerder aan de beurt zijn" geen enkel voordeel op.
+
+Daarom is álles een bevel — ook rekruteren en bouwen. Zou een verse eenheid
+meteen op de kaart verschijnen, dan zien de spelers die later plannen precies hoe
+sterk je staat. Alleen de speler zelf ziet zijn eigen plannen (pijlen op de kaart
+en een lijstje in het paneel).
+
+De uitvoering verloopt in vaste stappen (zie `js/resolve.js`):
+
+1. **Opbouw** — rekruten en gebouwen komen erbij; een fort dat je nu bouwt telt
+   deze ronde al mee.
+2. **Vertrek** — alle ingezette troepen verlaten tegelijk hun land. Wie aanvalt,
+   laat zijn eigen gebied dus zwakker achter.
+3. **Versterking** — verplaatsingen naar eigen land landen vóór de gevechten,
+   zodat je met een verplaatsing echt kunt verdedigen.
+4. **Gevechten** — per aangevallen land. Vallen meerdere spelers hetzelfde land
+   aan, dan bepaalt een zichtbare **dobbelworp** wie het eerst mag; de volgende
+   vecht daarna tegen de nieuwe eigenaar.
+
+Een potje duurt een vast aantal ronden (`ROUND_LIMIT`), zodat de speelduur
+voorspelbaar is en iedereen precies even veel beurten heeft. Wie dan de meeste
+landen bezit, wint.
 
 De afhankelijkheden lopen één kant op:
 
@@ -78,8 +106,10 @@ constants  ↗            → view → render · input · ui → main
 | `js/constants.js`   | balans: kleuren, eenheden, gebouwen, economie                  |
 | `js/geo.js`         | projectie, bounding boxes en "welk land ligt onder deze tik"   |
 | `js/state.js`       | spelstand, opslaan/laden en regels (inkomen, winst, buren)     |
-| `js/setup.js`       | nieuw spel: startlanden gespreid verdelen, neutralen vullen    |
+| `js/setup.js`       | nieuw spel: gelijkwaardige thuisgebieden kiezen, neutralen vullen |
 | `js/combat.js`      | gevechtsafwikkeling met steen-papier-schaar-eenheden           |
+| `js/resolve.js`     | voert alle bevelen van iedereen tegelijk uit → draaiboek        |
+| `js/fx.js`          | effecten op de kaart: marsen, inslagen, veroveringen, vlaggen   |
 | `js/view.js`        | camera: zoom/pan en projectie graden ↔ scherm                  |
 | `js/render.js`      | kaart, eigendomskleuren, markeringen en troepen-badges tekenen |
 | `js/input.js`       | slepen/knijpen/scrollen + tik → landselectie                   |
@@ -88,8 +118,13 @@ constants  ↗            → view → render · input · ui → main
 | `js/main.js`        | de besturing: fasen, beurten en alles aan elkaar knopen        |
 
 Andere balans → `constants.js`. Andere kaart/landen → opnieuw `world-data.js`
-genereren. Ander gevechtsgevoel → `combat.js`. Nieuwe fase of scherm → `main.js`
-+ `ui.js`.
+genereren. Ander gevechtsgevoel → `combat.js`. Andere volgorde van uitvoeren →
+`resolve.js`. Nieuwe fase of scherm → `main.js` + `ui.js`.
+
+**Balans is met simulaties afgesteld.** De startverdeling koos eerder plekken
+"zo ver mogelijk uit elkaar", wat één speler steevast op een afgelegen eiland
+zonder uitbreidingsruimte zette (die won 0–4% van de potjes). `setup.js` kiest nu
+plekken met vergelijkbare uitbreidingsruimte, en varieert ze per potje.
 
 ## Een nieuwe stand-alone game toevoegen
 

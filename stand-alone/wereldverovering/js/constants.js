@@ -34,11 +34,15 @@ export const BUILDINGS = {
 export const BUILDING_ORDER = ['markt', 'kazerne', 'fort'];
 
 // Economie
-export const BASE_INCOME = 2;       // goud per eigen land per beurt
+export const BASE_INCOME = 4;       // goud per eigen land per beurt
 export const MARKET_INCOME = 3;     // extra goud per marktniveau
 export const FORT_DEFENSE = 0.35;   // verdedigingsbonus per fortniveau
 export const KAZERNE_KORTING = 0.15;// rekruteerkorting per kazerneniveau
 export const START_GOLD = 24;       // startgoud per speler
+// Geen stoelbonus meer: doordat alle spelers hun bevelen tegelijk uitvoeren,
+// bestaat het voordeel van "eerder aan de beurt zijn" niet. Gemeten gaf een
+// bonus juist een voordeel aan de látere stoelen.
+export const SEAT_BONUS = 0;
 
 // Continent-bonus: krijg je alléén als je het hele continent bezit.
 export const CONTINENT_BONUS = {
@@ -50,17 +54,31 @@ export const CONTINENT_NL = {
 };
 
 // Startopstelling
-export const SEEDS_PER_PLAYER = 3;  // eigen startlanden per speler
-export const SEED_TROOPS = 6;       // totaal starttroepen verdeeld over je seeds
+export const SEEDS_PER_PLAYER = 6;  // eigen startlanden per speler
+export const SEED_TROOPS = 16;       // totaal starttroepen verdeeld over je seeds
 export const NEUTRAL_MIN = 1;       // troepen in een neutraal land (min)
-export const NEUTRAL_MAX = 3;       // troepen in een neutraal land (max)
+export const NEUTRAL_MAX = 2;       // troepen in een neutraal land (max)
 
-// Overwinning door overheersing: aandeel van alle landen dat je moet bezitten.
-export const DOMINATION_SHARE = 0.6;
+// Het spel duurt een vast aantal ronden. Dat houdt een potje voorspelbaar kort
+// én eerlijk: iedereen speelt precies even vaak. Aan het eind wint wie de
+// meeste landen heeft.
+export const ROUND_LIMIT = 12;
 
-// Beurtfasen
-export const PHASES = ['inkomen', 'bouwen', 'aanvallen', 'verschuiven'];
+// Vroegtijdige winst door overheersing: aandeel van alle landen dat je moet
+// bezitten. Wordt alleen aan het EIND van een ronde gecontroleerd, zodat
+// iedereen even veel beurten heeft gehad.
+export const DOMINATION_SHARE = 0.45;
+
+// Beurtfasen. Spelers plannen om de beurt in het geheim; daarna worden alle
+// bevelen van iedereen tegelijk uitgevoerd (zie resolve.js). Zo heeft niemand
+// voordeel van "eerder aan de beurt zijn".
+export const PHASES = ['bouwen', 'aanvallen', 'verschuiven'];
 export const PHASE_NL = {
-  inkomen: 'Inkomen', bouwen: 'Bouwen & rekruteren',
-  aanvallen: 'Veroveren', verschuiven: 'Verschuiven',
+  bouwen: 'Bouwen & rekruteren',
+  aanvallen: 'Aanvallen plannen',
+  verschuiven: 'Verplaatsen plannen',
 };
+
+// Bij botsende bevelen (meerdere spelers vallen hetzelfde land aan) bepaalt een
+// dobbelworp wie het eerst aanvalt. Puur toeval, dus voor iedereen gelijk.
+export const DOBBEL_ZIJDEN = 20;

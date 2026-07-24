@@ -1,12 +1,13 @@
 // ui.js — alle schermen en panelen (DOM). Leest de spelstand en roept de
 // besturing (controller) aan voor acties. Bevat geen spelregels.
 import {
-  game, troepen, aantalLanden, rekruteerKost, hasSave,
+  game, troepen, aantalLanden, rekruteerKost, hasSave, ranglijst,
+  bevelenVan, beschikbaar, beschikbaarPerSoort, weergaveTroepen, bouwNiveau,
 } from './state.js';
-import { GEO } from './geo.js';
+import { GEO, N } from './geo.js';
 import {
   PLAYER_COLORS, NEUTRAL, UNITS, UNIT_ORDER, BUILDINGS, BUILDING_ORDER,
-  CONTINENT_NL,
+  CONTINENT_NL, ROUND_LIMIT, DOMINATION_SHARE,
 } from './constants.js';
 
 let C = null;
@@ -32,8 +33,11 @@ export function renderHUD() {
   el('turnPill').textContent = p.naam;
   el('goldVal').textContent = '⬤ ' + p.goud;
   el('goldVal').style.color = '#ffd85b';
-  el('roundVal').textContent = 'R' + game.round + ' · ' + aantalLanden(game.cur) + ' 🚩';
-  const kort = { bouwen: 'Bouwen', aanvallen: 'Veroveren', verschuiven: 'Verschuiven' };
+  const laatste = game.round >= ROUND_LIMIT;
+  el('roundVal').textContent = `R${game.round}/${ROUND_LIMIT} · ${aantalLanden(game.cur)} 🚩`;
+  el('roundVal').classList.toggle('final', laatste);
+  el('roundVal').title = laatste ? 'Laatste ronde! Wie de meeste landen heeft, wint.' : '';
+  const kort = { bouwen: 'Bouwen', aanvallen: 'Aanvallen', verschuiven: 'Verplaatsen' };
   const phases = ['bouwen', 'aanvallen', 'verschuiven'];
   el('phaseBar').innerHTML = phases.map((ph) =>
     `<span class="ph ${ph === game.phase ? 'on' : ''}">${kort[ph]}</span>`).join('<span class="sep">▸</span>');
@@ -49,11 +53,15 @@ function bouwLabel(b) {
 }
 function landInfoHTML(i) {
   if (i < 0) return '';
-  const t = game.troops[i], b = game.build[i];
+  const eigen = game.owner[i] === game.cur;
+  const t = eigen ? beschikbaarPerSoort(game.cur, i) : game.troops[i];
+  const b = eigen
+    ? Object.fromEntries(BUILDING_ORDER.map((k) => [k, bouwNiveau(i, k, game.cur)]))
+    : game.build[i];
   return `<div class="land">
     <div class="landkop"><span class="dot" style="background:${eigenaarKleur(i)}"></span>
       <b>${esc(GEO[i].name)}</b> <span class="muted">· ${CONTINENT_NL[GEO[i].cont] || GEO[i].cont}</span></div>
-    <div class="landsub"><span>${eigenaarNaam(i)}</span> · ${troepen(i)} troepen (${troepLabel(t)}) · Gebouwen: ${bouwLabel(b)}</div>
+    <div class="landsub"><span>${eigenaarNaam(i)}</span> · ${eigen ? beschikbaar(game.cur, i) + ' vrij' : troepen(i) + ' troepen'} (${troepLabel(t)}) · Gebouwen: ${bouwLabel(b)}</div>
   </div>`;
 }
 
@@ -76,7 +84,7 @@ export function renderPanel(sel) {
       html += landInfoHTML(i);
       html += `<div class="grp"><div class="grptitel">Rekruteren <span class="muted">(in ${esc(GEO[i].name)})</span></div><div class="btns">`;
       for (const k of UNIT_ORDER) {
-        const kost = rekruteerKost(k, i);
+        const kost = rekruteerKost(k, i, cur);
         const kan = game.players[cur].goud >= kost;
         html += `<button class="act" data-recruit="${k}" ${kan ? '' : 'disabled'}>
           <b>${UNITS[k].naam}</b><span>⬤ ${kost}</span></button>`;
@@ -84,7 +92,7 @@ export function renderPanel(sel) {
       html += `</div></div>`;
       html += `<div class="grp"><div class="grptitel">Bouwen</div><div class="btns">`;
       for (const k of BUILDING_ORDER) {
-        const lvl = game.build[i][k], max = BUILDINGS[k].max;
+        const lvl = bouwNiveau(i, k, cur), max = BUILDINGS[k].max;
         const done = lvl >= max;
         const kost = done ? 0 : BUILDINGS[k].kost[lvl];
         const kan = !done && game.players[cur].goud >= kost;
@@ -96,28 +104,33 @@ export function renderPanel(sel) {
       html += `<div class="hint">Tik op <b>je eigen land</b> om daar te rekruteren of te bouwen.</div>`;
       if (i >= 0) html += landInfoHTML(i);
     }
+    html += bevelenHTML();
     html += footer('Klaar met bouwen ▸');
   } else if (game.phase === 'aanvallen') {
     if (sel.source >= 0) {
-      html += `<div class="hint">Tik een <b style="color:#ffe06e">geel gemarkeerd</b> buurland om aan te vallen vanuit ${esc(GEO[sel.source].name)} (${troepen(sel.source)} troepen).</div>`;
+      html += `<div class="hint">Tik een <b style="color:#ffe06e">geel gemarkeerd</b> buurland om een aanval te plannen vanuit ${esc(GEO[sel.source].name)} <span class="muted">(${beschikbaar(cur, sel.source)} vrij)</span>.</div>`;
       html += landInfoHTML(sel.source);
     } else {
-      html += `<div class="hint">Tik op <b>je eigen land met ≥2 troepen</b> om vandaar aan te vallen.</div>`;
+      html += `<div class="hint">Plan je aanvallen: tik <b>je eigen land met ≥2 vrije troepen</b>, daarna een buurland. Alles wordt straks <b>tegelijk</b> uitgevoerd.</div>`;
       if (sel.info >= 0) html += landInfoHTML(sel.info);
     }
-    html += footer('Klaar met veroveren ▸');
+    html += bevelenHTML();
+    html += footer('Klaar met aanvallen ▸');
   } else if (game.phase === 'verschuiven') {
     if (sel.source >= 0) {
-      html += `<div class="hint">Tik een <b style="color:#ffe06e">gemarkeerd eigen buurland</b> om troepen te verplaatsen vanuit ${esc(GEO[sel.source].name)}.</div>`;
+      html += `<div class="hint">Tik een <b style="color:#ffe06e">gemarkeerd eigen buurland</b> om troepen te verplaatsen vanuit ${esc(GEO[sel.source].name)} <span class="muted">(${beschikbaar(cur, sel.source)} vrij)</span>.</div>`;
       html += landInfoHTML(sel.source);
     } else {
-      html += `<div class="hint">Verplaats troepen: tik je eigen land (≥2 troepen), daarna een aangrenzend eigen land. Of beëindig je beurt.</div>`;
+      html += `<div class="hint">Verplaats troepen tussen eigen landen. Versterkingen komen aan <b>vóór</b> de gevechten, dus hiermee kun je verdedigen.</div>`;
       if (sel.info >= 0) html += landInfoHTML(sel.info);
     }
-    html += footer('Beurt beëindigen ▸');
+    html += bevelenHTML();
+    html += footer('Klaar — geef door ▸');
   }
 
   box.innerHTML = html;
+  box.querySelectorAll('[data-cancel]').forEach((b) =>
+    b.addEventListener('click', () => C.onCancelOrder(+b.dataset.cancel)));
   box.querySelectorAll('[data-recruit]').forEach((b) =>
     b.addEventListener('click', () => C.onRecruit(b.dataset.recruit)));
   box.querySelectorAll('[data-build]').forEach((b) =>
@@ -126,6 +139,35 @@ export function renderPanel(sel) {
   if (f) f.addEventListener('click', () => C.onEndPhase());
 }
 const footer = (label) => `<div class="foot"><button class="prim" data-end>${label}</button></div>`;
+
+// Lijstje met wat de speler tot nu toe heeft ingepland (met ✕ om te annuleren).
+function bevelenHTML() {
+  const lijst = bevelenVan(game.cur);
+  if (!lijst.length) return '';
+  const rijen = lijst.map((o, i) => {
+    let icoon, tekst, badge;
+    if (o.type === 'aanval' || o.type === 'verplaats') {
+      icoon = o.type === 'aanval' ? '⚔' : '➜';
+      tekst = `${esc(GEO[o.src].name)} → <b>${esc(GEO[o.dst].name)}</b>`;
+      badge = o.troepen.inf + o.troepen.cav + o.troepen.art;
+    } else if (o.type === 'rekruteer') {
+      icoon = '🛡';
+      tekst = `${UNITS[o.unit].naam} in <b>${esc(GEO[o.dst].name)}</b>`;
+      badge = `⬤${o.kost}`;
+    } else {
+      icoon = '🏗';
+      tekst = `${BUILDINGS[o.gebouw].naam} in <b>${esc(GEO[o.dst].name)}</b>`;
+      badge = `⬤${o.kost}`;
+    }
+    return `<div class="bevel ${o.type}">
+      <span class="bi">${icoon}</span>
+      <span class="bt">${tekst}</span>
+      <span class="bn">${badge}</span>
+      <button class="bx" data-cancel="${i}" title="Annuleren">✕</button>
+    </div>`;
+  }).join('');
+  return `<div class="grp"><div class="grptitel">Ingepland (${lijst.length})</div>${rijen}</div>`;
+}
 
 // ---- overlays ---------------------------------------------------------------
 function overlay(html, cls = '') {
@@ -210,40 +252,158 @@ export function showSetup() {
 export function showPass(idx, onReady) {
   const p = game.players[idx];
   const hex = spelerKleur(idx);
+  // Paneel leegmaken: anders leest de volgende speler door de vervaging heen
+  // nog wat de vorige had ingepland.
+  el('panel').innerHTML = '';
   overlay(`
     <div class="passcard" style="--c:${hex}">
       <div class="passdot" style="background:${hex}"></div>
       <h2>Geef de telefoon aan</h2>
       <div class="passnaam" style="color:${hex}">${esc(p.naam)}</div>
-      <p class="sub">Ronde ${game.round} · ${aantalLanden(idx)} landen · ⬤ ${p.goud} goud</p>
+      <p class="sub">Ronde ${game.round} van ${ROUND_LIMIT} · ${aantalLanden(idx)} landen · ⬤ ${p.goud} goud</p>
+      ${game.round >= ROUND_LIMIT ? '<p class="laatsteronde">⏳ Laatste ronde — nu telt elk land!</p>' : ''}
       <button class="prim big" id="passGo">Ik ben er klaar voor</button>
     </div>`, 'pass');
   el('passGo').addEventListener('click', onReady);
 }
 
-export function showVictory(idx) {
+// ---- gelijktijdige resolutie ------------------------------------------------
+
+// "Iedereen heeft gepland" — telefoon in het midden leggen.
+export function showResolutieStart(aantal, onGo) {
+  el('panel').innerHTML = '';        // niemands plan mag nog leesbaar zijn
+  overlay(`
+    <div class="midden">📱</div>
+    <h2>Iedereen heeft gepland</h2>
+    <p class="sub">Leg de telefoon in het midden zodat iedereen kan meekijken.
+      Alle ${aantal} bevelen worden nu <b>tegelijk</b> uitgevoerd.</p>
+    <button class="prim big" id="goRes">Uitvoeren!</button>
+  `, 'menu resolutie');
+  el('goRes').addEventListener('click', () => { hideOverlay(); onGo(); });
+}
+
+// Balk bovenin tijdens het afspelen, met een knop om door te spoelen.
+export function startResolutieWeergave(onSkip) {
+  let bar = el('resbar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'resbar';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = `<span id="restekst">Uitvoeren…</span><button id="resskip">⏩ Sneller</button>`;
+  bar.classList.add('show');
+  // HUD wegblenden: tijdens de uitvoering is niemand "aan de beurt".
+  document.body.classList.add('resolutie');
+  el('resskip').addEventListener('click', () => { onSkip(); el('resskip').disabled = true; });
+}
+export function resolutieTekst(t) {
+  const e = el('restekst');
+  if (e) e.textContent = t;
+}
+export function stopResolutieWeergave() {
+  const bar = el('resbar');
+  if (bar) bar.classList.remove('show');
+  document.body.classList.remove('resolutie');
+}
+
+// Dobbelworp bij botsende aanvallen: zichtbaar en voor iedereen gelijk.
+export function toonDobbel(ev, landnaam, g, snel) {
+  return new Promise((klaar) => {
+    const rijen = ev.worpen.map((w, i) => `
+      <div class="dobbelrij" style="animation-delay:${i * 0.12}s">
+        <span class="dot" style="background:${spelerKleur(w.speler)}"></span>
+        <span class="dn">${esc(g.players[w.speler].naam)}</span>
+        <span class="dw" data-worp="${w.worp}">?</span>
+      </div>`).join('');
+    const kaart = document.createElement('div');
+    kaart.className = 'dobbelkaart';
+    kaart.innerHTML = `<div class="dk-titel">⚄ Botsing om ${esc(landnaam)}</div>
+      ${rijen}
+      <div class="dk-uitleg">Hoogste worp valt als eerste aan</div>`;
+    document.body.appendChild(kaart);
+
+    const duur = snel ? 250 : 1100;
+    const t0 = performance.now();
+    const tik = () => {
+      const p = (performance.now() - t0) / duur;
+      kaart.querySelectorAll('.dw').forEach((e) => {
+        if (p < 0.75) e.textContent = 1 + Math.floor(Math.random() * 20);
+        else { e.textContent = e.dataset.worp; e.classList.add('vast'); }
+      });
+      if (p < 1) requestAnimationFrame(tik);
+      else {
+        const winnaar = kaart.querySelector('.dobbelrij');
+        if (winnaar) winnaar.classList.add('eerst');
+        setTimeout(() => { kaart.remove(); klaar(); }, snel ? 150 : 650);
+      }
+    };
+    requestAnimationFrame(tik);
+  });
+}
+
+export function showVictory(idx, reden) {
   const p = game.players[idx];
   const hex = spelerKleur(idx);
+  const lijst = ranglijst();
+  const uitleg = {
+    laatste: 'Alle tegenstanders zijn uitgeschakeld.',
+    overheersing: `Meer dan ${Math.round(DOMINATION_SHARE * 100)}% van de wereld veroverd.`,
+    rondes: `Na ${ROUND_LIMIT} ronden de meeste landen.`,
+  }[reden] || '';
+
+  const medaille = ['🥇', '🥈', '🥉'];
+  const rijen = lijst.map((r, k) => `
+    <div class="scorerij ${r.i === idx ? 'winnaar' : ''}">
+      <span class="pos">${medaille[k] || k + 1}</span>
+      <span class="dot" style="background:${spelerKleur(r.i)}"></span>
+      <span class="nm">${esc(r.pl.naam)}${r.pl.alive ? '' : ' <span class="muted">(uit)</span>'}</span>
+      <span class="sc">${r.landen} <span class="muted">landen</span></span>
+      <span class="pct">${Math.round(r.landen / N * 100)}%</span>
+    </div>`).join('');
+
   overlay(`
-    <h1>🏆 ${esc(p.naam)} wint!</h1>
-    <p class="sub" style="color:${hex}">De wereld is veroverd na ${game.round} ronden.</p>
-    <div class="passdot" style="background:${hex};margin:14px auto"></div>
+    <div class="winkroon">🏆</div>
+    <h1 style="color:${hex}">${esc(p.naam)} wint!</h1>
+    <p class="sub">${uitleg}</p>
+    <div class="scorelijst">${rijen}</div>
     <button class="prim big" id="againG">Nieuw spel</button>
-  `, 'menu');
+    <a class="ghost" href="../../">← Terug naar Minigames</a>
+  `, 'menu victory');
+  strooiConfetti([hex, '#ffd85b', '#ffffff', '#7ee2a8', '#ff8fb1']);
   el('againG').addEventListener('click', () => C.playAgain());
+}
+
+// Confetti als losse elementen bovenop de overlay (CSS-animatie).
+function strooiConfetti(kleuren) {
+  const laag = document.createElement('div');
+  laag.className = 'confetti';
+  for (let i = 0; i < 70; i++) {
+    const s = document.createElement('i');
+    s.style.left = Math.random() * 100 + '%';
+    s.style.background = kleuren[i % kleuren.length];
+    s.style.animationDelay = (Math.random() * 1.6).toFixed(2) + 's';
+    s.style.animationDuration = (2.4 + Math.random() * 2).toFixed(2) + 's';
+    s.style.transform = `rotate(${Math.random() * 360}deg)`;
+    s.style.width = (5 + Math.random() * 6).toFixed(1) + 'px';
+    laag.appendChild(s);
+  }
+  el('overlay').appendChild(laag);
+  setTimeout(() => laag.remove(), 6000);
 }
 
 export function showHelp() {
   overlay(`
     <h2>Hoe werkt Wereldverovering?</h2>
     <div class="help">
-      <p><b>Doel:</b> verover de wereld. Je wint als je alle tegenstanders uitschakelt of ${Math.round(0.6 * 100)}% van alle landen bezit.</p>
-      <p><b>Elke beurt (3 fasen):</b></p>
+      <p><b>Doel:</b> bezit na <b>${ROUND_LIMIT} ronden</b> de meeste landen. Je wint eerder als je alle tegenstanders uitschakelt of ${Math.round(DOMINATION_SHARE * 100)}% van de wereld verovert.</p>
+      <p class="fairness">🤝 <b>Iedereen speelt tegelijk.</b> Je plant je zetten in het geheim en geeft de telefoon door. Pas als iedereen klaar is, worden álle bevelen tegelijkertijd uitgevoerd — niemand heeft dus voordeel van eerder aan de beurt zijn.</p>
+      <p><b>Je beurt (plannen, 3 stappen):</b></p>
       <ol>
-        <li><b>Bouwen &amp; rekruteren</b> — je krijgt goud van je landen. Koop eenheden (in een eigen land) en bouw <b>markt</b> (goud), <b>kazerne</b> (goedkoper rekruteren) of <b>fort</b> (verdediging).</li>
-        <li><b>Veroveren</b> — tik je eigen land (≥2 troepen), dan een geel buurland om aan te vallen. Kies hoeveel troepen je meestuurt.</li>
-        <li><b>Verschuiven</b> — verplaats troepen tussen aangrenzende eigen landen. Daarna eindigt je beurt.</li>
+        <li><b>Bouwen &amp; rekruteren</b> — je krijgt goud van je landen. Koop eenheden en bouw <b>markt</b> (goud), <b>kazerne</b> (goedkoper rekruteren) of <b>fort</b> (verdediging). Dit gebeurt meteen.</li>
+        <li><b>Aanvallen plannen</b> — tik je eigen land, dan een geel buurland. Je geeft alleen het <i>bevel</i>; het gevecht volgt straks.</li>
+        <li><b>Verplaatsen plannen</b> — schuif troepen naar een eigen buurland. Versterkingen komen aan <b>vóór</b> de gevechten, dus zo verdedig je.</li>
       </ol>
+      <p><b>De uitvoering:</b> alle legers vertrekken tegelijk — val je aan, dan staat je eigen land dus zwakker. Vallen twee spelers hetzelfde land aan, dan bepaalt een <b>dobbelworp</b> wie het eerst mag; de tweede vecht daarna tegen de nieuwe eigenaar.</p>
       <p><b>Eenheden (steen-papier-schaar):</b> Infanterie ▸ Artillerie ▸ Cavalerie ▸ Infanterie. Elke soort is sterker tegen de soort die hij verslaat.</p>
       <p><b>Kaart:</b> sleep om te bewegen, knijp of scroll om te zoomen. Cijfers zijn het aantal troepen; stippen onder een land zijn gebouwen.</p>
     </div>
@@ -254,8 +414,9 @@ export function showHelp() {
 
 // ---- aanval-dialoog ---------------------------------------------------------
 function stepperDialog({ title, src, dst, kleurBron, actie, actieLabel, defenderInfo }) {
-  const t = game.troops[src];
-  const totaal = troepen(src);
+  // Alleen troepen die nog niet aan een ander bevel zijn toegewezen.
+  const t = beschikbaarPerSoort(game.cur, src);
+  const totaal = beschikbaar(game.cur, src);
   // standaard: stuur alles behalve 1 mee
   const commit = { inf: t.inf, cav: t.cav, art: t.art };
   let over = 1;
@@ -307,23 +468,24 @@ function stepperDialog({ title, src, dst, kleurBron, actie, actieLabel, defender
 }
 
 export function attackDialog(src, dst) {
-  const d = game.troops[dst], b = game.build[dst];
-  const dinfo = `Verdediger: <b>${eigenaarNaam(dst)}</b> · ${troepen(dst)} troepen${b.fort ? ` · Fort ${b.fort}` : ''}`;
+  const b = game.build[dst];
+  const dinfo = `Verdediger: <b>${eigenaarNaam(dst)}</b> · ${troepen(dst)} troepen${b.fort ? ` · Fort ${b.fort}` : ''}
+    <br><span class="waarschuwing">Let op: de verdediger kan dit nog versterken — jullie plannen tegelijk.</span>`;
   stepperDialog({
-    title: '⚔ Aanval op ' + esc(GEO[dst].name),
+    title: '⚔ Aanval plannen op ' + esc(GEO[dst].name),
     src, dst, kleurBron: eigenaarKleur(src),
     defenderInfo: dinfo,
-    actieLabel: 'Aanvallen!',
+    actieLabel: 'Aanval inplannen',
     actie: (commit) => C.confirmAttack(src, dst, commit),
   });
 }
 
 export function moveDialog(src, dst) {
   stepperDialog({
-    title: '➜ Verplaats naar ' + esc(GEO[dst].name),
+    title: '➜ Verplaatsing plannen naar ' + esc(GEO[dst].name),
     src, dst, kleurBron: eigenaarKleur(src),
     defenderInfo: `Naar eigen land · nu ${troepen(dst)} troepen`,
-    actieLabel: 'Verplaatsen',
+    actieLabel: 'Verplaatsing inplannen',
     actie: (commit) => C.confirmMove(src, dst, commit),
   });
 }

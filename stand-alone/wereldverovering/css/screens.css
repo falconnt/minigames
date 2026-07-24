@@ -1,0 +1,84 @@
+/* screens.css — schermvullende overlays: menu, doorgeven, dialoog, winst, help. */
+#overlay {
+  position: fixed; inset: 0; z-index: 50;
+  display: none; align-items: center; justify-content: center;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+  background: rgba(4, 8, 16, 0.72); backdrop-filter: blur(4px);
+}
+#overlay.show { display: flex; }
+
+.sheet {
+  width: min(94vw, 460px); max-height: 88vh; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 18px; padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+.sheet h1 { margin: 0 0 4px; font-size: 26px; }
+.sheet h2 { margin: 0 0 12px; font-size: 20px; }
+.sheet .sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+
+.ghost {
+  display: block; width: 100%; margin-top: 10px;
+  padding: 12px; border-radius: 12px; font-weight: 700; font-size: 14px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); color: var(--ink);
+}
+.ghost:active { background: rgba(255, 255, 255, 0.12); }
+.menucol { display: flex; flex-direction: column; gap: 4px; }
+.menucol .prim, .menucol .ghost { margin-top: 6px; }
+
+/* speler-instellingen */
+.players { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+.prow {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+  border-radius: 12px; padding: 8px;
+}
+.pname {
+  flex: 1; min-width: 0; padding: 9px 10px; border-radius: 9px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); color: var(--ink);
+  font-size: 15px; font-weight: 600;
+}
+.sws { display: flex; gap: 4px; }
+.sw {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent;
+}
+.sw.on { border-color: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4) inset; }
+.rm { width: 30px; height: 30px; border-radius: 8px; color: var(--muted); font-size: 15px; }
+
+/* doorgeef-scherm */
+.passcard { text-align: center; padding: 8px 0; }
+.passdot {
+  width: 74px; height: 74px; border-radius: 50%; margin: 6px auto 14px;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.08), 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.passnaam { font-size: 30px; font-weight: 900; margin: 4px 0 4px; }
+
+/* dialoog (aanval/verplaats) */
+.dinfo { text-align: left; margin-bottom: 14px; font-size: 14px; line-height: 1.5; }
+.dinfo .dot { margin-right: 6px; }
+.srow {
+  display: flex; align-items: center; gap: 10px; padding: 9px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.sname { font-weight: 700; font-size: 15px; }
+.smax { color: var(--muted); font-size: 12.5px; flex: 1; text-align: left; }
+.sctl { display: flex; align-items: center; gap: 10px; }
+.sbtn {
+  width: 40px; height: 40px; border-radius: 10px; font-size: 22px; font-weight: 800;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid var(--line); color: var(--ink);
+}
+.sbtn:active { background: rgba(255, 255, 255, 0.18); }
+.sval { min-width: 30px; text-align: center; font-size: 18px; font-weight: 800; }
+.dsum { margin: 14px 0; font-size: 14px; }
+.drow { display: flex; gap: 10px; }
+.drow .ghost, .drow .prim { margin-top: 0; }
+.drow .ghost { flex: 1; }
+.drow .prim { flex: 2; }
+
+/* help */
+.help { text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
+.help p { margin: 8px 0; }
+.help ol { margin: 8px 0; padding-left: 20px; }
+.help li { margin: 5px 0; }
+.help b { color: #fff; }

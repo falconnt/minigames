@@ -1,0 +1,49 @@
+/* hud.css — bovenbalk: aan-de-beurt, goud, ronde, fase-indicator. */
+#hud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  padding: calc(env(safe-area-inset-top) + 8px) 10px 8px;
+  background: linear-gradient(180deg, rgba(6, 11, 20, 0.92), rgba(6, 11, 20, 0));
+  pointer-events: none;
+}
+#hud .row { display: flex; align-items: center; gap: 8px; }
+#hud .row > * { pointer-events: auto; }
+#hud .spacer { flex: 1; pointer-events: none; }
+
+.pill {
+  font-weight: 800; font-size: 14px; color: #06101f;
+  padding: 7px 14px; border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.stat {
+  font-weight: 700; font-size: 14px;
+  background: rgba(10, 16, 28, 0.72); border: 1px solid var(--line);
+  padding: 6px 11px; border-radius: 999px; white-space: nowrap;
+}
+
+.icobtn {
+  width: 38px; height: 38px; border-radius: 10px; font-size: 17px;
+  background: rgba(10, 16, 28, 0.72); border: 1px solid var(--line);
+  display: grid; place-items: center;
+}
+.icobtn:active { background: rgba(30, 42, 64, 0.9); }
+
+.row2 {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px; pointer-events: none;
+}
+#roundVal {
+  margin-left: auto; flex: none; font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: rgba(10, 16, 28, 0.6); padding: 4px 9px; border-radius: 999px;
+}
+#phaseBar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 12px; font-weight: 700; pointer-events: none;
+}
+#phaseBar .ph {
+  padding: 4px 10px; border-radius: 999px; color: var(--muted);
+  background: rgba(10, 16, 28, 0.6); border: 1px solid transparent;
+}
+#phaseBar .ph.on {
+  color: #06101f; background: var(--gold); border-color: var(--gold);
+}
+#phaseBar .sep { color: var(--muted); opacity: .5; }

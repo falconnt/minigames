@@ -1,0 +1,50 @@
+/* base.css — basis, kleuren, canvas, knoppen en meldingen. */
+:root {
+  --bg: #0b1220;
+  --ink: #e8eef7;
+  --muted: #9fb0c6;
+  --line: rgba(255, 255, 255, 0.10);
+  --panel: rgba(14, 21, 35, 0.97);
+  --prim: #2f7df6;
+  --prim2: #1e63d6;
+  --gold: #ffd85b;
+  --ok: #37c26b;
+  --bad: #e6483d;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overscroll-behavior: none; touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
+
+#map {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  display: block; touch-action: none;
+}
+
+button {
+  font: inherit; color: inherit; cursor: pointer;
+  border: none; background: none;
+}
+
+/* meldingen onderaan (boven het paneel) */
+#toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 12px);
+  transform: translate(-50%, 20px);
+  max-width: min(92vw, 520px);
+  background: rgba(10, 16, 28, 0.96); border: 1px solid var(--line);
+  color: var(--ink); padding: 11px 16px; border-radius: 12px;
+  font-size: 14px; text-align: center; line-height: 1.35;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  z-index: 40;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: none; }
+#toast .tl { color: var(--muted); }
+
+.muted { color: var(--muted); }

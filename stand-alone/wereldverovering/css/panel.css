@@ -38,6 +38,27 @@
 .act:active { background: rgba(255, 255, 255, 0.12); }
 .act:disabled { opacity: .38; }
 
+/* ingeplande bevelen */
+.bevel {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 9px; margin-bottom: 5px; border-radius: 9px; font-size: 13px;
+  background: rgba(255, 255, 255, 0.05); border-left: 3px solid var(--gold);
+  animation: bevel-in .25s ease backwards;
+}
+@keyframes bevel-in { from { opacity: 0; transform: translateX(-10px); } }
+.bevel.verplaats { border-left-color: #8fd6ff; }
+.bevel .bi { font-size: 14px; }
+.bevel .bt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bevel .bn {
+  font-weight: 800; background: rgba(0, 0, 0, 0.3);
+  padding: 2px 8px; border-radius: 999px; font-size: 12px;
+}
+.bevel .bx {
+  width: 26px; height: 26px; border-radius: 7px; color: var(--muted);
+  background: rgba(255, 255, 255, 0.06); flex: none;
+}
+.bevel .bx:active { background: rgba(255, 90, 77, 0.3); color: #fff; }
+
 .foot { margin-top: 12px; }
 .prim {
   display: block; width: 100%; text-align: center;

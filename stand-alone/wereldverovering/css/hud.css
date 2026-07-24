@@ -34,7 +34,14 @@
 #roundVal {
   margin-left: auto; flex: none; font-size: 12px; font-weight: 700; white-space: nowrap;
   background: rgba(10, 16, 28, 0.6); padding: 4px 9px; border-radius: 999px;
+  transition: color .2s, background .2s;
 }
+/* laatste ronde valt op */
+#roundVal.final {
+  color: #06101f; background: var(--gold);
+  animation: rond-puls 1.6s ease-in-out infinite;
+}
+@keyframes rond-puls { 50% { box-shadow: 0 0 0 5px rgba(255, 216, 91, 0.18); } }
 #phaseBar {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   font-size: 12px; font-weight: 700; pointer-events: none;
@@ -47,3 +54,8 @@
   color: #06101f; background: var(--gold); border-color: var(--gold);
 }
 #phaseBar .sep { color: var(--muted); opacity: .5; }
+
+/* Tijdens de gezamenlijke uitvoering is niemand aan de beurt: HUD wegblenden
+   zodat de resolutiebalk het beeld heeft. */
+body.resolutie #hud { opacity: 0; pointer-events: none; }
+#hud { transition: opacity .25s ease; }

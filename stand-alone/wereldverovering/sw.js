@@ -1,6 +1,6 @@
 // Service worker voor Wereldverovering (stand-alone app, eigen scope).
 // Verhoog CACHE_VERSION met de hand bij elke inhoudelijke wijziging.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v4';
 const CACHE = 'wereldverovering-' + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -17,8 +17,10 @@ const APP_SHELL = [
   './js/state.js',
   './js/setup.js',
   './js/combat.js',
+  './js/resolve.js',
   './js/view.js',
   './js/render.js',
+  './js/fx.js',
   './js/input.js',
   './js/ui.js',
   './js/pwa.js',

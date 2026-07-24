@@ -258,6 +258,15 @@ body {
   box-shadow: 0 8px 22px rgb(0 0 0 / 0.14);
 }
 
+/* Losse apps: aparte sectie onderaan het startscherm. */
+.standalone { margin-top: 2rem; }
+.standalone-head { margin: 0 0 0.9rem; }
+.standalone-head h2 { margin: 0 0 0.2rem; font-size: 1.15rem; }
+.standalone-head p { margin: 0; color: var(--text-dim); font-size: 0.9rem; }
+.card-standalone .card-icon { padding: 0; overflow: hidden; background: var(--bg-inset); }
+.card-standalone .card-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+.tag-standalone { background: rgba(95, 135, 245, 0.16); color: var(--accent); }
+
 /* Kaarten vliegen gestaggerd in bij het openen van het startscherm. */
 @media (prefers-reduced-motion: no-preference) {
   .cards .card { animation: card-in 0.38s ease backwards; }

@@ -4,6 +4,7 @@
 import { storage } from './storage.js';
 import { getTheme, setTheme } from './theme.js';
 import { games, categories, getGame, getCategory } from './registry.js';
+import { standaloneGames } from './standalone.js';
 import { cloudEnabled } from './cloud-config.js';
 import * as cloud from './cloud.js';
 import * as sync from './sync.js';
@@ -65,9 +66,34 @@ function renderHome() {
   const streak = storage.getStat('streak');
   const streakChip = streak >= 2 ? `<span class="streak-chip" title="Dagen op rij gespeeld">🔥 ${streak} dagen op rij</span>` : '';
 
+  // Losse (stand-alone) games: puur links, alleen op 'Alles' onderaan getoond.
+  const standaloneSection = activeCategory === 'alles'
+    ? `<section class="standalone">
+        <div class="standalone-head">
+          <h2>Losse apps</h2>
+          <p>Op zichzelf staande games met een eigen scherm — los installeerbaar, buiten highscores en sync om.</p>
+        </div>
+        <div class="cards">
+          ${standaloneGames
+            .map(
+              (g) => `<a class="card card-standalone" href="${g.folder}">
+              <div class="card-icon"><img src="${g.icon}" alt="" width="58" height="58" loading="lazy"></div>
+              <div class="card-body">
+                <h3>${g.title}</h3>
+                <p>${g.description}</p>
+                <div class="card-meta"><span class="tag tag-standalone">↗ Losse app</span></div>
+              </div>
+            </a>`
+            )
+            .join('')}
+        </div>
+      </section>`
+    : '';
+
   view.innerHTML = `
     <div class="chips">${chips}${streakChip}</div>
     <div class="cards">${cards || '<p class="empty">Geen games in deze categorie.</p>'}</div>
+    ${standaloneSection}
   `;
 
   view.querySelectorAll('.chip').forEach((btn) =>

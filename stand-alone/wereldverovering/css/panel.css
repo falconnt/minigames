@@ -1,0 +1,49 @@
+/* panel.css — onderpaneel met acties per fase. */
+#panel {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-radius: 18px 18px 0 0;
+  padding: 12px 12px calc(env(safe-area-inset-bottom) + 12px);
+  max-height: 48vh; overflow-y: auto;
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.45);
+}
+#panel:empty { display: none; }
+
+.hint {
+  font-size: 13.5px; line-height: 1.4; color: var(--ink);
+  background: rgba(47, 125, 246, 0.12); border: 1px solid rgba(47, 125, 246, 0.28);
+  padding: 9px 12px; border-radius: 10px; margin-bottom: 10px;
+}
+
+.land { margin-bottom: 10px; }
+.landkop { display: flex; align-items: center; gap: 7px; font-size: 15px; }
+.landkop .dot, .dinfo .dot {
+  width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none;
+}
+.landsub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+.grp { margin-top: 10px; }
+.grptitel { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.act {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 6px; border-radius: 12px; min-height: 52px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line);
+  font-size: 13px;
+}
+.act b { font-size: 13px; }
+.act span { font-size: 12px; color: var(--gold); font-weight: 700; }
+.act:active { background: rgba(255, 255, 255, 0.12); }
+.act:disabled { opacity: .38; }
+
+.foot { margin-top: 12px; }
+.prim {
+  display: block; width: 100%; text-align: center;
+  padding: 13px; border-radius: 12px; font-weight: 800; font-size: 15px;
+  color: #fff; background: linear-gradient(180deg, var(--prim), var(--prim2));
+  box-shadow: 0 4px 14px rgba(47, 125, 246, 0.4);
+}
+.prim:active { transform: translateY(1px); }
+.prim.big { padding: 15px; font-size: 16px; margin-top: 12px; }

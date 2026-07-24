@@ -22,9 +22,10 @@ https://<gebruiker>.github.io/minigames/stand-alone/citydrive/
 
 ## Games
 
-| Game       | Map          | Omschrijving                                              |
-| ---------- | ------------ | -------------------------------------------------------- |
-| City Drive | `citydrive/` | Top-down rijgame met garage, tuning, upgrades en drifts. |
+| Game             | Map                 | Omschrijving                                                                        |
+| ---------------- | ------------------- | ----------------------------------------------------------------------------------- |
+| City Drive       | `citydrive/`        | Top-down rijgame met garage, tuning, upgrades en drifts.                             |
+| Wereldverovering | `wereldverovering/` | Beurten-strategie op de echte wereldkaart: verover landen, 2–6 spelers op één toestel. |
 
 ## City Drive: modulaire opzet
 
@@ -55,6 +56,40 @@ constants → cars → state → (world · fx · input · audio · economy)
 
 Nieuwe auto → `cars.js`. Ander stadsontwerp → `world.js`. Rijgevoel → `physics.js`.
 Nieuw tuning-onderdeel → `garage.js` (+ evt. `constants.js`).
+
+## Wereldverovering: modulaire opzet
+
+Een beurten-strategiespel (Risk-achtig) op de **echte wereldkaart**. Spelers
+starten met een klein thuisgebied; de rest van de wereld is neutraal en verover
+je gaandeweg. Alles wordt in code op canvas getekend — geen kaartafbeeldingen.
+De landgeometrie en buurrelaties komen uit een vooraf gegenereerde dataset
+(Natural Earth 110m, publiek domein; zie `js/world-data.js`).
+
+De afhankelijkheden lopen één kant op:
+
+```
+world-data → geo → state → (setup · combat)
+constants  ↗            → view → render · input · ui → main
+```
+
+| Bestand             | Verantwoordelijkheid                                            |
+| ------------------- | -------------------------------------------------------------- |
+| `js/world-data.js`  | gegenereerde landen (vormen, labelpunten) + buurrelaties (`ADJ`) |
+| `js/constants.js`   | balans: kleuren, eenheden, gebouwen, economie                  |
+| `js/geo.js`         | projectie, bounding boxes en "welk land ligt onder deze tik"   |
+| `js/state.js`       | spelstand, opslaan/laden en regels (inkomen, winst, buren)     |
+| `js/setup.js`       | nieuw spel: startlanden gespreid verdelen, neutralen vullen    |
+| `js/combat.js`      | gevechtsafwikkeling met steen-papier-schaar-eenheden           |
+| `js/view.js`        | camera: zoom/pan en projectie graden ↔ scherm                  |
+| `js/render.js`      | kaart, eigendomskleuren, markeringen en troepen-badges tekenen |
+| `js/input.js`       | slepen/knijpen/scrollen + tik → landselectie                   |
+| `js/ui.js`          | schermen en panelen (menu, doorgeven, dialogen, HUD)           |
+| `js/pwa.js`         | installatieknop + service worker                               |
+| `js/main.js`        | de besturing: fasen, beurten en alles aan elkaar knopen        |
+
+Andere balans → `constants.js`. Andere kaart/landen → opnieuw `world-data.js`
+genereren. Ander gevechtsgevoel → `combat.js`. Nieuwe fase of scherm → `main.js`
++ `ui.js`.
 
 ## Een nieuwe stand-alone game toevoegen
 

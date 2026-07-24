@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Wereldverovering</title>
+<meta name="description" content="Wereldverovering — verover de echte wereldkaart in een beurten-strategiespel voor 2–6 spelers op één telefoon.">
+
+<!-- PWA: installeerbaar via Chrome op Android (eigen scope, los van Minigames) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wereldverovering">
+<meta name="theme-color" content="#0b1220">
+
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/hud.css">
+<link rel="stylesheet" href="css/panel.css">
+<link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+<!-- Wereldkaart -->
+<canvas id="map"></canvas>
+
+<!-- HUD bovenaan -->
+<div id="hud">
+  <div class="row">
+    <div id="turnPill" class="pill">—</div>
+    <div id="goldVal" class="stat">⬤ 0</div>
+    <div class="spacer"></div>
+    <button class="icobtn" id="installBtn" title="App installeren" hidden>⬇</button>
+    <button class="icobtn" id="helpBtn" title="Uitleg">❔</button>
+    <button class="icobtn" id="menuBtn" title="Menu">☰</button>
+  </div>
+  <div class="row2">
+    <div id="phaseBar"></div>
+    <div id="roundVal" class="muted">Ronde 1</div>
+  </div>
+</div>
+
+<!-- Onderpaneel met acties per fase -->
+<div id="panel"></div>
+
+<!-- Meldingen -->
+<div id="toast"></div>
+
+<!-- Schermvullende overlays (menu, doorgeven, dialoog, winst) -->
+<div id="overlay"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
